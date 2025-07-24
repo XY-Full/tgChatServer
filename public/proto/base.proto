@@ -1,0 +1,33 @@
+syntax = "proto3";
+package cs;
+
+// 用户基础信息
+message EasyPlayerInfo
+{
+    int64           player_id   = 1; // 用户id
+    string          name        = 2; // 用户名
+    string          avatar      = 3; // 头像
+    string          profile     = 4; // 简介
+}
+
+// 玩家的聊天状态
+message PlayerChatInfo
+{
+    int64                   player_id       = 1; // 用户id  
+    int64                   mute_end_time   = 2; // 禁言截止时间
+    repeated int64          chat_cool_down  = 3; // 聊天cd结束时间
+    repeated EasyPlayerInfo block_player    = 4; // 拉黑用户列表
+}
+
+// 聊天消息
+message ChatMessage
+{
+    int64           player_id   = 1; // 用户id
+    string          msg         = 2; // 消息内容
+    int32           emoji_id    = 3; // 表情id
+    int32           channel_id  = 4; // 频道id
+    int64           timestamp   = 5; // 发送时间
+    int64           msg_id      = 6; // 消息id
+    int64           chat_id     = 7; // 聊天ID
+    EasyPlayerInfo  player_info = 8; // 用户基础信息
+}

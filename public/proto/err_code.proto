@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+enum ErrorCode
+{
+    Error_unknown = 0;
+    Error_success = 1;
+
+    Error_argument                      = 3;   // 参数错误
+
+    // 聊天错误代码
+    Error_muted                         = 130; // 用户被禁言
+    Error_no_channel                    = 131; // 不存在这个频道
+    Error_msg_too_long                  = 132; // 消息长度过长
+    Error_wrong_msg                     = 133; // 消息内容有问题
+    Error_no_msg                        = 134; // 消息不存在
+    Error_block_self                    = 135; // 拉黑自己
+    Error_chat_in_cd                    = 136; // 聊天cd中
+    Error_block_player_over_limit       = 137; // 拉黑人数上限
+    Error_item_num_limit                = 138; // 物品数量限制
+}

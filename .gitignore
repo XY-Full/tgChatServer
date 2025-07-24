@@ -1,0 +1,5 @@
+nohup.out
+*.swp
+compile_commands.json
+build
+.cache

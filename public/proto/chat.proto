@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package cs;
+import "base.proto";
+
+// CS_PLAYER_SEND_MESSAGE 	        = 250;	// 用户发送消息
+message PlayerSendMessage
+{
+    message Request {
+        string  msg                 = 1; // 用户消息内容
+        int32   emojiId             = 2; // 表情id
+        int32   channel             = 3; // 频道id 0～3分别对应跨服，本服，工会，私聊
+        int32   chatId              = 4; // 聊天ID
+    }
+
+    message Response {
+        int32       err = 1;  // 错误码
+    }
+
+    Request     request     = 1;
+    Response    response    = 2;
+}
+
+// CS_PLAYER_REQ_MESSAGE 	        = 251;	// 用户请求消息
+message PlayerReqMessage
+{
+    message Request {
+        int64       msg_id      = 1; // 目前的消息ID
+        int32       after_count = 2; // 需要的条数
+        int32       channel     = 3; // 频道id
+    }
+
+    message Response {
+        int32                   err = 1; // 错误码
+        repeated    ChatMessage msg = 2; // 消息列表
+    }
+
+    Request     request     = 1;
+    Response    response    = 2;
+}

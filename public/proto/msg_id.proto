@@ -1,0 +1,12 @@
+syntax = "proto3";
+package MSGID;
+
+enum MsgID
+{
+    CS_HEART_BEAT           = 0; // 心跳
+    CS_PLAYER_SEND_MESSAGE  = 1; // 用户发消息
+    CS_PLAYER_REQ_MESSAGE   = 2; // 用户拉消息
+    CS_PLAYER_REQ_CHAT_INFO = 3; // 用户查询当前状态
+
+    SC_NOTIFY           = 10000; // 下推
+}
