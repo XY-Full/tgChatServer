@@ -1,6 +1,7 @@
 #include "player_chat_info.h"
 #include "Helper.h"
 #include <memory>
+#include "Log.h"
 
 std::shared_ptr<cs::EasyPlayerInfo> getEasyPlayerInfo(int64_t playerid)
 {

@@ -21,7 +21,6 @@ private:
     void registerEvent();
     void registerMessage();
 
-    void playerReqChatInfo(const NetPack& pPack);
     void playerReqChatMessage(const NetPack& pPack);
     void playerSendChatMessage(const NetPack& pPack);
 

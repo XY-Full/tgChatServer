@@ -1,7 +1,8 @@
+#pragma once
+
 #include "chat.pb.h"
 #include "err_code.pb.h"
 #include "deque"
-#include "ModuleManager.h"
 #include "unordered_map"
 #include <google/protobuf/message.h>
 #include <string>

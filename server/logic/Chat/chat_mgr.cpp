@@ -43,9 +43,6 @@ void ChatMgr::registerMessage()
 
     busd_->registerHandler(MSGID::CS_PLAYER_REQ_MESSAGE,
                            std::bind(&ChatMgr::playerReqChatMessage, this, std::placeholders::_1));
-
-    busd_->registerHandler(MSGID::CS_PLAYER_REQ_CHAT_INFO,
-                           std::bind(&ChatMgr::playerReqChatInfo, this, std::placeholders::_1));
 }
 
 void ChatMgr::registerEvent()
