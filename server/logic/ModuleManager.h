@@ -1,5 +1,6 @@
 #pragma once
 #include "Busd.h"
+#include "Chat/chat_mgr.h"
 #include "TelegramBot/TelegramBot.h"
 #include <memory>
 #include <vector>
@@ -7,6 +8,7 @@
 class ILogic;
 class HeartHandler;
 class TelegramBot;
+class ChatMgr;
 
 class ModuleManager 
 {
@@ -19,10 +21,12 @@ public:
 
     std::shared_ptr<HeartHandler> getHeartHandler() { return heartMgr_; }
     std::shared_ptr<TelegramBot> getConfigUpdate() { return telegramBotMgr_; }
+    std::shared_ptr<ChatMgr> getChatMgr() { return chatMgr_; }
 
 private:
     std::shared_ptr<HeartHandler> heartMgr_;
     std::shared_ptr<TelegramBot> telegramBotMgr_;
+    std::shared_ptr<ChatMgr> chatMgr_;
 
 private:
     Busd* busd_;
