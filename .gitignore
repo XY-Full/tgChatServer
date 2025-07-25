@@ -3,3 +3,4 @@ nohup.out
 compile_commands.json
 build
 .cache
+server/config.json

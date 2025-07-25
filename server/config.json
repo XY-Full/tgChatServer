@@ -2,5 +2,9 @@
     "server": 
     {
         "port": 8889
+    },
+    "telegram":
+    {
+        "bot_token": ""
     }
 }
