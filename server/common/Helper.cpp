@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <stdexcept>
 #include <string>
+#include "GlobalSpace.h"
+#include "JsonConfigNode.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -194,8 +196,9 @@ void Helper::sendTgMessage(const std::string &chat_id, const std::string &text)
     if (curl)
     {
         std::string escaped_text = curl_easy_escape(curl, text.c_str(), text.length());
-        std::string url = "https://api.telegram.org/bot" + std::string(BOT_TOKEN) + "/sendMessage?chat_id=" + chat_id +
-                          "&text=" + escaped_text;
+        std::string base_url = "https://api.telegram.org/bot";
+        std::string token = (*(GlobalSpace()->configMgr_))["telegram"]["bot_token"].value<std::string>();
+        std::string url = base_url + token + "/sendMessage?chat_id=" + chat_id + "&text=" + escaped_text;
 
         // std::cout << "URL: " << url << std::endl;
 

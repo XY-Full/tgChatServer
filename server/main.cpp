@@ -9,6 +9,7 @@
 
 #include <csignal>
 #include <memory>
+#include "GlobalSpace.h"
 
 // 全局通道
 Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> server_to_busd;
@@ -24,6 +25,9 @@ int main()
 
     Busd bus(&loop, &server_to_busd, &busd_to_server);
     bus.start();
+
+    GlobalSpace()->busd_ = &bus;
+    GlobalSpace()->configMgr_ = &config_resolver;
 
     ModuleManager manager(&bus, &loop);
 
