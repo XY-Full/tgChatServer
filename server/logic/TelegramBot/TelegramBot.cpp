@@ -12,8 +12,8 @@
 TelegramBot::TelegramBot(Busd *busd) : ILogic(busd)
 {
     registerEvent();
-    startWebhook("/webhook", "/etc/letsencrypt/live/vps.ov1.top/fullchain.pem",
-                               "/etc/letsencrypt/live/vps.ov1.top/privkey.pem");
+    startWebhook("/webhook", "/etc/letsencrypt/live/chat.uuu.bar/fullchain.pem",
+                               "/etc/letsencrypt/live/chat.uuu.bar/privkey.pem");
     ILOG << "bot init done";
 }
 
