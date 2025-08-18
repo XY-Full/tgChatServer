@@ -1,6 +1,6 @@
 #pragma once
 #include "Channel.h"
-#include "EpollWrapper.h"
+#include "EventLoopWrapper.h"
 #include "NetPack.h"
 #include "SocketWrapper.h"
 #include <unordered_map>
@@ -29,7 +29,7 @@ private:
 
     int server_fd_;
     Timer* loop_;
-    EpollWrapper epoller_;
+    EventLoopWrapper epoller_;
     std::unordered_map<int, int64_t> fd_to_conn_;
     std::unordered_map<int64_t, std::shared_ptr<SocketWrapper>> conn_map_;
     std::atomic<int64_t> next_conn_id_{1};

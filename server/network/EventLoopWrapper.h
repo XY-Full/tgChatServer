@@ -1,16 +1,16 @@
 #pragma once
 #include <vector>
 
-class EpollWrapper 
+class EventLoopWrapper 
 {
 public:
-    EpollWrapper();
-    ~EpollWrapper();
+    EventLoopWrapper();
+    ~EventLoopWrapper();
 
     bool add(int fd);
     bool remove(int fd);
     std::vector<int> wait(int timeout_ms = 1000);
 
 private:
-    int epoll_fd_;
+    int loop_fd_; // epoll_fd 或 kqueue_fd
 };

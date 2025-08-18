@@ -1,4 +1,5 @@
 #include "JsonConfigNode.h"
+#include <sstream>
 
 JsonConfigNode::JsonConfigNode(JsonConfig *config, const std::string &keyPath)
     : config_(config), keyPath_(keyPath)

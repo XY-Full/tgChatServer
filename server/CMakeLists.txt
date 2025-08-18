@@ -18,6 +18,7 @@ add_subdirectory(network)
 add_subdirectory(busd)
 add_subdirectory(logic)
 add_subdirectory(common)
+add_subdirectory(core)
 
 get_target_property(curl_location CURL::libcurl LOCATION)
 message(STATUS "CURL lib location: ${curl_location}")
@@ -27,6 +28,7 @@ add_executable(server main.cpp)
 target_link_libraries(server
     PRIVATE network
             busd_core
+            core
             logic_modules
             proto
             common
