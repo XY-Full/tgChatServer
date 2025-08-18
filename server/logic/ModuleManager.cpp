@@ -7,7 +7,7 @@ void ModuleManager::registerAllModule()
 {
     heartMgr_ = std::make_shared<HeartHandler>(busd_);
 
-    telegramBotMgr_ = std::make_shared<TelegramBot>(busd_);
-
     chatMgr_ = std::make_shared<ChatMgr>(busd_);
+
+    telegramBotMgr_ = std::make_shared<TelegramBot>(busd_);
 }

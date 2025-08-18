@@ -16,4 +16,4 @@ target_include_directories(common
     ${CMAKE_SOURCE_DIR}/../third/httplib
 )
 
-target_include_directories(common PUBLIC protobuf)
+target_include_directories(common PUBLIC ${Protobuf_INCLUDE_DIRS})

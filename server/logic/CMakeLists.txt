@@ -17,4 +17,4 @@ target_include_directories(logic_modules
                             ${CMAKE_SOURCE_DIR}/protobuf/proto_files
                             )
                             
-target_link_libraries(logic_modules PUBLIC common busd_core protobuf)
+target_link_libraries(logic_modules PUBLIC common busd_core ${Protobuf_LIBRARY})
