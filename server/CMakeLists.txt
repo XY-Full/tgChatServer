@@ -1,61 +1,87 @@
-
 cmake_minimum_required(VERSION 3.10)
-project(Server)
+project(Server LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 指定第三方库的根目录
+# 第三方库根目录
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/../third)
 
-# 告诉 CMake 去这些目录下找包
+# 优先找静态库，动态库做保底
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.so")
+
 list(APPEND CMAKE_PREFIX_PATH
     ${THIRD_PARTY_DIR}/openssl
     ${THIRD_PARTY_DIR}/protobuf
     ${THIRD_PARTY_DIR}/curl
+    ${THIRD_PARTY_DIR}/zlib
 )
 
-# Protobuf 路径
-set(PROTOBUF_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/../third/protobuf/include)
-set(PROTOBUF_LIB_DIR     ${CMAKE_SOURCE_DIR}/../third/protobuf/lib)
-link_directories(${PROTOBUF_LIB_DIR})
-include_directories(${PROTOBUF_INCLUDE_DIR})
-
-# 设置 OpenSSL 路径
-set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/../third/openssl)
-set(OPENSSL_INCLUDE_DIR ${OPENSSL_ROOT_DIR}/include)
-set(OPENSSL_LIBRARIES ${OPENSSL_ROOT_DIR}/lib)
-
-find_package(OpenSSL REQUIRED)
-
-if (OpenSSL_FOUND)
-    message(STATUS "Found OpenSSL: ${OPENSSL_LIBRARIES}")
-    include_directories(${OPENSSL_INCLUDE_DIR})
-    link_directories(${OPENSSL_ROOT_DIR}/lib)
+# -----------------------------
+# Protobuf
+# -----------------------------
+set(Protobuf_USE_STATIC_LIBS ON)
+find_package(Protobuf REQUIRED)
+if(Protobuf_FOUND)
+    message(STATUS "Found Protobuf: ${Protobuf_INCLUDE_DIRS}")
+    include_directories(${Protobuf_INCLUDE_DIRS})
 endif()
 
-# 查找 curl 模块
-find_package(CURL REQUIRED)
+# -----------------------------
+# OpenSSL
+# -----------------------------
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL REQUIRED)
+if(OpenSSL_FOUND)
+    message(STATUS "Found OpenSSL: ${OpenSSL_VERSION}")
+    include_directories(${OPENSSL_INCLUDE_DIR})
+endif()
 
-# 各子模块
+# -----------------------------
+# CURL
+# -----------------------------
+set(CURL_USE_STATIC_LIBS TRUE)
+find_package(CURL REQUIRED)
+if(CURL_FOUND)
+    message(STATUS "Found CURL: ${CURL_LIBRARY}")
+    include_directories(${CURL_INCLUDE_DIRS})
+endif()
+
+# -----------------------------
+# ZLIB
+# -----------------------------
+set(ZLIB_USE_STATIC_LIBS TRUE)
+find_package(ZLIB REQUIRED)
+if(ZLIB_FOUND)
+    message(STATUS "Found zlib: ${ZLIB_LIBRARY}")
+    include_directories(${ZLIB_INCLUDE_DIRS})
+endif()
+
+# -----------------------------
+# 添加子模块
+# -----------------------------
 add_subdirectory(../public proto)
 add_subdirectory(network)
 add_subdirectory(busd)
 add_subdirectory(logic)
 add_subdirectory(common)
 
-get_target_property(curl_location CURL::libcurl LOCATION)
-message(STATUS "CURL lib location: ${curl_location}")
-
+# -----------------------------
 # 可执行文件
+# -----------------------------
 add_executable(server main.cpp)
+
 target_link_libraries(server
-    PRIVATE network
-            busd_core
-            logic_modules
-            proto
-            common
-            OpenSSL::SSL 
-            OpenSSL::Crypto 
-            pthread
-            CURL::libcurl
+    PRIVATE
+        network
+        busd_core
+        logic_modules
+        proto
+        common
+	CURL::libcurl
+        OpenSSL::SSL
+        OpenSSL::Crypto
+	ZLIB::ZLIB
+        pthread
+	${Protobuf_LIBRARY}
 )
 
