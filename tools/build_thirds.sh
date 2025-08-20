@@ -128,8 +128,8 @@ install_headers() {
 }
 
 # 主流程
-#build_zlib
-#build_openssl
+build_zlib
+build_openssl
 build_protobuf
 build_curl
 install_headers
