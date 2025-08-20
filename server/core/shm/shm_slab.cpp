@@ -1,6 +1,7 @@
 #include "shm_slab.h"
 #include <cassert>
 #include <thread>
+#include <stdexcept>
 
 namespace shmslab {
 

@@ -74,9 +74,12 @@ add_executable(server main.cpp)
 
 target_link_libraries(server
     PRIVATE
-        proto
         network
+	busd_core
+	core
         logic_modules
+	common
+	proto
         pthread
 )
 
@@ -94,6 +97,10 @@ if(APPLE)
 else()
     message(STATUS "Configuring for Linux")
     target_link_libraries(server PRIVATE
+	CURL::libcurl
+	OpenSSL::SSL
+        OpenSSL::Crypto
+	ZLIB::ZLIB
         pthread
         dl
     )

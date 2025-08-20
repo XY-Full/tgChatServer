@@ -4,7 +4,7 @@
 #include <thread>
 #include <new>
 #include <cstring>
-
+#include <stdexcept>
 namespace shmrcu {
 
 // 支持最多 1024 个并发读者槽（跨进程/线程共享）

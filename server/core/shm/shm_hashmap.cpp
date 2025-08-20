@@ -1,6 +1,7 @@
 #include "shm_hashmap.h"
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 namespace shmrcu_map {
 

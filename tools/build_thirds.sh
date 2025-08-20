@@ -27,7 +27,7 @@ fetch_and_extract() {
   echo ">>> extracting $pkg ..."
   tar xf "$pkg"
   cd "$ROOT_DIR"
-  rm -fr "$THIRD_DIR/"
+  rm -fr "$THIRD_DIR/$pkg" 
   mv "$PKG_DIR/$dir" "$THIRD_DIR/"
 }
 
@@ -87,7 +87,7 @@ build_curl() {
 
   cd "$THIRD_DIR/curl-$ver"
   CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure \
-    --prefix="$THIRD_DIR/protobuf" \
+    --prefix="$THIRD_DIR/curl" \
     --with-openssl="$THIRD_DIR/openssl" \
     --with-zlib="$THIRD_DIR/zlib" \
     --disable-shared \
@@ -123,17 +123,17 @@ install_headers() {
        -o "$THIRD_DIR/httplib/httplib.h"
 
   # nlohmann-json
-  mkdir -p "$THIRD_DIR/nlohmann-json"
+  mkdir -p "$THIRD_DIR/nlohmann"
   curl -sSL https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp \
        -o "$THIRD_DIR/nlohmann/json.hpp"
 }
 
 # 主流程
-build_zlib
-build_openssl
+#build_zlib
+#build_openssl
 build_protobuf
 build_curl
-install_headers
+#install_headers
 
 echo ">>> All dependencies are built successfully into $THIRD_DIR"
 
