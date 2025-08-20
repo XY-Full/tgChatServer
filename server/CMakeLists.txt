@@ -10,6 +10,7 @@ set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/../third)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.so")
 
 list(APPEND CMAKE_PREFIX_PATH
+    ${THIRD_PARTY_DIR}
     ${THIRD_PARTY_DIR}/openssl
     ${THIRD_PARTY_DIR}/protobuf
     ${THIRD_PARTY_DIR}/curl
@@ -73,16 +74,27 @@ add_executable(server main.cpp)
 
 target_link_libraries(server
     PRIVATE
-        network
-        busd_core
-        logic_modules
         proto
-        common
-	    CURL::libcurl
-        OpenSSL::SSL
-        OpenSSL::Crypto
-	    ZLIB::ZLIB
+        network
+        logic_modules
         pthread
-	    ${Protobuf_LIBRARY}
 )
 
+# -----------------------------
+# 平台特定依赖
+# -----------------------------
+if(APPLE)
+    message(STATUS "Configuring for macOS")
+    target_link_libraries(server PRIVATE
+        "-framework CoreFoundation"
+        "-framework Security"
+        "-framework SystemConfiguration"
+        "iconv"
+    )
+else()
+    message(STATUS "Configuring for Linux")
+    target_link_libraries(server PRIVATE
+        pthread
+        dl
+    )
+endif()

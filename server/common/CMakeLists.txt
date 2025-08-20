@@ -17,3 +17,6 @@ target_include_directories(common
 )
 
 target_include_directories(common PUBLIC ${Protobuf_INCLUDE_DIRS})
+
+
+target_link_libraries(common PUBLIC CURL::libcurl)
