@@ -27,6 +27,7 @@ fetch_and_extract() {
   echo ">>> extracting $pkg ..."
   tar xf "$pkg"
   cd "$ROOT_DIR"
+  rm -fr "$THIRD_DIR/"
   mv "$PKG_DIR/$dir" "$THIRD_DIR/"
 }
 
