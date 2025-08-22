@@ -1,4 +1,5 @@
 #include "Timer.h"
+#include <algorithm>
 
 /*
 TODO:

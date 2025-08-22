@@ -27,7 +27,7 @@ fetch_and_extract() {
   echo ">>> extracting $pkg ..."
   tar xf "$pkg"
   cd "$ROOT_DIR"
-  rm -fr "$THIRD_DIR/$pkg" 
+  rm -fr "$THIRD_DIR/$dir" 
   mv "$PKG_DIR/$dir" "$THIRD_DIR/"
 }
 
@@ -55,6 +55,8 @@ build_openssl() {
   cd "$THIRD_DIR/openssl-$ver"
   ./Configure --prefix="$THIRD_DIR/openssl" no-shared
   make -j$NPROC && make install_sw
+  rm -f "$THIRD_DIR/openssl/lib"
+  ln -sf "$THIRD_DIR/openssl/lib64" "$THIRD_DIR/openssl/lib"
   cd "$ROOT_DIR"
   rm -rf "$THIRD_DIR/openssl-$ver"
 }
