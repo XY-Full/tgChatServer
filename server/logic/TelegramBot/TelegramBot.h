@@ -16,8 +16,8 @@ public:
 
 private:
     MessagePtr NotifyAllPlayer(int64_t, const std::shared_ptr<cs::ChatMessage> &msg);
-    void startWebhook(const std::string& webhook_url, const std::string& cert_file, const std::string& private_key_file);
+    void startWebhook(const std::string &webhook_url, const std::string &cert_file,
+                      const std::string &private_key_file);
 };
 
 #endif // TELEGRAM_BOT_H
-

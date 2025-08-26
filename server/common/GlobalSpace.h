@@ -6,8 +6,8 @@ class JsonConfig;
 
 struct GlobalStruct
 {
-    Busd* busd_;
-    JsonConfig* configMgr_;
+    Busd *busd_;
+    JsonConfig *configMgr_;
 };
 
-GlobalStruct* GlobalSpace();
+GlobalStruct *GlobalSpace();

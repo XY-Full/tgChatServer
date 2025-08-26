@@ -1,6 +1,6 @@
 #include "GlobalSpace.h"
 
-GlobalStruct* GlobalSpace()
+GlobalStruct *GlobalSpace()
 {
     static GlobalStruct globalSpace;
     return &globalSpace;

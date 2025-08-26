@@ -1,14 +1,15 @@
 #include "shm_lock.h"
 #include <stdexcept>
 
-ShmLock::ShmLock(void* addr)
+ShmLock::ShmLock(void *addr)
 {
 #if defined(_WIN32) || defined(_WIN64)
     // Windows 互斥锁直接基于命名 mutex 创建
-    m_mutex = CreateMutexA(NULL, FALSE, (LPCSTR)addr); 
-    if (!m_mutex) throw std::runtime_error("CreateMutex failed");
+    m_mutex = CreateMutexA(NULL, FALSE, (LPCSTR)addr);
+    if (!m_mutex)
+        throw std::runtime_error("CreateMutex failed");
 #else
-    m_mutex = reinterpret_cast<pthread_mutex_t*>(addr);
+    m_mutex = reinterpret_cast<pthread_mutex_t *>(addr);
 
     // 初始化互斥锁（进程共享）
     pthread_mutexattr_t attr;
@@ -22,9 +23,11 @@ ShmLock::ShmLock(void* addr)
 ShmLock::~ShmLock()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    if (m_mutex) CloseHandle(m_mutex);
+    if (m_mutex)
+        CloseHandle(m_mutex);
 #else
-    if (m_mutex) pthread_mutex_destroy(m_mutex);
+    if (m_mutex)
+        pthread_mutex_destroy(m_mutex);
 #endif
 }
 

@@ -11,6 +11,7 @@ target_include_directories(core
     PUBLIC 
     ${CMAKE_SOURCE_DIR}/../third
     ${CMAKE_SOURCE_DIR}/../third/nlohmann-json
+    ${CMAKE_CURRENT_LIST_DIR}/common/JsonParser
 )
 
 target_include_directories(core PUBLIC)

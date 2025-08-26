@@ -50,7 +50,7 @@ void ChatMgr::registerEvent()
     busd_->registerEventHandle(&ChatMgr::NotifyAllPlayer, this);
 }
 
-void ChatMgr::playerSendChatMessage(const NetPack& pPack)
+void ChatMgr::playerSendChatMessage(const NetPack &pPack)
 {
     PROCESS_NETPACK_BEGIN(cs::PlayerSendMessage);
 
@@ -73,7 +73,7 @@ void ChatMgr::playerSendChatMessage(const NetPack& pPack)
     PROCESS_NETPACK_END();
 }
 
-void ChatMgr::playerReqChatMessage(const NetPack& pPack)
+void ChatMgr::playerReqChatMessage(const NetPack &pPack)
 {
     PROCESS_NETPACK_BEGIN(cs::PlayerReqMessage);
     (void)uid;

@@ -13,7 +13,7 @@ using PlayerChatLocalInfoPtr = std::shared_ptr<PlayerChatLocalInfo>;
 class ChatMgr : public ILogic
 {
 public:
-    ChatMgr(Busd* busd);
+    ChatMgr(Busd *busd);
 
     ~ChatMgr(void);
 
@@ -21,8 +21,8 @@ private:
     void registerEvent();
     void registerMessage();
 
-    void playerReqChatMessage(const NetPack& pPack);
-    void playerSendChatMessage(const NetPack& pPack);
+    void playerReqChatMessage(const NetPack &pPack);
+    void playerSendChatMessage(const NetPack &pPack);
 
     MessagePtr NotifyAllPlayer(int64_t, const std::shared_ptr<cs::ChatMessage> &msg);
     void Message2DB(std::shared_ptr<cs::ChatMessage> ev);

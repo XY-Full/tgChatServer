@@ -2,13 +2,14 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <map>
 #include <mutex>
 #include <thread>
-#include <condition_variable>
 
-class Timer {
+class Timer
+{
 public:
     using TaskId = uint64_t;
     using Callback = std::function<void()>;
@@ -33,10 +34,10 @@ private:
     using TimePoint = Clock::time_point;
     using Duration = Clock::duration;
 
-    struct Task 
+    struct Task
     {
         TimePoint nextRun;
-        Duration interval;  // 0 表示一次性任务
+        Duration interval; // 0 表示一次性任务
         Callback cb;
     };
 

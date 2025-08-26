@@ -7,8 +7,7 @@ class JsonConfigNode
 public:
     JsonConfigNode() = default; // 默认构造函数
     JsonConfigNode(JsonConfig *config, const std::string &keyPath);
-    JsonConfigNode(JsonConfig *config, json *data,
-                   const std::string &keyPath = "");
+    JsonConfigNode(JsonConfig *config, json *data, const std::string &keyPath = "");
 
     // 安全访问方法
     std::optional<JsonConfigNode> tryGet(const std::string &key) const;
@@ -67,8 +66,7 @@ public:
         }
         catch (const json::exception &e)
         {
-            throw std::runtime_error("Conversion error at " + keyPath_ + ": " +
-                                     e.what());
+            throw std::runtime_error("Conversion error at " + keyPath_ + ": " + e.what());
         }
     }
 
@@ -90,8 +88,7 @@ public:
     }
     bool isNumber() const
     {
-        return exists() &&
-               (data_->is_number_integer() || data_->is_number_float());
+        return exists() && (data_->is_number_integer() || data_->is_number_float());
     }
     bool isBoolean() const
     {
@@ -147,8 +144,7 @@ private:
     {
         if (!data_)
         {
-            throw std::runtime_error("Cannot append to invalid node: " +
-                                     keyPath_);
+            throw std::runtime_error("Cannot append to invalid node: " + keyPath_);
         }
         if (!data_->is_array())
         {

@@ -8,10 +8,10 @@
 #include <pthread.h>
 #endif
 
-class ShmLock 
+class ShmLock
 {
 public:
-    ShmLock(void* addr);
+    ShmLock(void *addr);
     ~ShmLock();
 
     void Lock();
@@ -21,6 +21,6 @@ private:
 #if defined(_WIN32) || defined(_WIN64)
     HANDLE m_mutex;
 #else
-    pthread_mutex_t* m_mutex;
+    pthread_mutex_t *m_mutex;
 #endif
 };

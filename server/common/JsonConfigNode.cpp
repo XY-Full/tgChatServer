@@ -1,8 +1,7 @@
 #include "JsonConfigNode.h"
 #include <sstream>
 
-JsonConfigNode::JsonConfigNode(JsonConfig *config, const std::string &keyPath)
-    : config_(config), keyPath_(keyPath)
+JsonConfigNode::JsonConfigNode(JsonConfig *config, const std::string &keyPath) : config_(config), keyPath_(keyPath)
 {
 
     if (config_ && !keyPath.empty())
@@ -63,14 +62,12 @@ JsonConfigNode::JsonConfigNode(JsonConfig *config, const std::string &keyPath)
     }
 }
 
-JsonConfigNode::JsonConfigNode(JsonConfig *config, json *data,
-                               const std::string &keyPath)
+JsonConfigNode::JsonConfigNode(JsonConfig *config, json *data, const std::string &keyPath)
     : config_(config), data_(data), keyPath_(keyPath)
 {
 }
 
-std::optional<JsonConfigNode> JsonConfigNode::tryGet(
-    const std::string &key) const
+std::optional<JsonConfigNode> JsonConfigNode::tryGet(const std::string &key) const
 {
     if (!data_ || !data_->is_object())
     {
@@ -90,8 +87,7 @@ JsonConfigNode JsonConfigNode::getOrCreate(const std::string &key)
 {
     if (!data_)
     {
-        throw std::runtime_error("Cannot create child on invalid node: " +
-                                 keyPath_);
+        throw std::runtime_error("Cannot create child on invalid node: " + keyPath_);
     }
 
     if (!data_->is_object())

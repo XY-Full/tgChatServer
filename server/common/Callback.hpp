@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>
 #include <functional>
-#include <memory>
 #include <google/protobuf/message.h>
+#include <memory>
+#include <string>
 
 typedef std::shared_ptr<::google::protobuf::Message> MessagePtr;
 
@@ -16,11 +16,10 @@ enum CallbackType
 class Callback
 {
 public:
-    Callback(const Callback&) = delete;
-    Callback& operator=(const Callback&) = delete;
-    Callback(Callback&&) = delete;
-    Callback& operator=(Callback&&) = delete;
-
+    Callback(const Callback &) = delete;
+    Callback &operator=(const Callback &) = delete;
+    Callback(Callback &&) = delete;
+    Callback &operator=(Callback &&) = delete;
 
     Callback(int32_t type, void *p, const google::protobuf::Descriptor *descriptor, const std::string &name)
         : type_(type), this_(p), descriptor_(descriptor), name_(name)

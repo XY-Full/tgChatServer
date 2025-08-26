@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-class EventLoopWrapper 
+class EventLoopWrapper
 {
 public:
     EventLoopWrapper();

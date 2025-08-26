@@ -29,7 +29,7 @@ public:
     };
 
     explicit JsonConfig(const std::string &path = "", LoadMode mode = LoadMode::SingleFile, bool autoSave = false);
-    
+
     // 禁止拷贝
     JsonConfig(const JsonConfig &) = delete;
     JsonConfig &operator=(const JsonConfig &) = delete;
@@ -42,10 +42,12 @@ public:
 
     ~JsonConfig();
 
-    std::string getPath() { return configPath_.string(); }
+    std::string getPath()
+    {
+        return configPath_.string();
+    }
 
-    bool load(const std::string &path = "",
-              LoadMode mode = LoadMode::SingleFile);
+    bool load(const std::string &path = "", LoadMode mode = LoadMode::SingleFile);
     bool save(const std::string &specificFile = "");
 
     JsonConfigNode operator[](const std::string &key);
@@ -78,12 +80,10 @@ public:
         return dirty_;
     }
 
-    using ChangeCallback =
-        std::function<void(const std::string &key, const json &value)>;
+    using ChangeCallback = std::function<void(const std::string &key, const json &value)>;
     void addChangeCallback(ChangeCallback callback);
 
-    static void createDefaultConfig(const std::string &path,
-                                    const json &defaultConfig);
+    static void createDefaultConfig(const std::string &path, const json &defaultConfig);
 
     // 安全获取节点
     std::optional<JsonConfigNode> getNode(const std::string &path) const;

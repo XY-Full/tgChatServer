@@ -1,27 +1,30 @@
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <chrono>
-#include <thread>
 #include "NetPack.h"
 #include "config_update.pb.h"
 #include "msg_id.pb.h"
+#include <arpa/inet.h>
+#include <chrono>
+#include <cstring>
 #include <iomanip>
+#include <iostream>
+#include <string>
+#include <thread>
+#include <unistd.h>
 
-
-void print_bytes(const std::string& str) {
+void print_bytes(const std::string &str)
+{
     std::cout << "String content as bytes: ";
-    for (size_t i = 0; i < str.size(); ++i) {
+    for (size_t i = 0; i < str.size(); ++i)
+    {
         std::cout << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int)(unsigned char)str[i] << " ";
     }
-    std::cout << std::dec << std::endl;  // 恢复十进制输出
+    std::cout << std::dec << std::endl; // 恢复十进制输出
 }
 
-int main() {
+int main()
+{
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
+    if (sock < 0)
+    {
         perror("socket error");
         return 1;
     }
@@ -31,7 +34,8 @@ int main() {
     server_addr.sin_port = htons(8887);
     inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
 
-    if (connect(sock, (sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+    if (connect(sock, (sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
         perror("connect error");
         close(sock);
         return 1;
@@ -50,16 +54,19 @@ int main() {
 
     // 发送数据包
     ssize_t sent = send(sock, buffer->data(), buffer->size(), 0);
-    if (sent < 0) {
+    if (sent < 0)
+    {
         perror("send error");
-    } else {
+    }
+    else
+    {
         std::cout << "Sent " << sent << " bytes" << std::endl;
     }
 
     // 可选读取回应
     char recv_buf[1024] = {0};
     ssize_t recvd = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
-    if (recvd > 0) 
+    if (recvd > 0)
     {
         recv_buf[recvd] = '\0';
         std::cout << "Received: " << recv_buf << std::endl;

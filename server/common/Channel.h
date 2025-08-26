@@ -4,18 +4,17 @@
 #include <queue>
 
 // 线程安全的Channel模板类
-template <typename T>
-class Channel 
+template <typename T> class Channel
 {
 public:
-    void push(const T& item) 
+    void push(const T &item)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.push(item);
         cond_.notify_one();
     }
 
-    bool pop(T& item) 
+    bool pop(T &item)
     {
         std::unique_lock<std::mutex> lock(mutex_);
         cond_.wait(lock, [this] { return !queue_.empty(); });
@@ -33,10 +32,11 @@ public:
         return item;
     }
 
-    bool try_pop(T& item) 
+    bool try_pop(T &item)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (queue_.empty()) return false;
+        if (queue_.empty())
+            return false;
         item = queue_.front();
         queue_.pop();
         return true;

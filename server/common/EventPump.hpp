@@ -1,7 +1,7 @@
 #pragma once
 
-#include "FuncResolver.hpp"
 #include "Callback.hpp"
+#include "FuncResolver.hpp"
 #include "Log.h"
 
 class EventPump;

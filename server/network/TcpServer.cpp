@@ -1,14 +1,12 @@
 #include "TcpServer.h"
-#include <netinet/in.h>
-#include <sys/socket.h>
+#include "Log.h"
 #include <cstring>
 #include <iostream>
-#include "Log.h"
+#include <netinet/in.h>
+#include <sys/socket.h>
 
-TcpServer::TcpServer(int port,
-                     Channel<std::pair<int64_t, std::shared_ptr<NetPack>>>* out,
-                     Channel<std::pair<int64_t, std::shared_ptr<NetPack>>>* in,
-                     Timer* loop)
+TcpServer::TcpServer(int port, Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *out,
+                     Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *in, Timer *loop)
     : server_to_busd(out), busd_to_server(in), loop_(loop)
 {
     server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -20,7 +18,7 @@ TcpServer::TcpServer(int port,
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
 
-    if(bind(server_fd_, (sockaddr*)&addr, sizeof(addr)) != 0)
+    if (bind(server_fd_, (sockaddr *)&addr, sizeof(addr)) != 0)
     {
         ELOG << "Failed to bind to port " << port;
         exit(1);
@@ -32,13 +30,13 @@ TcpServer::TcpServer(int port,
     epoller_.add(server_fd_);
 }
 
-TcpServer::~TcpServer() 
+TcpServer::~TcpServer()
 {
     stop();
     ::close(server_fd_);
 }
 
-void TcpServer::start() 
+void TcpServer::start()
 {
     running_ = true;
     accept_thread_ = std::thread(&TcpServer::acceptLoop, this);
@@ -46,20 +44,22 @@ void TcpServer::start()
     loop_->runEvery(1.0f, std::bind(&TcpServer::checkHeartbeats, this));
 }
 
-void TcpServer::stop() 
+void TcpServer::stop()
 {
     running_ = false;
-    if (accept_thread_.joinable()) accept_thread_.join();
-    if (out_thread_.joinable()) out_thread_.join();
+    if (accept_thread_.joinable())
+        accept_thread_.join();
+    if (out_thread_.joinable())
+        out_thread_.join();
 }
 
-void TcpServer::acceptLoop() 
+void TcpServer::acceptLoop()
 {
-    while (running_) 
+    while (running_)
     {
-        for (int fd : epoller_.wait(1000)) 
+        for (int fd : epoller_.wait(1000))
         {
-            if (fd == server_fd_) 
+            if (fd == server_fd_)
             {
                 int client_fd = accept(server_fd_, nullptr, nullptr);
                 int64_t conn_id = next_conn_id_++;
@@ -67,20 +67,20 @@ void TcpServer::acceptLoop()
                 conn_map_[conn_id] = std::make_shared<SocketWrapper>(client_fd);
                 fd_to_conn_[client_fd] = conn_id;
                 ILOG << "New connection: " << conn_id;
-            } 
-            else 
+            }
+            else
             {
                 int64_t conn_id = fd_to_conn_[fd];
                 std::string len_buf;
                 auto connPtr = conn_map_[conn_id];
-                if(!connPtr)
+                if (!connPtr)
                 {
                     ELOG << "Invalid connection ID " << conn_id << ", closing connection";
                     cleanupConnection(fd);
                     continue;
                 }
 
-                if (!connPtr->recvAll(len_buf, 4, true)) 
+                if (!connPtr->recvAll(len_buf, 4, true))
                 {
                     ELOG << "Failed to receive length from conn " << conn_id << ", closing connection";
                     cleanupConnection(fd);
@@ -88,8 +88,8 @@ void TcpServer::acceptLoop()
                 }
 
                 // 防止非数字导致长度超大
-                int32_t len = *reinterpret_cast<const int32_t*>(len_buf.data());
-                if (len <= 0 || len > 10 * 1024 * 1024) 
+                int32_t len = *reinterpret_cast<const int32_t *>(len_buf.data());
+                if (len <= 0 || len > 10 * 1024 * 1024)
                 {
                     ELOG << "Invalid message length: " << len << ", closing connection " << conn_id;
                     cleanupConnection(fd);
@@ -97,7 +97,7 @@ void TcpServer::acceptLoop()
                 }
 
                 std::string full_data;
-                if (!connPtr->recvAll(full_data, len)) 
+                if (!connPtr->recvAll(full_data, len))
                 {
                     ELOG << "Failed to receive full message from conn " << conn_id << ", closing connection";
                     cleanupConnection(fd);
@@ -120,14 +120,14 @@ void TcpServer::checkHeartbeats()
     auto now = std::chrono::steady_clock::now();
     std::vector<int> fds_to_close;
 
-    for (const auto& [conn_id, last_time] : last_active_time_) 
+    for (const auto &[conn_id, last_time] : last_active_time_)
     {
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_time).count() > HEARTBEAT_TIMEOUT_SECONDS) 
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_time).count() > HEARTBEAT_TIMEOUT_SECONDS)
         {
             WLOG << "Heartbeat timeout for conn " << conn_id << ", kicking...";
-            for (const auto& [fd, id] : fd_to_conn_) 
+            for (const auto &[fd, id] : fd_to_conn_)
             {
-                if (id == conn_id) 
+                if (id == conn_id)
                 {
                     fds_to_close.push_back(fd);
                     break;
@@ -136,16 +136,16 @@ void TcpServer::checkHeartbeats()
         }
     }
 
-    for (int fd : fds_to_close) 
+    for (int fd : fds_to_close)
     {
         cleanupConnection(fd);
     }
 }
 
-void TcpServer::cleanupConnection(int fd) 
+void TcpServer::cleanupConnection(int fd)
 {
     auto it = fd_to_conn_.find(fd);
-    if (it != fd_to_conn_.end()) 
+    if (it != fd_to_conn_.end())
     {
         int64_t conn_id = it->second;
         conn_map_.erase(conn_id);
@@ -157,13 +157,13 @@ void TcpServer::cleanupConnection(int fd)
     }
 }
 
-void TcpServer::outConsumerLoop() 
+void TcpServer::outConsumerLoop()
 {
-    while (running_) 
+    while (running_)
     {
         auto [conn_id, data] = busd_to_server->pop();
         auto it = conn_map_.find(conn_id);
-        if (it != conn_map_.end()) 
+        if (it != conn_map_.end())
         {
             it->second->sendAll(*data->serialize());
         }

@@ -1,4 +1,6 @@
 #include "Helper.h"
+#include "GlobalSpace.h"
+#include "JsonConfigNode.h"
 #include "Log.h"
 #include <atomic>
 #include <chrono>
@@ -6,8 +8,6 @@
 #include <iomanip>
 #include <stdexcept>
 #include <string>
-#include "GlobalSpace.h"
-#include "JsonConfigNode.h"
 
 #if defined(_WIN32)
 #include <windows.h>

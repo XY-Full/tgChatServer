@@ -1,25 +1,24 @@
 #pragma once
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
-#include <atomic>
-#include <memory>
-#include <chrono>
-#include <mutex>
-#include <condition_variable>
 #include <unordered_map>
 
-#include "SocketWrapper.h"
 #include "Channel.h"
 #include "NetPack.h"
+#include "SocketWrapper.h"
 #include "Timer.h"
 
-class TcpClient {
+class TcpClient
+{
 public:
-    TcpClient(const std::string& ip, int port,
-              Channel<std::shared_ptr<NetPack>>* in,
-              Channel<std::shared_ptr<NetPack>>* out,
-              Timer* timer);
+    TcpClient(const std::string &ip, int port, Channel<std::shared_ptr<NetPack>> *in,
+              Channel<std::shared_ptr<NetPack>> *out, Timer *timer);
 
     ~TcpClient();
 
@@ -37,9 +36,9 @@ private:
     int sock_ = -1;
 
     std::unique_ptr<SocketWrapper> socket_;
-    Channel<std::shared_ptr<NetPack>>* recv_channel_;
-    Channel<std::shared_ptr<NetPack>>* send_channel_;
-    Timer* timer_;
+    Channel<std::shared_ptr<NetPack>> *recv_channel_;
+    Channel<std::shared_ptr<NetPack>> *send_channel_;
+    Timer *timer_;
 
     std::atomic<bool> running_ = false;
     std::thread recv_thread_;

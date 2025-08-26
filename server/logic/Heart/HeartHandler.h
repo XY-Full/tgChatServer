@@ -1,12 +1,12 @@
 #include "ILogic.h"
 
-class HeartHandler : public ILogic 
+class HeartHandler : public ILogic
 {
 public:
-    HeartHandler(Busd*);
-    
+    HeartHandler(Busd *);
+
     void registerHandlers() override;
 
 private:
-    void onHeart(const NetPack& msg);
+    void onHeart(const NetPack &msg);
 };
