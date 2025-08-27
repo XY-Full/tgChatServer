@@ -25,19 +25,19 @@ class TerminalInterface;
  * 提供进程模型的基础框架，支持快速创建服务
  * 用户只需继承此类并实现相应的回调函数即可开发独立进程
  */
-class iApp
+class IApp
 {
 public:
     /**
      * @brief 构造函数
      * @param app_name 应用程序名称
      */
-    explicit iApp(const std::string &app_name = "iApp");
+    explicit IApp(const std::string &app_name = "IApp");
 
     /**
      * @brief 虚析构函数
      */
-    virtual ~iApp();
+    virtual ~IApp();
 
     /**
      * @brief 启动应用程序

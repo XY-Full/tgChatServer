@@ -19,9 +19,9 @@
 #include <thread>
 #include <unistd.h>
 
-// ========== iApp Implementation ==========
+// ========== IApp Implementation ==========
 
-iApp::iApp(const std::string &app_name)
+IApp::IApp(const std::string &app_name)
     : m_app_name(app_name), m_running(false), m_should_reload(false), m_tick_interval_ms(10)
 {
     m_config_manager = std::make_unique<ConfigManager>();
@@ -32,12 +32,12 @@ iApp::iApp(const std::string &app_name)
     m_last_tick_time = std::chrono::steady_clock::now();
 }
 
-iApp::~iApp()
+IApp::~IApp()
 {
     stop();
 }
 
-int iApp::run(int argc, char *argv[])
+int IApp::run(int argc, char *argv[])
 {
     if (!initialize(argc, argv))
     {
@@ -80,7 +80,7 @@ int iApp::run(int argc, char *argv[])
     return 0;
 }
 
-void iApp::stop()
+void IApp::stop()
 {
     m_running = false;
     m_cv.notify_all();
@@ -98,12 +98,12 @@ void iApp::stop()
     m_terminal->stop();
 }
 
-ConfigManager &iApp::getContext()
+ConfigManager &IApp::getContext()
 {
     return *m_config_manager;
 }
 
-bool iApp::initialize(int argc, char *argv[])
+bool IApp::initialize(int argc, char *argv[])
 {
     // 解析命令行参数
     if (!m_cmd_parser->parse(argc, argv))
@@ -111,8 +111,8 @@ bool iApp::initialize(int argc, char *argv[])
         return false;
     }
 
-    // 判断是否显示帮助
-    if (m_cmd_parser->getValue("help") == "true")
+    // 是否显示help信息
+    if (m_cmd_parser->isHelpMode())
     {
         m_cmd_parser->showHelp();
         return false;
@@ -263,12 +263,12 @@ bool iApp::initialize(int argc, char *argv[])
     }
 
     // 启动线程
-    m_tick_thread = std::thread(&iApp::tickThread, this);
+    m_tick_thread = std::thread(&IApp::tickThread, this);
 
     return true;
 }
 
-void iApp::mainLoop()
+void IApp::mainLoop()
 {
     std::thread signal_thread([this]() {
         while (m_running)
@@ -308,7 +308,7 @@ void iApp::mainLoop()
     }
 }
 
-void iApp::tickThread()
+void IApp::tickThread()
 {
     while (m_running)
     {
@@ -322,14 +322,14 @@ void iApp::tickThread()
     }
 }
 
-void iApp::terminalThread()
+void IApp::terminalThread()
 {
     bool enable_telnet = m_config_manager->getValue<bool>("terminal.enable_telnet", false);
     uint16_t telnet_port = m_config_manager->getValue<int>("terminal.telnet_port", 23);
     m_terminal->start(enable_telnet, telnet_port);
 }
 
-void iApp::handleSignal(int signal)
+void IApp::handleSignal(int signal)
 {
     switch (signal)
     {
@@ -345,19 +345,19 @@ void iApp::handleSignal(int signal)
     }
 }
 
-bool iApp::loadConfig()
+bool IApp::loadConfig()
 {
     std::string config_file = m_cmd_parser->getValue("config");
     return m_config_manager->loadConfig(config_file);
 }
 
-bool iApp::saveConfig()
+bool IApp::saveConfig()
 {
     std::string config_file = m_cmd_parser->getValue("config");
     return m_config_manager->saveConfig(config_file);
 }
 
-void iApp::registerCommandLineArg(const std::string &name, const std::string &description,
+void IApp::registerCommandLineArg(const std::string &name, const std::string &description,
                                   const std::string &default_value, std::function<void(const std::string &)> callback)
 {
     m_cmd_parser->registerArg(name, description, default_value);
@@ -374,24 +374,24 @@ void iApp::registerCommandLineArg(const std::string &name, const std::string &de
     }
 }
 
-std::string iApp::getCommandLineArg(const std::string &name) const
+std::string IApp::getCommandLineArg(const std::string &name) const
 {
     return m_cmd_parser->getValue(name);
 }
 
-void iApp::registerTerminalCommand(const std::string &command, const std::string &description,
+void IApp::registerTerminalCommand(const std::string &command, const std::string &description,
                                    std::function<std::string(const std::vector<std::string> &)> callback)
 {
     m_terminal->registerCommand(command, description, callback);
     m_terminal_commands[command] = callback;
 }
 
-void iApp::setTickInterval(uint32_t interval_ms)
+void IApp::setTickInterval(uint32_t interval_ms)
 {
     m_tick_interval_ms = interval_ms;
 }
 
-uint32_t iApp::getTickInterval() const
+uint32_t IApp::getTickInterval() const
 {
     return m_tick_interval_ms;
 }
