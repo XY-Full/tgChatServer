@@ -1,51 +1,111 @@
-#pragma once
-#include "Channel.h"
-#include "EventPump.hpp"
-#include "NetPack.h"
-#include "Timer.h"
-#include "core_user.pb.h"
-#include <array>
-#include <functional>
+// busd.h
+#ifndef BUS_DAEMON_H
+#define BUS_DAEMON_H
+
+#include "../core/bus/IBusCommon.h"
+#include "../core/shm/shm_ringbuffer.h"
+#include "../core/shm/shm_hashmap.h"
+#include "../core/shm/shm_slab.h"
+#include "../core/shm/shm_spinlock.h"
+#include "../core/shm/shm_epoch.h"
+#include "Log.h"
+
+#include <atomic>
 #include <memory>
+#include <string>
 #include <thread>
+#include <vector>
 #include <unordered_map>
+#include <mutex>
+#include <shared_mutex>
 
-class Busd : public EventPump
-{
+class BusDaemon {
 public:
-    using NetPackHandler = std::function<void(const NetPack &)>;
-    using EventHandler = std::function<MessagePtr()>;
-    using ForwardHandleFunc = std::function<void(const NetPack &)>;
-
-    Busd(Timer *loop, Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *in,
-         Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *out);
-
-    // 注册网络包处理函数
-    void registerHandler(int32_t msg_id, NetPackHandler handler);
-
-    void start();
+    struct Config {
+        // 网络配置
+        std::string unix_socket_path = "/var/run/ibus/busd.sock";
+        uint16_t tcp_port = 1883;
+        uint16_t cluster_port = 1884;
+        
+        // 共享内存配置
+        std::string shm_base_path = "/dev/shm/ibus";
+        size_t shm_segment_size = 64 * 1024 * 1024; // 64MB
+        size_t max_shm_segments = 16;
+        
+        // 性能配置
+        uint32_t max_connections = 10000;
+        uint32_t max_topics = 100000;
+        uint32_t max_message_size = 16 * 1024 * 1024; // 16MB
+        uint32_t worker_threads = 4;
+        
+        // 持久化配置
+        bool persistence_enabled = false;
+        std::string persistence_path = "/var/lib/ibus";
+        size_t persistence_max_size = 1 * 1024 * 1024 * 1024; // 1GB
+        
+        // 集群配置
+        bool cluster_enabled = false;
+        std::vector<std::string> cluster_nodes;
+        
+        // 安全配置
+        bool authentication_enabled = false;
+        std::string auth_config_path = "/etc/ibus/auth.conf";
+    };
+    
+    BusDaemon();
+    ~BusDaemon();
+    
+    bool init(const Config& config);
+    bool start();
     void stop();
-
-    // 像单个玩家发送消息
-    void sendToClient(int64_t uid, int32_t msg_id, const google::protobuf::Message &msg);
-    // 像所有玩家发送消息
-    void broadcastTotalPlayer(int32_t msg_id, const google::protobuf::Message &msg);
-
-    void replyToClient(const NetPack &request, const google::protobuf::Message &msg);
-
+    void wait();
+    
+    // 管理接口
+    IBus::Stats get_stats() const;
+    bool reload_config();
+    
 private:
-    void processMessages();
-    void forwardC2S(const NetPack &pack);
-    void forwardS2C(const NetPack &pack);
-
-    std::unordered_map<int32_t, NetPackHandler> netpackHandlers_;
-    std::unordered_map<std::string, NetPackHandler> eventHandlers_;
-    Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *in_channel_ = nullptr;
-    Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *out_channel_ = nullptr;
-    Timer *loop_ = nullptr;
-    std::thread worker_;
-    std::atomic<bool> running_ = false;
-
-    std::unordered_map<int64_t, core::UsrSvrMappingData> UsrSvrMap;
-    std::array<ForwardHandleFunc, std::numeric_limits<int8_t>::max()> forwardHandleArray_;
+    // 内部类前向声明
+    class Connection;
+    class TopicManager;
+    class PersistenceManager;
+    class ClusterManager;
+    class SecurityManager;
+    
+    Config config_;
+    std::atomic<bool> running_{false};
+    
+    // 核心组件
+    std::unique_ptr<TopicManager> topic_manager_;
+    std::unique_ptr<PersistenceManager> persistence_manager_;
+    std::unique_ptr<ClusterManager> cluster_manager_;
+    std::unique_ptr<SecurityManager> security_manager_;
+    
+    // 网络组件
+    int epoll_fd_{-1};
+    int unix_listen_fd_{-1};
+    int tcp_listen_fd_{-1};
+    int cluster_listen_fd_{-1};
+    
+    // 连接管理
+    std::unordered_map<int, std::shared_ptr<Connection>> connections_;
+    std::shared_mutex connections_mutex_;
+    
+    // 工作线程
+    std::vector<std::thread> worker_threads_;
+    
+    // 统计信息
+    mutable std::mutex stats_mutex_;
+    IBus::Stats stats_;
+    
+    // 内部方法
+    bool setup_network();
+    bool setup_shm();
+    void worker_loop();
+    void accept_connections(int listen_fd, bool is_unix);
+    void handle_connection(int fd);
+    void cleanup_connection(int fd);
+    void update_stats(const IBus::Stats& delta);
 };
+
+#endif // BUS_DAEMON_H

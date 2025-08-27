@@ -14,6 +14,7 @@ target_include_directories(busd_core
                             ${CMAKE_SOURCE_DIR}/protobuf/include
                             ${CMAKE_SOURCE_DIR}/../public/proto_files
                             ${CMAKE_SOURCE_DIR}/common
+                            ${CMAKE_SOURCE_DIR}/core/bus
                             )
                             
 target_include_directories(busd_core PUBLIC common network)
