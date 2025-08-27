@@ -31,6 +31,29 @@ fetch_and_extract() {
   mv "$PKG_DIR/$dir" "$THIRD_DIR/"
 }
 
+# 克隆github仓库函数
+git_clone() {
+  local url=$1
+  local tag=$2
+  local dir=$3
+
+  cd "$PKG_DIR"
+  if [ ! -f "$dir.tar.gz" ]; then
+    echo ">>> git clone $dir ..."
+    echo "git clone --branch $tag --recurse-submodules $url $dir"
+    git clone --branch "$tag" --recurse-submodules "$url" "$dir"
+    tar -zcvf "$dir.tar.gz" "$dir"
+  else
+    echo ">>> using local $dir.tar.gz"
+    echo ">>> extracting $dir.tar.gz ..."
+    tar xf "$dir.tar.gz"
+  fi
+
+  cd "$ROOT_DIR"
+  rm -fr "$THIRD_DIR/$dir" 
+  mv "$PKG_DIR/$dir" "$THIRD_DIR/"
+}
+
 # ============ build zlib ============
 build_zlib() {
   local ver="1.3.1"
@@ -117,6 +140,21 @@ build_curl() {
   rm -rf "$THIRD_DIR/curl-$ver"
 }
 
+# ============ build libcopp ============
+build_libcopp() {
+  local ver="2.3.1"
+  local tag="v$ver"
+  local url="https://github.com/owent/libcopp"
+  git_clone "$url" "$tag" "libcopp-$ver"
+
+  cd "$THIRD_DIR/libcopp-$ver"
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$THIRD_DIR/libcopp
+  cd build
+  make -j$NPROC && make install
+  cd "$ROOT_DIR"
+  rm -rf "$THIRD_DIR/libcopp-$ver"
+}
+
 # ============ header-only deps ============
 install_headers() {
   # httplib
@@ -135,6 +173,7 @@ build_zlib
 build_openssl
 build_protobuf
 build_curl
+build_libcopp
 install_headers
 
 echo ">>> All dependencies are built successfully into $THIRD_DIR"
