@@ -283,7 +283,7 @@ void IApp::mainLoop()
 
     while (m_running)
     {
-        if (m_should_reload)
+        if (unlikely(m_should_reload))
         {
             m_should_reload = false;
             if (!onReload())

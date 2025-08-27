@@ -19,6 +19,9 @@ class SignalHandler;
 class CommandLineParser;
 class TerminalInterface;
 
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+
 /**
  * @brief iApp框架的核心基类
  *
