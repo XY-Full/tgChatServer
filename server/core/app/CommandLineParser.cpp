@@ -9,7 +9,7 @@ CommandLineParser::CommandLineParser() : m_terminal_mode(false), m_help_mode(fal
     registerArg("h,help", "显示帮助信息", "false");
     registerArg("t,terminal", "启动终端模式", "false");
     registerArg("tick-interval", "设置定时器间隔(毫秒)", "10");
-    registerArg("config", "配置文件路径", "config.json");
+    registerArg("c,config", "配置文件路径", "config.json");
     registerArg("enable-telnet", "启用telnet终端", "false");
     registerArg("telnet-port", "telnet端口号", "23");
 }
