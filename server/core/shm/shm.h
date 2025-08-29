@@ -12,6 +12,13 @@
 #include <unistd.h>
 #endif
 
+enum ShmCreateType
+{
+    SHM_ERROR   = -1,
+    SHM_EXIST   =  0,
+    SHM_CREATE  =  1, 
+};
+
 class SharedMemory : public ISharedMemory
 {
 public:
@@ -20,7 +27,7 @@ public:
 
     // create=true: 创建或打开(幂等)，如果已存在则直接打开并忽略size
     // create=false: 仅附着已有
-    bool Open(const std::string &name, std::size_t size, bool create = true) override;
+    int32_t Open(const std::string &name, std::size_t size, bool create = true) override;
 
     void *GetAddress() const override
     {
@@ -34,7 +41,7 @@ public:
     bool Read(void *buffer, std::size_t size, std::size_t offset = 0) override;
     bool Write(const void *buffer, std::size_t size, std::size_t offset = 0) override;
 
-    void Close() override;
+    void Close(bool remove) override;
 
 private:
 #if defined(_WIN32) || defined(_WIN64)
@@ -42,4 +49,5 @@ private:
 #endif
     void *m_addr;
     std::size_t m_size;
+    std::string m_name;
 };

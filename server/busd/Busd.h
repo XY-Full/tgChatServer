@@ -23,9 +23,8 @@ class BusDaemon {
 public:
     struct Config {
         // 网络配置
-        std::string unix_socket_path = "/var/run/ibus/busd.sock";
+        std::string unix_socket_path = "/var/run/ibus/busd.sock";   // 一台机器仅有一台Busd
         uint16_t tcp_port = 1883;
-        uint16_t cluster_port = 1884;
         
         // 共享内存配置
         std::string shm_base_path = "/dev/shm/ibus";
@@ -43,13 +42,20 @@ public:
         std::string persistence_path = "/var/lib/ibus";
         size_t persistence_max_size = 1 * 1024 * 1024 * 1024; // 1GB
         
-        // 集群配置
-        bool cluster_enabled = false;
-        std::vector<std::string> cluster_nodes;
-        
         // 安全配置
         bool authentication_enabled = false;
         std::string auth_config_path = "/etc/ibus/auth.conf";
+
+        // 集群配置
+        bool cluster_enabled = false;
+        std::string node_id;
+        std::string cluster_host;
+        uint16_t cluster_port = 1884;
+        std::vector<std::string> capabilities;
+        
+        // 中心管理服务配置
+        std::string center_host = "127.0.0.1";
+        uint16_t center_port = 8888;
     };
     
     BusDaemon();

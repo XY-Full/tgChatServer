@@ -4,16 +4,19 @@
 #include <chrono>
 #include <thread>
 
-class HealthChecker {
+class HealthChecker
+{
 public:
-    HealthChecker(ServiceRegistry& reg);
+    HealthChecker(ServiceRegistry &reg);
     ~HealthChecker();
-    void start(std::chrono::seconds interval = std::chrono::seconds(5), std::chrono::seconds timeout = std::chrono::seconds(2));
+    void start(std::chrono::seconds interval = std::chrono::seconds(5),
+               std::chrono::seconds timeout = std::chrono::seconds(2));
     void stop();
+
 private:
     void loop();
-    bool probe_instance(const ServiceInstancePtr& inst);
-    ServiceRegistry& reg_;
+    bool probe_instance(const ServiceInstancePtr &inst);
+    ServiceRegistry &reg_;
     std::thread thr_;
     std::atomic<bool> stop_{false};
     std::chrono::seconds interval_{5};

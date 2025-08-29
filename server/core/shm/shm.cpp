@@ -1,5 +1,6 @@
 #include "shm.h"
 #include <cstring>
+#include <sys/mman.h>
 
 SharedMemory::SharedMemory()
     :
@@ -12,93 +13,163 @@ SharedMemory::SharedMemory()
 
 SharedMemory::~SharedMemory()
 {
-    Close();
+    // 默认不销毁共享内存数据
+    Close(false);
 }
 
-bool SharedMemory::Open(const std::string &name, std::size_t size, bool create)
+int32_t SharedMemory::Open(const std::string &name, std::size_t size, bool create)
 {
 #if defined(_WIN32) || defined(_WIN64)
-    // Windows: 命名映射对象
+    // Windows实现
     DWORD protect = PAGE_READWRITE;
     DWORD access = FILE_MAP_ALL_ACCESS;
-
-    if (create)
+    int32_t result = SHM_ERROR;    // -1代表映射有误，0代表已存在，1代表新建
+    
+    // 先尝试打开现有的共享内存
+    m_handle = OpenFileMappingA(access, FALSE, name.c_str());
+    
+    if (m_handle)
     {
-        // Create or open
-        m_handle =
-            CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, protect,
-                               static_cast<DWORD>((static_cast<unsigned long long>(size) >> 32) & 0xFFFFFFFFull),
-                               static_cast<DWORD>(static_cast<unsigned long long>(size) & 0xFFFFFFFFull), name.c_str());
-        if (!m_handle)
-            return false;
-
-        // 如果已存在，大小以创建时传入为准；我们仍把 m_size 设为调用方给的 size
-        // 真正的“实际大小”在匿名映射上并不好查询；这点与 POSIX 不同。
+        // 共享内存已存在，检查大小
+        // 注意：Windows无法直接查询映射对象的大小，需要其他方法
+        // 这里我们使用一个技巧：尝试映射并检查文件大小
+        
+        // 创建临时视图来检查大小
+        void* temp_addr = MapViewOfFile(m_handle, access, 0, 0, 0);
+        if (!temp_addr)
+        {
+            CloseHandle(m_handle);
+            m_handle = nullptr;
+            return result;
+        }
+        
+        // 获取内存信息
+        MEMORY_BASIC_INFORMATION info;
+        if (VirtualQuery(temp_addr, &info, sizeof(info)))
+        {
+            // 检查区域大小
+            if (info.RegionSize != size)
+            {
+                // 大小不匹配，报错
+                UnmapViewOfFile(temp_addr);
+                CloseHandle(m_handle);
+                m_handle = nullptr;
+                return result;
+            }
+        }
+        
+        // 大小匹配，使用这个映射
+        UnmapViewOfFile(temp_addr);
         m_size = size;
+
+        result = SHM_EXIST;
+    }
+    else if (create)
+    {
+        // 共享内存不存在，且允许创建
+        m_handle = CreateFileMappingA(
+            INVALID_HANDLE_VALUE, 
+            nullptr, 
+            protect,
+            static_cast<DWORD>((static_cast<unsigned long long>(size) >> 32) & 0xFFFFFFFFull),
+            static_cast<DWORD>(static_cast<unsigned long long>(size) & 0xFFFFFFFFull), 
+            name.c_str()
+        );
+        
+        if (!m_handle)
+            return result;
+        
+        m_size = size;
+
+        result = SHM_CREATE;
     }
     else
     {
-        m_handle = OpenFileMappingA(access, FALSE, name.c_str());
-        if (!m_handle)
-            return false;
-
-        // 无法从 handle 直接拿到 mapping size，调用方需保证 size>=真实占用
-        // 我们把 m_size 设为传入 size，用于边界检查；若想保守，可只做地址检查。
-        m_size = size;
+        // 共享内存不存在，且不允许创建
+        return result;
     }
 
-    // 视图大小=0 表示整个映射，避免 32 位截断
+    // 创建视图
     m_addr = MapViewOfFile(m_handle, access, 0, 0, 0);
     if (!m_addr)
     {
         Close();
-        return false;
+        return SHM_ERROR;
     }
-    return true;
+
+    return result;
 
 #else
-    // POSIX
+    // POSIX实现
+    int32_t result = SHM_ERROR;    // -1代表映射有误，0代表已存在，1代表新建
     int flags = O_RDWR;
-    if (create)
-        flags |= O_CREAT;
-
-    // shm 名字必须以 '/' 开头
     std::string shm_name = name.empty() || name[0] == '/' ? name : ("/" + name);
-
-    int fd = shm_open(shm_name.c_str(), flags, 0666);
-    if (fd == -1)
-        return false;
-
-    struct stat st{};
-    if (create)
+    
+    // 先尝试打开现有的共享内存
+    int fd = shm_open(shm_name.c_str(), O_RDWR, 0666);
+    
+    if (fd != -1)
     {
-        // 创建或打开：如果是新建，ftruncate；如果已存在，ftruncate 不会缩小已有对象
+        // 共享内存已存在，检查大小
+        struct stat st;
+        if (fstat(fd, &st) == -1)
+        {
+            close(fd);
+            return result;
+        }
+        
+        // 检查大小是否匹配
+        if (static_cast<std::size_t>(st.st_size) != size)
+        {
+            close(fd);
+            return result; // 大小不匹配，报错
+        }
+        
+        // 大小匹配，继续映射
+        m_size = static_cast<std::size_t>(st.st_size);
+        result = SHM_EXIST;
+    }
+    else if (create && errno == ENOENT)
+    {
+        // 共享内存不存在，且允许创建
+        flags |= O_CREAT | O_EXCL;
+        fd = shm_open(shm_name.c_str(), flags, 0666);
+        
+        if (fd == -1)
+            return result;
+        
+        // 设置大小
         if (ftruncate(fd, static_cast<off_t>(size)) == -1)
         {
             close(fd);
-            return false;
+            shm_unlink(shm_name.c_str());
+            return result;
         }
+        
+        m_size = size;
+        result = SHM_CREATE;
     }
-
-    if (fstat(fd, &st) == -1)
+    else
     {
-        close(fd);
-        return false;
+        // 共享内存不存在，且不允许创建，或者其他错误
+        return result;
     }
-
-    // 附着已有时，实际大小以 fstat 为准
-    m_size = static_cast<std::size_t>(st.st_size);
-
+    
+    // 映射共享内存
     m_addr = mmap(nullptr, m_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
-
+    
     if (m_addr == MAP_FAILED)
     {
         m_addr = nullptr;
         m_size = 0;
-        return false;
+        if (create)
+            shm_unlink(shm_name.c_str());
+        return SHM_ERROR;
     }
-    return true;
+    
+    m_name = shm_name;
+    return result;
 #endif
 }
 
@@ -119,7 +190,7 @@ bool SharedMemory::Write(const void *buffer, std::size_t size, std::size_t offse
     return true;
 }
 
-void SharedMemory::Close()
+void SharedMemory::Close(bool remove)
 {
 #if defined(_WIN32) || defined(_WIN64)
     if (m_addr)
@@ -137,6 +208,11 @@ void SharedMemory::Close()
     {
         munmap(m_addr, m_size);
         m_addr = nullptr;
+    }
+
+    if(remove && !m_name.empty())
+    {
+        shm_unlink(m_name.c_str());
     }
 #endif
     m_size = 0;

@@ -1,22 +1,26 @@
 #pragma once
-#include <atomic>
+#include "shm_lock.h"
 #include <cstdint>
-#include <thread>
 
 struct ShmSpinLock
 {
-    // 0=unlocked, 1=locked
-    std::atomic<uint32_t> state;
+    ShmLock lock_;
 
-    void InitUnlocked()
+    void InitUnlocked(std::string name)
     {
-        state.store(0, std::memory_order_relaxed);
+        lock_ = ShmLock(name);
     }
+
+    void Destroy()
+    {
+        lock_.Destroy();
+    }
+
     bool TryLock()
     {
-        uint32_t expected = 0;
-        return state.compare_exchange_strong(expected, 1, std::memory_order_acquire, std::memory_order_relaxed);
+        return lock_.TryLock();
     }
+
     void Lock()
     {
         // 指数退避 + yield
@@ -42,8 +46,20 @@ struct ShmSpinLock
                 spins <<= 1;
         }
     }
+
     void Unlock()
     {
-        state.store(0, std::memory_order_release);
+        lock_.Unlock();
+    }
+
+    // 为了兼容lock_guard
+    void lock()
+    {
+        Lock();
+    }
+
+    void unlock()
+    {
+        Unlock();
     }
 };

@@ -2,21 +2,23 @@
 
 #include "ServiceRegistry.h"
 #include <atomic>
+#include <mutex>
 #include <thread>
 #include <unordered_map>
-#include <mutex>
 
-class TcpRegistrar {
+class TcpRegistrar
+{
 public:
-    TcpRegistrar(ServiceRegistry& reg, uint16_t port = 9090);
+    TcpRegistrar(ServiceRegistry &reg, uint16_t port = 9090);
     ~TcpRegistrar();
     void start();
     void stop();
+
 private:
     void accept_loop();
     void handle_client(int client_fd);
 
-    ServiceRegistry& reg_;
+    ServiceRegistry &reg_;
     uint16_t port_;
     std::thread thr_;
     std::atomic<bool> stop_{false};

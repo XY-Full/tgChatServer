@@ -31,3 +31,7 @@ compile_proto_if_needed() {
 cd "$path/proto"
 proto_files=(*.proto)
 compile_proto_if_needed "$path/proto" "$path/proto_files" "${proto_files[@]}"
+
+cd "$path/ss_proto"
+proto_files=(*.proto)
+compile_proto_if_needed "$path/ss_proto" "$path/proto_files" "${proto_files[@]}"

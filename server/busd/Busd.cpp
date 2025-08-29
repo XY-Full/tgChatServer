@@ -128,6 +128,24 @@ bool BusDaemon::init(const Config& config) {
         return false;
     }
     
+    if (config_.cluster_enabled) {
+        ClusterManager::Config cluster_config;
+        cluster_config.node_id = config_.node_id;
+        cluster_config.host = config_.cluster_host;
+        cluster_config.port = config_.cluster_port;
+        cluster_config.capabilities = config_.capabilities;
+        
+        cluster_config.registry_config.center_host = config_.center_host;
+        cluster_config.registry_config.center_port = config_.center_port;
+        
+        cluster_manager_ = std::make_unique<ClusterManager>(cluster_config);
+        if (!cluster_manager_->start()) {
+            WLOG << "Failed to initialize cluster, continuing in standalone mode";
+        } else {
+            ILOG << "Cluster initialized successfully";
+        }
+    }
+    
     ILOG << "BusDaemon initialized successfully";
     return true;
 }
