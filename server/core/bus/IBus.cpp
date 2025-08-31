@@ -6,6 +6,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "../../common/Helper.h"
 
 namespace IBus
 {
@@ -85,30 +86,8 @@ public:
             return false;
         }
 
-        AppMsg msg;
-        msg.type_ = Type::S2S;
-        msg.seq_ = now_seq_++;
-
-        // 获取pb数据的类型名，依赖这个进行反序列化
-        std::string message_name = message.GetTypeName();
-        // pb数据序列化
-        std::string serialized_data;
-        if (!message.SerializeToString(&serialized_data))
-        {
-            ELOG << "Error to serialize message";
-            return false;
-        }
-
-        // 深拷贝合并数据
-        msg.data_len_ = message_name.size() + serialized_data.size();   // data完整的长度
-        msg.data_ = new char[msg.data_len_];                            // 拷贝完整数据到网络包中
-        msg.msg_name_len = message_name.size();                         // 类型名字在data_中的前缀长度
-
-        // 拷贝 message_name 和 serialized_data
-        memcpy(msg.data_, message_name.data(), msg.msg_name_len);
-        memcpy(msg.data_ + msg.msg_name_len, serialized_data.data(), serialized_data.size());
-
-        bool result = local_ring_->Push(msg);
+        auto msg = Helper::CreateSSPack(message);
+        bool result = local_ring_->Push(*msg);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
@@ -142,24 +121,21 @@ public:
         return 0;
     }
 
-    bool Reply(uint64_t req_id, const void *data, size_t len)
+    bool Reply(uint32_t req_id, const google::protobuf::Message& message)
     {
         if (!ready_)
         {
-            ELOG << "Cannot send reply, client not ready";
+            ELOG << "Cannot reply, client not ready";
             return false;
         }
 
-        google::protobuf::Message msg;
-        msg.flags = Message::Flags::RESPONSE;
-        msg.request_id = req_id;
-        msg.data.assign(static_cast<const char *>(data), len);
-        msg.timestamp = std::chrono::steady_clock::now();
-
-        bool result = local_ring_->Push(msg);
+        auto msg = Helper::CreateSSPack(message);
+        msg->seq_ = req_id + 1;
+        
+        bool result = local_ring_->Push(*msg);
         if (!result)
         {
-            ELOG << "Failed to push reply to local ring buffer";
+            ELOG << "Failed to push message to local ring buffer";
         }
 
         return result;

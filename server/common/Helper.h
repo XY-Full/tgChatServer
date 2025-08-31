@@ -1,8 +1,19 @@
 #pragma once
 
-#include "string"
+#include <string>
+#include <memory>
 
 #define BOT_TOKEN "7860009277:AAEvFHoZqJIeYVReYOoS62m5GjYWVIDfXNo"
+
+namespace google
+{
+    namespace protobuf
+    {
+        class Message;
+    }
+}
+
+class AppMsg;
 
 class Helper
 {
@@ -17,4 +28,5 @@ public:
     static int64_t timeGetTimeS();
     static int64_t timeGetTimeMS();
     static int64_t GenUID();
+    static AppMsg* CreateSSPack(const google::protobuf::Message &message, uint32_t seq = 0);
 };

@@ -1,4 +1,5 @@
 #include "shm_ringbuffer.h"
+#include "shm.h"
 #include <mutex>
 
 template <typename T>
@@ -9,7 +10,13 @@ ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size, b
     shm_size_ = CalculateShmSize();
 
     // 创建共享内存
-    shm_addr_ = shm_manager_.Open(shm_name_, shm_size_, true);
+    auto result = shm_manager_.Open(shm_name_, shm_size_, true);
+    if(result == SHM_ERROR)
+    {
+        throw std::runtime_error("Failed to create shared memory");
+    }
+
+    shm_addr_ = shm_manager_.GetAddress();
 
     // 初始化共享内存
     InitShm(true);

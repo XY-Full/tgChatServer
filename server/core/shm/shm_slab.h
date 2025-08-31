@@ -1,4 +1,5 @@
 #pragma once
+#include "shm_spinlock.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -53,6 +54,11 @@ struct SlabHeader
 class ShmSlab
 {
 public:
+    // 适用创建或附加到共享内存，并将整块共享内存作为slab
+    // shm_name: slab共享内存文件的名字， total: 总大小， region_off/size: slab管理的区域（相对base的偏移和大小），默认整块内存都作为slab
+    ShmSlab(const std::string& shm_name, uint32_t total = 40960, uint32_t region_off = 0, uint32_t region_size = 40960);
+
+    // 适用于已有一块共享内存空间，在此基础上分配一块作为slab
     // base: 共享内存基址；total: 共享内存总大小；region_off/region_size：分配器管理区间
     // create=true 时初始化，否则附着
     ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create);
@@ -71,7 +77,6 @@ public:
         return hdr_;
     }
 
-private:
     inline uint8_t *base8() const
     {
         return reinterpret_cast<uint8_t *>(base_);
@@ -87,19 +92,20 @@ private:
         return static_cast<uint32_t>(reinterpret_cast<const uint8_t *>(p) - base8());
     }
 
+private:
     static uint32_t SizeClassIndex(uint32_t bytes);
     static uint32_t RoundToClassSize(uint32_t bytes);
 
     // 内部：生成新页并挂到 class
     uint32_t NewPage(uint32_t cls);
-    // class 级简单自旋锁
-    static void Lock(std::atomic<uint32_t> &l);
-    static void Unlock(std::atomic<uint32_t> &l);
 
 private:
     void *base_;
     uint32_t total_;
     SlabHeader *hdr_;
+    std::string shm_name_;
+    // 现在是slab全局锁，未来可改为每class锁，或者每页锁，看后续性能有没有瓶颈
+    ShmSpinLock lock_{shm_name_ + "_lock"};
 };
 
 } // namespace shmslab

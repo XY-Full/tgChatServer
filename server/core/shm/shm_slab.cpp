@@ -1,4 +1,5 @@
 #include "shm_slab.h"
+#include "shm.h"
 #include <cassert>
 #include <stdexcept>
 #include <thread>
@@ -48,26 +49,48 @@ uint32_t ShmSlab::RoundToClassSize(uint32_t bytes)
     return (s + 7u) & ~7u;
 }
 
-void ShmSlab::Lock(std::atomic<uint32_t> &l)
+ShmSlab::ShmSlab(const std::string& shm_name, uint32_t region_off, uint32_t region_size, uint32_t total)
+    : shm_name_(shm_name), total_(total)
 {
-    for (uint32_t spins = 1;;)
+    SharedMemory shm;
+    auto is_create = shm.Open(shm_name_, total);
+    base_ = shm.GetAddress();
+    hdr_ = reinterpret_cast<SlabHeader *>(reinterpret_cast<uint8_t *>(base_) + region_off);
+    if (is_create == SHM_CREATE)
     {
-        uint32_t exp = 0;
-        if (l.compare_exchange_weak(exp, 1, std::memory_order_acquire))
-            return;
-        for (uint32_t i = 0; i < spins; ++i)
-            std::this_thread::yield();
-        if (spins < (1u << 10))
-            spins <<= 1;
+        new (hdr_) SlabHeader{};
+        hdr_->magic = kMagic;
+        hdr_->version = 1;
+        hdr_->total_size = total_;
+        hdr_->base_offset = region_off;
+        hdr_->bump.store(region_off + sizeof(SlabHeader), std::memory_order_relaxed);
+        hdr_->end = region_off + region_size;
+
+        // 初始化 size-class
+        uint32_t sizes[MAX_CLASSES] = {16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192};
+        for (uint32_t i = 0; i < MAX_CLASSES; ++i)
+        {
+            auto &c = hdr_->classes[i];
+            c.item_size = (sizes[i] + 7u) & ~7u;
+            c.items_per_page = (PAGE_SIZE - sizeof(PageHeader) - 256 /*bitmap预算*/) / c.item_size;
+            if (c.items_per_page == 0)
+                c.items_per_page = 1;
+            // bitmap 用 bytes = ceil(items/8)，这里保守在 NewPage 精确计算
+            c.free_list = 0;
+            c.page_list = 0;
+            c.lock.store(0, std::memory_order_relaxed);
+        }
+    }
+    else
+    {
+        if (hdr_->magic != kMagic || hdr_->version != 1)
+        {
+            throw std::runtime_error("ShmSlab: incompatible header");
+        }
     }
 }
-void ShmSlab::Unlock(std::atomic<uint32_t> &l)
-{
-    l.store(0, std::memory_order_release);
-}
 
-ShmSlab::ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create)
-    : base_(base), total_(total)
+ShmSlab::ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create) : base_(base)
 {
     hdr_ = reinterpret_cast<SlabHeader *>(reinterpret_cast<uint8_t *>(base_) + region_off);
     if (create)
@@ -172,22 +195,23 @@ uint32_t ShmSlab::Alloc(uint32_t bytes)
         return 0; // 超出最大类，实际可扩展为“直连大块分配器”
 
     auto &c = hdr_->classes[cls];
-    Lock(c.lock);
+    lock_.Lock();
     // 优先从 free_list 取
     if (c.free_list == 0)
     {
         // 尝试新页
         if (NewPage(cls) == 0 && c.free_list == 0)
         {
-            Unlock(c.lock);
+            lock_.Unlock();
             return 0;
         }
     }
     // pop 头结点
     uint32_t off = c.free_list;
+    // 此处的off是字节数偏移，将slab的基址转为uint8指针，再做指针加法，得到实际指针地址
     uint32_t *pNext = reinterpret_cast<uint32_t *>(base8() + off);
     c.free_list = *pNext; // 下一节点成为链头
-    Unlock(c.lock);
+    lock_.Unlock();
 
     return off;
 }
@@ -202,12 +226,12 @@ void ShmSlab::Free(uint32_t off, uint32_t bytes)
         return;
 
     auto &c = hdr_->classes[cls];
-    Lock(c.lock);
+    lock_.Lock();
     // 将该块 push 到 free_list 头部
     uint32_t *pNext = reinterpret_cast<uint32_t *>(base8() + off);
     *pNext = c.free_list;
     c.free_list = off;
-    Unlock(c.lock);
+    lock_.Unlock();
 }
 
 } // namespace shmslab

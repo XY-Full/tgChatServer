@@ -8,6 +8,9 @@
 #include <iomanip>
 #include <stdexcept>
 #include <string>
+#include "google/protobuf/message.h"
+#include "../core/network/AppMsg.h"
+#include "../core/shm/shm_slab.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -267,4 +270,38 @@ int64_t Helper::GenUID()
     // 3位 counter，可支撑同一毫秒内生成 1000 个 UID
     int64_t uid = now_ms * 1000 + counter.fetch_add(1);
     return uid;
+}
+
+AppMsg* Helper::CreateSSPack(const google::protobuf::Message &message, uint32_t seq)
+{
+    static std::atomic<uint32_t> now_seq_{0};
+    static shmslab::ShmSlab shm_slab_{"SSPackShmSlab"};
+
+    // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
+    auto message_strlen = message.ByteSizeLong();
+    // 获取pb数据的类型名，依赖这个进行反序列化
+    auto message_name = message.GetTypeName();
+
+    // 从slab中分配内存块
+    auto pack_shm_addr = shm_slab_.Alloc(message_strlen + sizeof(AppMsg)); // 申请AppMsg结构体+body数据大小的内存块
+    
+    auto msg = reinterpret_cast<AppMsg *>(pack_shm_addr);
+    msg->type_ = Type::S2S;
+    if(seq == 0) msg->seq_ = now_seq_.fetch_add(1);
+
+    msg->data_ = reinterpret_cast<char *>(pack_shm_addr) + sizeof(AppMsg); // body紧跟在AppMsg结构体后面
+    msg->data_len_ = message_name.size() + message_strlen; // body数据长度
+    msg->msg_name_len = message_name.size();// 类型名字在data_中的前缀长度
+
+    // pb数据序列化到data_中，需要预留前缀长度，填充类型名字
+    if (!message.SerializeToArray(msg->data_ + msg->msg_name_len, message_strlen))
+    {
+        ELOG << "Error to serialize message";
+        return nullptr;
+    }
+    
+    // 拷贝 message_name 到body头部
+    memcpy(msg->data_, message_name.data(), msg->msg_name_len);
+
+    return msg;
 }

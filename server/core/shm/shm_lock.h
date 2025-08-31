@@ -10,8 +10,9 @@ public:
     ShmLock(std::string name)
     {
         // 如果是新创建的,需要初始化锁
-        if (mutex_memory_.Open(name, sizeof(pthread_mutexattr_t)) == SHM_CREATE)
+        if (mutex_memory_.Open(name, sizeof(pthread_mutex_t)) == SHM_CREATE)
         {
+            mutex_ = reinterpret_cast<pthread_mutex_t *>(mutex_memory_.GetAddress());
             pthread_mutexattr_t attr;
             if (pthread_mutexattr_init(&attr) != 0)
             {
