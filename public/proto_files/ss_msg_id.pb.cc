@@ -27,13 +27,13 @@ static constexpr ::_pbi::MigrationSchema* schemas = nullptr;
 static constexpr ::_pb::Message* const* file_default_instances = nullptr;
 
 const char descriptor_table_protodef_ss_5fmsg_5fid_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\017ss_msg_id.proto*[\n\007SSMsgID\022\021\n\rSS_HEART"
-  "_BEAT\020\000\022\027\n\023SS_REGIST_TO_CENTER\020\001\022\024\n\020SS_U"
-  "PDATE_STATUS\020\002\022\016\n\tSC_NOTIFY\020\220Nb\006proto3"
+  "\n\017ss_msg_id.proto*S\n\007SSMsgID\022\021\n\rSS_HEART"
+  "_BEAT\020\000\022\027\n\023SS_REGIST_TO_CENTER\020\001\022\034\n\030SS_U"
+  "PDATE_SERVICE_STATUS\020\002b\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_ss_5fmsg_5fid_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_ss_5fmsg_5fid_2eproto = {
-    false, false, 118, descriptor_table_protodef_ss_5fmsg_5fid_2eproto,
+    false, false, 110, descriptor_table_protodef_ss_5fmsg_5fid_2eproto,
     "ss_msg_id.proto",
     &descriptor_table_ss_5fmsg_5fid_2eproto_once, nullptr, 0, 0,
     schemas, file_default_instances, TableStruct_ss_5fmsg_5fid_2eproto::offsets,
@@ -55,7 +55,6 @@ bool SSMsgID_IsValid(int value) {
     case 0:
     case 1:
     case 2:
-    case 10000:
       return true;
     default:
       return false;

@@ -11,21 +11,25 @@
 // Message name to ID mapping
 static const std::unordered_map<std::string, uint32_t> kMsgNameToId = {
     {"RegistToCenter", 1},
+    {"UpdateServiceStatus", 2},
 };
 
 // ID to message name mapping
 static const std::unordered_map<uint32_t, std::string> kIdToMsgName = {
     {1, "RegistToCenter"},
+    {2, "UpdateServiceStatus"},
 };
 
 // ID to msg_id string mapping
 static const std::unordered_map<uint32_t, std::string> kIdToMsgIdStr = {
     {1, "SS_REGIST_TO_CENTER"},
+    {2, "SS_UPDATE_SERVICE_STATUS"},
 };
 
 // msg_id string to ID mapping
 static const std::unordered_map<std::string, uint32_t> kMsgIdStrToId = {
     {"SS_REGIST_TO_CENTER", 1},
+    {"SS_UPDATE_SERVICE_STATUS", 2},
 };
 
 // clang-format on

@@ -48,15 +48,6 @@ struct TableStruct_core_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_core_2eproto;
 namespace ss {
-class CenterServiceMap;
-struct CenterServiceMapDefaultTypeInternal;
-extern CenterServiceMapDefaultTypeInternal _CenterServiceMap_default_instance_;
-class CenterServiceMap_Request;
-struct CenterServiceMap_RequestDefaultTypeInternal;
-extern CenterServiceMap_RequestDefaultTypeInternal _CenterServiceMap_Request_default_instance_;
-class CenterServiceMap_Response;
-struct CenterServiceMap_ResponseDefaultTypeInternal;
-extern CenterServiceMap_ResponseDefaultTypeInternal _CenterServiceMap_Response_default_instance_;
 class HeartBeat;
 struct HeartBeatDefaultTypeInternal;
 extern HeartBeatDefaultTypeInternal _HeartBeat_default_instance_;
@@ -69,15 +60,24 @@ extern RegistToCenter_RequestDefaultTypeInternal _RegistToCenter_Request_default
 class RegistToCenter_Response;
 struct RegistToCenter_ResponseDefaultTypeInternal;
 extern RegistToCenter_ResponseDefaultTypeInternal _RegistToCenter_Response_default_instance_;
+class UpdateServiceStatus;
+struct UpdateServiceStatusDefaultTypeInternal;
+extern UpdateServiceStatusDefaultTypeInternal _UpdateServiceStatus_default_instance_;
+class UpdateServiceStatus_Request;
+struct UpdateServiceStatus_RequestDefaultTypeInternal;
+extern UpdateServiceStatus_RequestDefaultTypeInternal _UpdateServiceStatus_Request_default_instance_;
+class UpdateServiceStatus_Response;
+struct UpdateServiceStatus_ResponseDefaultTypeInternal;
+extern UpdateServiceStatus_ResponseDefaultTypeInternal _UpdateServiceStatus_Response_default_instance_;
 }  // namespace ss
 PROTOBUF_NAMESPACE_OPEN
-template<> ::ss::CenterServiceMap* Arena::CreateMaybeMessage<::ss::CenterServiceMap>(Arena*);
-template<> ::ss::CenterServiceMap_Request* Arena::CreateMaybeMessage<::ss::CenterServiceMap_Request>(Arena*);
-template<> ::ss::CenterServiceMap_Response* Arena::CreateMaybeMessage<::ss::CenterServiceMap_Response>(Arena*);
 template<> ::ss::HeartBeat* Arena::CreateMaybeMessage<::ss::HeartBeat>(Arena*);
 template<> ::ss::RegistToCenter* Arena::CreateMaybeMessage<::ss::RegistToCenter>(Arena*);
 template<> ::ss::RegistToCenter_Request* Arena::CreateMaybeMessage<::ss::RegistToCenter_Request>(Arena*);
 template<> ::ss::RegistToCenter_Response* Arena::CreateMaybeMessage<::ss::RegistToCenter_Response>(Arena*);
+template<> ::ss::UpdateServiceStatus* Arena::CreateMaybeMessage<::ss::UpdateServiceStatus>(Arena*);
+template<> ::ss::UpdateServiceStatus_Request* Arena::CreateMaybeMessage<::ss::UpdateServiceStatus_Request>(Arena*);
+template<> ::ss::UpdateServiceStatus_Response* Arena::CreateMaybeMessage<::ss::UpdateServiceStatus_Response>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace ss {
 
@@ -479,8 +479,23 @@ class RegistToCenter_Response final :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kLocalBusdShmNameFieldNumber = 2,
     kErrFieldNumber = 1,
   };
+  // string local_busd_shm_name = 2;
+  void clear_local_busd_shm_name();
+  const std::string& local_busd_shm_name() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_local_busd_shm_name(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_local_busd_shm_name();
+  PROTOBUF_NODISCARD std::string* release_local_busd_shm_name();
+  void set_allocated_local_busd_shm_name(std::string* local_busd_shm_name);
+  private:
+  const std::string& _internal_local_busd_shm_name() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_local_busd_shm_name(const std::string& value);
+  std::string* _internal_mutable_local_busd_shm_name();
+  public:
+
   // .SSErrorCode err = 1;
   void clear_err();
   ::SSErrorCode err() const;
@@ -498,6 +513,7 @@ class RegistToCenter_Response final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr local_busd_shm_name_;
     int err_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -686,24 +702,24 @@ class RegistToCenter final :
 };
 // -------------------------------------------------------------------
 
-class CenterServiceMap_Request final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.CenterServiceMap.Request) */ {
+class UpdateServiceStatus_Request final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.UpdateServiceStatus.Request) */ {
  public:
-  inline CenterServiceMap_Request() : CenterServiceMap_Request(nullptr) {}
-  ~CenterServiceMap_Request() override;
-  explicit PROTOBUF_CONSTEXPR CenterServiceMap_Request(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline UpdateServiceStatus_Request() : UpdateServiceStatus_Request(nullptr) {}
+  ~UpdateServiceStatus_Request() override;
+  explicit PROTOBUF_CONSTEXPR UpdateServiceStatus_Request(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  CenterServiceMap_Request(const CenterServiceMap_Request& from);
-  CenterServiceMap_Request(CenterServiceMap_Request&& from) noexcept
-    : CenterServiceMap_Request() {
+  UpdateServiceStatus_Request(const UpdateServiceStatus_Request& from);
+  UpdateServiceStatus_Request(UpdateServiceStatus_Request&& from) noexcept
+    : UpdateServiceStatus_Request() {
     *this = ::std::move(from);
   }
 
-  inline CenterServiceMap_Request& operator=(const CenterServiceMap_Request& from) {
+  inline UpdateServiceStatus_Request& operator=(const UpdateServiceStatus_Request& from) {
     CopyFrom(from);
     return *this;
   }
-  inline CenterServiceMap_Request& operator=(CenterServiceMap_Request&& from) noexcept {
+  inline UpdateServiceStatus_Request& operator=(UpdateServiceStatus_Request&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -726,20 +742,20 @@ class CenterServiceMap_Request final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const CenterServiceMap_Request& default_instance() {
+  static const UpdateServiceStatus_Request& default_instance() {
     return *internal_default_instance();
   }
-  static inline const CenterServiceMap_Request* internal_default_instance() {
-    return reinterpret_cast<const CenterServiceMap_Request*>(
-               &_CenterServiceMap_Request_default_instance_);
+  static inline const UpdateServiceStatus_Request* internal_default_instance() {
+    return reinterpret_cast<const UpdateServiceStatus_Request*>(
+               &_UpdateServiceStatus_Request_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     4;
 
-  friend void swap(CenterServiceMap_Request& a, CenterServiceMap_Request& b) {
+  friend void swap(UpdateServiceStatus_Request& a, UpdateServiceStatus_Request& b) {
     a.Swap(&b);
   }
-  inline void Swap(CenterServiceMap_Request* other) {
+  inline void Swap(UpdateServiceStatus_Request* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -752,7 +768,7 @@ class CenterServiceMap_Request final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(CenterServiceMap_Request* other) {
+  void UnsafeArenaSwap(UpdateServiceStatus_Request* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -760,14 +776,14 @@ class CenterServiceMap_Request final :
 
   // implements Message ----------------------------------------------
 
-  CenterServiceMap_Request* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<CenterServiceMap_Request>(arena);
+  UpdateServiceStatus_Request* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<UpdateServiceStatus_Request>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const CenterServiceMap_Request& from);
+  void CopyFrom(const UpdateServiceStatus_Request& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const CenterServiceMap_Request& from) {
-    CenterServiceMap_Request::MergeImpl(*this, from);
+  void MergeFrom( const UpdateServiceStatus_Request& from) {
+    UpdateServiceStatus_Request::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -785,15 +801,15 @@ class CenterServiceMap_Request final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(CenterServiceMap_Request* other);
+  void InternalSwap(UpdateServiceStatus_Request* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ss.CenterServiceMap.Request";
+    return "ss.UpdateServiceStatus.Request";
   }
   protected:
-  explicit CenterServiceMap_Request(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit UpdateServiceStatus_Request(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -827,7 +843,7 @@ class CenterServiceMap_Request final :
       ::ss::ServiceInfo* local_info);
   ::ss::ServiceInfo* unsafe_arena_release_local_info();
 
-  // @@protoc_insertion_point(class_scope:ss.CenterServiceMap.Request)
+  // @@protoc_insertion_point(class_scope:ss.UpdateServiceStatus.Request)
  private:
   class _Internal;
 
@@ -843,24 +859,24 @@ class CenterServiceMap_Request final :
 };
 // -------------------------------------------------------------------
 
-class CenterServiceMap_Response final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.CenterServiceMap.Response) */ {
+class UpdateServiceStatus_Response final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.UpdateServiceStatus.Response) */ {
  public:
-  inline CenterServiceMap_Response() : CenterServiceMap_Response(nullptr) {}
-  ~CenterServiceMap_Response() override;
-  explicit PROTOBUF_CONSTEXPR CenterServiceMap_Response(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline UpdateServiceStatus_Response() : UpdateServiceStatus_Response(nullptr) {}
+  ~UpdateServiceStatus_Response() override;
+  explicit PROTOBUF_CONSTEXPR UpdateServiceStatus_Response(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  CenterServiceMap_Response(const CenterServiceMap_Response& from);
-  CenterServiceMap_Response(CenterServiceMap_Response&& from) noexcept
-    : CenterServiceMap_Response() {
+  UpdateServiceStatus_Response(const UpdateServiceStatus_Response& from);
+  UpdateServiceStatus_Response(UpdateServiceStatus_Response&& from) noexcept
+    : UpdateServiceStatus_Response() {
     *this = ::std::move(from);
   }
 
-  inline CenterServiceMap_Response& operator=(const CenterServiceMap_Response& from) {
+  inline UpdateServiceStatus_Response& operator=(const UpdateServiceStatus_Response& from) {
     CopyFrom(from);
     return *this;
   }
-  inline CenterServiceMap_Response& operator=(CenterServiceMap_Response&& from) noexcept {
+  inline UpdateServiceStatus_Response& operator=(UpdateServiceStatus_Response&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -883,20 +899,20 @@ class CenterServiceMap_Response final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const CenterServiceMap_Response& default_instance() {
+  static const UpdateServiceStatus_Response& default_instance() {
     return *internal_default_instance();
   }
-  static inline const CenterServiceMap_Response* internal_default_instance() {
-    return reinterpret_cast<const CenterServiceMap_Response*>(
-               &_CenterServiceMap_Response_default_instance_);
+  static inline const UpdateServiceStatus_Response* internal_default_instance() {
+    return reinterpret_cast<const UpdateServiceStatus_Response*>(
+               &_UpdateServiceStatus_Response_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     5;
 
-  friend void swap(CenterServiceMap_Response& a, CenterServiceMap_Response& b) {
+  friend void swap(UpdateServiceStatus_Response& a, UpdateServiceStatus_Response& b) {
     a.Swap(&b);
   }
-  inline void Swap(CenterServiceMap_Response* other) {
+  inline void Swap(UpdateServiceStatus_Response* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -909,7 +925,7 @@ class CenterServiceMap_Response final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(CenterServiceMap_Response* other) {
+  void UnsafeArenaSwap(UpdateServiceStatus_Response* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -917,14 +933,14 @@ class CenterServiceMap_Response final :
 
   // implements Message ----------------------------------------------
 
-  CenterServiceMap_Response* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<CenterServiceMap_Response>(arena);
+  UpdateServiceStatus_Response* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<UpdateServiceStatus_Response>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const CenterServiceMap_Response& from);
+  void CopyFrom(const UpdateServiceStatus_Response& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const CenterServiceMap_Response& from) {
-    CenterServiceMap_Response::MergeImpl(*this, from);
+  void MergeFrom( const UpdateServiceStatus_Response& from) {
+    UpdateServiceStatus_Response::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -942,15 +958,15 @@ class CenterServiceMap_Response final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(CenterServiceMap_Response* other);
+  void InternalSwap(UpdateServiceStatus_Response* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ss.CenterServiceMap.Response";
+    return "ss.UpdateServiceStatus.Response";
   }
   protected:
-  explicit CenterServiceMap_Response(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit UpdateServiceStatus_Response(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -964,9 +980,10 @@ class CenterServiceMap_Response final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kServiceInfoMapFieldNumber = 1,
+    kServiceInfoMapFieldNumber = 2,
+    kErrFieldNumber = 1,
   };
-  // repeated .ss.ServiceInfo service_info_map = 1;
+  // repeated .ss.ServiceInfo service_info_map = 2;
   int service_info_map_size() const;
   private:
   int _internal_service_info_map_size() const;
@@ -984,7 +1001,16 @@ class CenterServiceMap_Response final :
   const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >&
       service_info_map() const;
 
-  // @@protoc_insertion_point(class_scope:ss.CenterServiceMap.Response)
+  // .SSErrorCode err = 1;
+  void clear_err();
+  ::SSErrorCode err() const;
+  void set_err(::SSErrorCode value);
+  private:
+  ::SSErrorCode _internal_err() const;
+  void _internal_set_err(::SSErrorCode value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:ss.UpdateServiceStatus.Response)
  private:
   class _Internal;
 
@@ -993,6 +1019,7 @@ class CenterServiceMap_Response final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo > service_info_map_;
+    int err_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1000,24 +1027,24 @@ class CenterServiceMap_Response final :
 };
 // -------------------------------------------------------------------
 
-class CenterServiceMap final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.CenterServiceMap) */ {
+class UpdateServiceStatus final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.UpdateServiceStatus) */ {
  public:
-  inline CenterServiceMap() : CenterServiceMap(nullptr) {}
-  ~CenterServiceMap() override;
-  explicit PROTOBUF_CONSTEXPR CenterServiceMap(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline UpdateServiceStatus() : UpdateServiceStatus(nullptr) {}
+  ~UpdateServiceStatus() override;
+  explicit PROTOBUF_CONSTEXPR UpdateServiceStatus(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  CenterServiceMap(const CenterServiceMap& from);
-  CenterServiceMap(CenterServiceMap&& from) noexcept
-    : CenterServiceMap() {
+  UpdateServiceStatus(const UpdateServiceStatus& from);
+  UpdateServiceStatus(UpdateServiceStatus&& from) noexcept
+    : UpdateServiceStatus() {
     *this = ::std::move(from);
   }
 
-  inline CenterServiceMap& operator=(const CenterServiceMap& from) {
+  inline UpdateServiceStatus& operator=(const UpdateServiceStatus& from) {
     CopyFrom(from);
     return *this;
   }
-  inline CenterServiceMap& operator=(CenterServiceMap&& from) noexcept {
+  inline UpdateServiceStatus& operator=(UpdateServiceStatus&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -1040,20 +1067,20 @@ class CenterServiceMap final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const CenterServiceMap& default_instance() {
+  static const UpdateServiceStatus& default_instance() {
     return *internal_default_instance();
   }
-  static inline const CenterServiceMap* internal_default_instance() {
-    return reinterpret_cast<const CenterServiceMap*>(
-               &_CenterServiceMap_default_instance_);
+  static inline const UpdateServiceStatus* internal_default_instance() {
+    return reinterpret_cast<const UpdateServiceStatus*>(
+               &_UpdateServiceStatus_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     6;
 
-  friend void swap(CenterServiceMap& a, CenterServiceMap& b) {
+  friend void swap(UpdateServiceStatus& a, UpdateServiceStatus& b) {
     a.Swap(&b);
   }
-  inline void Swap(CenterServiceMap* other) {
+  inline void Swap(UpdateServiceStatus* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -1066,7 +1093,7 @@ class CenterServiceMap final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(CenterServiceMap* other) {
+  void UnsafeArenaSwap(UpdateServiceStatus* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -1074,14 +1101,14 @@ class CenterServiceMap final :
 
   // implements Message ----------------------------------------------
 
-  CenterServiceMap* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<CenterServiceMap>(arena);
+  UpdateServiceStatus* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<UpdateServiceStatus>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const CenterServiceMap& from);
+  void CopyFrom(const UpdateServiceStatus& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const CenterServiceMap& from) {
-    CenterServiceMap::MergeImpl(*this, from);
+  void MergeFrom( const UpdateServiceStatus& from) {
+    UpdateServiceStatus::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -1099,15 +1126,15 @@ class CenterServiceMap final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(CenterServiceMap* other);
+  void InternalSwap(UpdateServiceStatus* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ss.CenterServiceMap";
+    return "ss.UpdateServiceStatus";
   }
   protected:
-  explicit CenterServiceMap(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit UpdateServiceStatus(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -1118,8 +1145,8 @@ class CenterServiceMap final :
 
   // nested types ----------------------------------------------------
 
-  typedef CenterServiceMap_Request Request;
-  typedef CenterServiceMap_Response Response;
+  typedef UpdateServiceStatus_Request Request;
+  typedef UpdateServiceStatus_Response Response;
 
   // accessors -------------------------------------------------------
 
@@ -1127,43 +1154,43 @@ class CenterServiceMap final :
     kRequestFieldNumber = 1,
     kResponseFieldNumber = 2,
   };
-  // .ss.CenterServiceMap.Request request = 1;
+  // .ss.UpdateServiceStatus.Request request = 1;
   bool has_request() const;
   private:
   bool _internal_has_request() const;
   public:
   void clear_request();
-  const ::ss::CenterServiceMap_Request& request() const;
-  PROTOBUF_NODISCARD ::ss::CenterServiceMap_Request* release_request();
-  ::ss::CenterServiceMap_Request* mutable_request();
-  void set_allocated_request(::ss::CenterServiceMap_Request* request);
+  const ::ss::UpdateServiceStatus_Request& request() const;
+  PROTOBUF_NODISCARD ::ss::UpdateServiceStatus_Request* release_request();
+  ::ss::UpdateServiceStatus_Request* mutable_request();
+  void set_allocated_request(::ss::UpdateServiceStatus_Request* request);
   private:
-  const ::ss::CenterServiceMap_Request& _internal_request() const;
-  ::ss::CenterServiceMap_Request* _internal_mutable_request();
+  const ::ss::UpdateServiceStatus_Request& _internal_request() const;
+  ::ss::UpdateServiceStatus_Request* _internal_mutable_request();
   public:
   void unsafe_arena_set_allocated_request(
-      ::ss::CenterServiceMap_Request* request);
-  ::ss::CenterServiceMap_Request* unsafe_arena_release_request();
+      ::ss::UpdateServiceStatus_Request* request);
+  ::ss::UpdateServiceStatus_Request* unsafe_arena_release_request();
 
-  // .ss.CenterServiceMap.Response response = 2;
+  // .ss.UpdateServiceStatus.Response response = 2;
   bool has_response() const;
   private:
   bool _internal_has_response() const;
   public:
   void clear_response();
-  const ::ss::CenterServiceMap_Response& response() const;
-  PROTOBUF_NODISCARD ::ss::CenterServiceMap_Response* release_response();
-  ::ss::CenterServiceMap_Response* mutable_response();
-  void set_allocated_response(::ss::CenterServiceMap_Response* response);
+  const ::ss::UpdateServiceStatus_Response& response() const;
+  PROTOBUF_NODISCARD ::ss::UpdateServiceStatus_Response* release_response();
+  ::ss::UpdateServiceStatus_Response* mutable_response();
+  void set_allocated_response(::ss::UpdateServiceStatus_Response* response);
   private:
-  const ::ss::CenterServiceMap_Response& _internal_response() const;
-  ::ss::CenterServiceMap_Response* _internal_mutable_response();
+  const ::ss::UpdateServiceStatus_Response& _internal_response() const;
+  ::ss::UpdateServiceStatus_Response* _internal_mutable_response();
   public:
   void unsafe_arena_set_allocated_response(
-      ::ss::CenterServiceMap_Response* response);
-  ::ss::CenterServiceMap_Response* unsafe_arena_release_response();
+      ::ss::UpdateServiceStatus_Response* response);
+  ::ss::UpdateServiceStatus_Response* unsafe_arena_release_response();
 
-  // @@protoc_insertion_point(class_scope:ss.CenterServiceMap)
+  // @@protoc_insertion_point(class_scope:ss.UpdateServiceStatus)
  private:
   class _Internal;
 
@@ -1171,8 +1198,8 @@ class CenterServiceMap final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::ss::CenterServiceMap_Request* request_;
-    ::ss::CenterServiceMap_Response* response_;
+    ::ss::UpdateServiceStatus_Request* request_;
+    ::ss::UpdateServiceStatus_Response* response_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1300,6 +1327,56 @@ inline void RegistToCenter_Response::_internal_set_err(::SSErrorCode value) {
 inline void RegistToCenter_Response::set_err(::SSErrorCode value) {
   _internal_set_err(value);
   // @@protoc_insertion_point(field_set:ss.RegistToCenter.Response.err)
+}
+
+// string local_busd_shm_name = 2;
+inline void RegistToCenter_Response::clear_local_busd_shm_name() {
+  _impl_.local_busd_shm_name_.ClearToEmpty();
+}
+inline const std::string& RegistToCenter_Response::local_busd_shm_name() const {
+  // @@protoc_insertion_point(field_get:ss.RegistToCenter.Response.local_busd_shm_name)
+  return _internal_local_busd_shm_name();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void RegistToCenter_Response::set_local_busd_shm_name(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.local_busd_shm_name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ss.RegistToCenter.Response.local_busd_shm_name)
+}
+inline std::string* RegistToCenter_Response::mutable_local_busd_shm_name() {
+  std::string* _s = _internal_mutable_local_busd_shm_name();
+  // @@protoc_insertion_point(field_mutable:ss.RegistToCenter.Response.local_busd_shm_name)
+  return _s;
+}
+inline const std::string& RegistToCenter_Response::_internal_local_busd_shm_name() const {
+  return _impl_.local_busd_shm_name_.Get();
+}
+inline void RegistToCenter_Response::_internal_set_local_busd_shm_name(const std::string& value) {
+  
+  _impl_.local_busd_shm_name_.Set(value, GetArenaForAllocation());
+}
+inline std::string* RegistToCenter_Response::_internal_mutable_local_busd_shm_name() {
+  
+  return _impl_.local_busd_shm_name_.Mutable(GetArenaForAllocation());
+}
+inline std::string* RegistToCenter_Response::release_local_busd_shm_name() {
+  // @@protoc_insertion_point(field_release:ss.RegistToCenter.Response.local_busd_shm_name)
+  return _impl_.local_busd_shm_name_.Release();
+}
+inline void RegistToCenter_Response::set_allocated_local_busd_shm_name(std::string* local_busd_shm_name) {
+  if (local_busd_shm_name != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.local_busd_shm_name_.SetAllocated(local_busd_shm_name, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.local_busd_shm_name_.IsDefault()) {
+    _impl_.local_busd_shm_name_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ss.RegistToCenter.Response.local_busd_shm_name)
 }
 
 // -------------------------------------------------------------------
@@ -1488,25 +1565,25 @@ inline void RegistToCenter::set_allocated_response(::ss::RegistToCenter_Response
 
 // -------------------------------------------------------------------
 
-// CenterServiceMap_Request
+// UpdateServiceStatus_Request
 
 // .ss.ServiceInfo local_info = 1;
-inline bool CenterServiceMap_Request::_internal_has_local_info() const {
+inline bool UpdateServiceStatus_Request::_internal_has_local_info() const {
   return this != internal_default_instance() && _impl_.local_info_ != nullptr;
 }
-inline bool CenterServiceMap_Request::has_local_info() const {
+inline bool UpdateServiceStatus_Request::has_local_info() const {
   return _internal_has_local_info();
 }
-inline const ::ss::ServiceInfo& CenterServiceMap_Request::_internal_local_info() const {
+inline const ::ss::ServiceInfo& UpdateServiceStatus_Request::_internal_local_info() const {
   const ::ss::ServiceInfo* p = _impl_.local_info_;
   return p != nullptr ? *p : reinterpret_cast<const ::ss::ServiceInfo&>(
       ::ss::_ServiceInfo_default_instance_);
 }
-inline const ::ss::ServiceInfo& CenterServiceMap_Request::local_info() const {
-  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.Request.local_info)
+inline const ::ss::ServiceInfo& UpdateServiceStatus_Request::local_info() const {
+  // @@protoc_insertion_point(field_get:ss.UpdateServiceStatus.Request.local_info)
   return _internal_local_info();
 }
-inline void CenterServiceMap_Request::unsafe_arena_set_allocated_local_info(
+inline void UpdateServiceStatus_Request::unsafe_arena_set_allocated_local_info(
     ::ss::ServiceInfo* local_info) {
   if (GetArenaForAllocation() == nullptr) {
     delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.local_info_);
@@ -1517,9 +1594,9 @@ inline void CenterServiceMap_Request::unsafe_arena_set_allocated_local_info(
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.CenterServiceMap.Request.local_info)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.UpdateServiceStatus.Request.local_info)
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Request::release_local_info() {
+inline ::ss::ServiceInfo* UpdateServiceStatus_Request::release_local_info() {
   
   ::ss::ServiceInfo* temp = _impl_.local_info_;
   _impl_.local_info_ = nullptr;
@@ -1534,14 +1611,14 @@ inline ::ss::ServiceInfo* CenterServiceMap_Request::release_local_info() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Request::unsafe_arena_release_local_info() {
-  // @@protoc_insertion_point(field_release:ss.CenterServiceMap.Request.local_info)
+inline ::ss::ServiceInfo* UpdateServiceStatus_Request::unsafe_arena_release_local_info() {
+  // @@protoc_insertion_point(field_release:ss.UpdateServiceStatus.Request.local_info)
   
   ::ss::ServiceInfo* temp = _impl_.local_info_;
   _impl_.local_info_ = nullptr;
   return temp;
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Request::_internal_mutable_local_info() {
+inline ::ss::ServiceInfo* UpdateServiceStatus_Request::_internal_mutable_local_info() {
   
   if (_impl_.local_info_ == nullptr) {
     auto* p = CreateMaybeMessage<::ss::ServiceInfo>(GetArenaForAllocation());
@@ -1549,12 +1626,12 @@ inline ::ss::ServiceInfo* CenterServiceMap_Request::_internal_mutable_local_info
   }
   return _impl_.local_info_;
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Request::mutable_local_info() {
+inline ::ss::ServiceInfo* UpdateServiceStatus_Request::mutable_local_info() {
   ::ss::ServiceInfo* _msg = _internal_mutable_local_info();
-  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.Request.local_info)
+  // @@protoc_insertion_point(field_mutable:ss.UpdateServiceStatus.Request.local_info)
   return _msg;
 }
-inline void CenterServiceMap_Request::set_allocated_local_info(::ss::ServiceInfo* local_info) {
+inline void UpdateServiceStatus_Request::set_allocated_local_info(::ss::ServiceInfo* local_info) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
     delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.local_info_);
@@ -1572,78 +1649,98 @@ inline void CenterServiceMap_Request::set_allocated_local_info(::ss::ServiceInfo
     
   }
   _impl_.local_info_ = local_info;
-  // @@protoc_insertion_point(field_set_allocated:ss.CenterServiceMap.Request.local_info)
+  // @@protoc_insertion_point(field_set_allocated:ss.UpdateServiceStatus.Request.local_info)
 }
 
 // -------------------------------------------------------------------
 
-// CenterServiceMap_Response
+// UpdateServiceStatus_Response
 
-// repeated .ss.ServiceInfo service_info_map = 1;
-inline int CenterServiceMap_Response::_internal_service_info_map_size() const {
+// .SSErrorCode err = 1;
+inline void UpdateServiceStatus_Response::clear_err() {
+  _impl_.err_ = 0;
+}
+inline ::SSErrorCode UpdateServiceStatus_Response::_internal_err() const {
+  return static_cast< ::SSErrorCode >(_impl_.err_);
+}
+inline ::SSErrorCode UpdateServiceStatus_Response::err() const {
+  // @@protoc_insertion_point(field_get:ss.UpdateServiceStatus.Response.err)
+  return _internal_err();
+}
+inline void UpdateServiceStatus_Response::_internal_set_err(::SSErrorCode value) {
+  
+  _impl_.err_ = value;
+}
+inline void UpdateServiceStatus_Response::set_err(::SSErrorCode value) {
+  _internal_set_err(value);
+  // @@protoc_insertion_point(field_set:ss.UpdateServiceStatus.Response.err)
+}
+
+// repeated .ss.ServiceInfo service_info_map = 2;
+inline int UpdateServiceStatus_Response::_internal_service_info_map_size() const {
   return _impl_.service_info_map_.size();
 }
-inline int CenterServiceMap_Response::service_info_map_size() const {
+inline int UpdateServiceStatus_Response::service_info_map_size() const {
   return _internal_service_info_map_size();
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Response::mutable_service_info_map(int index) {
-  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.Response.service_info_map)
+inline ::ss::ServiceInfo* UpdateServiceStatus_Response::mutable_service_info_map(int index) {
+  // @@protoc_insertion_point(field_mutable:ss.UpdateServiceStatus.Response.service_info_map)
   return _impl_.service_info_map_.Mutable(index);
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >*
-CenterServiceMap_Response::mutable_service_info_map() {
-  // @@protoc_insertion_point(field_mutable_list:ss.CenterServiceMap.Response.service_info_map)
+UpdateServiceStatus_Response::mutable_service_info_map() {
+  // @@protoc_insertion_point(field_mutable_list:ss.UpdateServiceStatus.Response.service_info_map)
   return &_impl_.service_info_map_;
 }
-inline const ::ss::ServiceInfo& CenterServiceMap_Response::_internal_service_info_map(int index) const {
+inline const ::ss::ServiceInfo& UpdateServiceStatus_Response::_internal_service_info_map(int index) const {
   return _impl_.service_info_map_.Get(index);
 }
-inline const ::ss::ServiceInfo& CenterServiceMap_Response::service_info_map(int index) const {
-  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.Response.service_info_map)
+inline const ::ss::ServiceInfo& UpdateServiceStatus_Response::service_info_map(int index) const {
+  // @@protoc_insertion_point(field_get:ss.UpdateServiceStatus.Response.service_info_map)
   return _internal_service_info_map(index);
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Response::_internal_add_service_info_map() {
+inline ::ss::ServiceInfo* UpdateServiceStatus_Response::_internal_add_service_info_map() {
   return _impl_.service_info_map_.Add();
 }
-inline ::ss::ServiceInfo* CenterServiceMap_Response::add_service_info_map() {
+inline ::ss::ServiceInfo* UpdateServiceStatus_Response::add_service_info_map() {
   ::ss::ServiceInfo* _add = _internal_add_service_info_map();
-  // @@protoc_insertion_point(field_add:ss.CenterServiceMap.Response.service_info_map)
+  // @@protoc_insertion_point(field_add:ss.UpdateServiceStatus.Response.service_info_map)
   return _add;
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >&
-CenterServiceMap_Response::service_info_map() const {
-  // @@protoc_insertion_point(field_list:ss.CenterServiceMap.Response.service_info_map)
+UpdateServiceStatus_Response::service_info_map() const {
+  // @@protoc_insertion_point(field_list:ss.UpdateServiceStatus.Response.service_info_map)
   return _impl_.service_info_map_;
 }
 
 // -------------------------------------------------------------------
 
-// CenterServiceMap
+// UpdateServiceStatus
 
-// .ss.CenterServiceMap.Request request = 1;
-inline bool CenterServiceMap::_internal_has_request() const {
+// .ss.UpdateServiceStatus.Request request = 1;
+inline bool UpdateServiceStatus::_internal_has_request() const {
   return this != internal_default_instance() && _impl_.request_ != nullptr;
 }
-inline bool CenterServiceMap::has_request() const {
+inline bool UpdateServiceStatus::has_request() const {
   return _internal_has_request();
 }
-inline void CenterServiceMap::clear_request() {
+inline void UpdateServiceStatus::clear_request() {
   if (GetArenaForAllocation() == nullptr && _impl_.request_ != nullptr) {
     delete _impl_.request_;
   }
   _impl_.request_ = nullptr;
 }
-inline const ::ss::CenterServiceMap_Request& CenterServiceMap::_internal_request() const {
-  const ::ss::CenterServiceMap_Request* p = _impl_.request_;
-  return p != nullptr ? *p : reinterpret_cast<const ::ss::CenterServiceMap_Request&>(
-      ::ss::_CenterServiceMap_Request_default_instance_);
+inline const ::ss::UpdateServiceStatus_Request& UpdateServiceStatus::_internal_request() const {
+  const ::ss::UpdateServiceStatus_Request* p = _impl_.request_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::UpdateServiceStatus_Request&>(
+      ::ss::_UpdateServiceStatus_Request_default_instance_);
 }
-inline const ::ss::CenterServiceMap_Request& CenterServiceMap::request() const {
-  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.request)
+inline const ::ss::UpdateServiceStatus_Request& UpdateServiceStatus::request() const {
+  // @@protoc_insertion_point(field_get:ss.UpdateServiceStatus.request)
   return _internal_request();
 }
-inline void CenterServiceMap::unsafe_arena_set_allocated_request(
-    ::ss::CenterServiceMap_Request* request) {
+inline void UpdateServiceStatus::unsafe_arena_set_allocated_request(
+    ::ss::UpdateServiceStatus_Request* request) {
   if (GetArenaForAllocation() == nullptr) {
     delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.request_);
   }
@@ -1653,11 +1750,11 @@ inline void CenterServiceMap::unsafe_arena_set_allocated_request(
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.CenterServiceMap.request)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.UpdateServiceStatus.request)
 }
-inline ::ss::CenterServiceMap_Request* CenterServiceMap::release_request() {
+inline ::ss::UpdateServiceStatus_Request* UpdateServiceStatus::release_request() {
   
-  ::ss::CenterServiceMap_Request* temp = _impl_.request_;
+  ::ss::UpdateServiceStatus_Request* temp = _impl_.request_;
   _impl_.request_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
@@ -1670,27 +1767,27 @@ inline ::ss::CenterServiceMap_Request* CenterServiceMap::release_request() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ss::CenterServiceMap_Request* CenterServiceMap::unsafe_arena_release_request() {
-  // @@protoc_insertion_point(field_release:ss.CenterServiceMap.request)
+inline ::ss::UpdateServiceStatus_Request* UpdateServiceStatus::unsafe_arena_release_request() {
+  // @@protoc_insertion_point(field_release:ss.UpdateServiceStatus.request)
   
-  ::ss::CenterServiceMap_Request* temp = _impl_.request_;
+  ::ss::UpdateServiceStatus_Request* temp = _impl_.request_;
   _impl_.request_ = nullptr;
   return temp;
 }
-inline ::ss::CenterServiceMap_Request* CenterServiceMap::_internal_mutable_request() {
+inline ::ss::UpdateServiceStatus_Request* UpdateServiceStatus::_internal_mutable_request() {
   
   if (_impl_.request_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ss::CenterServiceMap_Request>(GetArenaForAllocation());
+    auto* p = CreateMaybeMessage<::ss::UpdateServiceStatus_Request>(GetArenaForAllocation());
     _impl_.request_ = p;
   }
   return _impl_.request_;
 }
-inline ::ss::CenterServiceMap_Request* CenterServiceMap::mutable_request() {
-  ::ss::CenterServiceMap_Request* _msg = _internal_mutable_request();
-  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.request)
+inline ::ss::UpdateServiceStatus_Request* UpdateServiceStatus::mutable_request() {
+  ::ss::UpdateServiceStatus_Request* _msg = _internal_mutable_request();
+  // @@protoc_insertion_point(field_mutable:ss.UpdateServiceStatus.request)
   return _msg;
 }
-inline void CenterServiceMap::set_allocated_request(::ss::CenterServiceMap_Request* request) {
+inline void UpdateServiceStatus::set_allocated_request(::ss::UpdateServiceStatus_Request* request) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
     delete _impl_.request_;
@@ -1707,33 +1804,33 @@ inline void CenterServiceMap::set_allocated_request(::ss::CenterServiceMap_Reque
     
   }
   _impl_.request_ = request;
-  // @@protoc_insertion_point(field_set_allocated:ss.CenterServiceMap.request)
+  // @@protoc_insertion_point(field_set_allocated:ss.UpdateServiceStatus.request)
 }
 
-// .ss.CenterServiceMap.Response response = 2;
-inline bool CenterServiceMap::_internal_has_response() const {
+// .ss.UpdateServiceStatus.Response response = 2;
+inline bool UpdateServiceStatus::_internal_has_response() const {
   return this != internal_default_instance() && _impl_.response_ != nullptr;
 }
-inline bool CenterServiceMap::has_response() const {
+inline bool UpdateServiceStatus::has_response() const {
   return _internal_has_response();
 }
-inline void CenterServiceMap::clear_response() {
+inline void UpdateServiceStatus::clear_response() {
   if (GetArenaForAllocation() == nullptr && _impl_.response_ != nullptr) {
     delete _impl_.response_;
   }
   _impl_.response_ = nullptr;
 }
-inline const ::ss::CenterServiceMap_Response& CenterServiceMap::_internal_response() const {
-  const ::ss::CenterServiceMap_Response* p = _impl_.response_;
-  return p != nullptr ? *p : reinterpret_cast<const ::ss::CenterServiceMap_Response&>(
-      ::ss::_CenterServiceMap_Response_default_instance_);
+inline const ::ss::UpdateServiceStatus_Response& UpdateServiceStatus::_internal_response() const {
+  const ::ss::UpdateServiceStatus_Response* p = _impl_.response_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::UpdateServiceStatus_Response&>(
+      ::ss::_UpdateServiceStatus_Response_default_instance_);
 }
-inline const ::ss::CenterServiceMap_Response& CenterServiceMap::response() const {
-  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.response)
+inline const ::ss::UpdateServiceStatus_Response& UpdateServiceStatus::response() const {
+  // @@protoc_insertion_point(field_get:ss.UpdateServiceStatus.response)
   return _internal_response();
 }
-inline void CenterServiceMap::unsafe_arena_set_allocated_response(
-    ::ss::CenterServiceMap_Response* response) {
+inline void UpdateServiceStatus::unsafe_arena_set_allocated_response(
+    ::ss::UpdateServiceStatus_Response* response) {
   if (GetArenaForAllocation() == nullptr) {
     delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.response_);
   }
@@ -1743,11 +1840,11 @@ inline void CenterServiceMap::unsafe_arena_set_allocated_response(
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.CenterServiceMap.response)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.UpdateServiceStatus.response)
 }
-inline ::ss::CenterServiceMap_Response* CenterServiceMap::release_response() {
+inline ::ss::UpdateServiceStatus_Response* UpdateServiceStatus::release_response() {
   
-  ::ss::CenterServiceMap_Response* temp = _impl_.response_;
+  ::ss::UpdateServiceStatus_Response* temp = _impl_.response_;
   _impl_.response_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
@@ -1760,27 +1857,27 @@ inline ::ss::CenterServiceMap_Response* CenterServiceMap::release_response() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ss::CenterServiceMap_Response* CenterServiceMap::unsafe_arena_release_response() {
-  // @@protoc_insertion_point(field_release:ss.CenterServiceMap.response)
+inline ::ss::UpdateServiceStatus_Response* UpdateServiceStatus::unsafe_arena_release_response() {
+  // @@protoc_insertion_point(field_release:ss.UpdateServiceStatus.response)
   
-  ::ss::CenterServiceMap_Response* temp = _impl_.response_;
+  ::ss::UpdateServiceStatus_Response* temp = _impl_.response_;
   _impl_.response_ = nullptr;
   return temp;
 }
-inline ::ss::CenterServiceMap_Response* CenterServiceMap::_internal_mutable_response() {
+inline ::ss::UpdateServiceStatus_Response* UpdateServiceStatus::_internal_mutable_response() {
   
   if (_impl_.response_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ss::CenterServiceMap_Response>(GetArenaForAllocation());
+    auto* p = CreateMaybeMessage<::ss::UpdateServiceStatus_Response>(GetArenaForAllocation());
     _impl_.response_ = p;
   }
   return _impl_.response_;
 }
-inline ::ss::CenterServiceMap_Response* CenterServiceMap::mutable_response() {
-  ::ss::CenterServiceMap_Response* _msg = _internal_mutable_response();
-  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.response)
+inline ::ss::UpdateServiceStatus_Response* UpdateServiceStatus::mutable_response() {
+  ::ss::UpdateServiceStatus_Response* _msg = _internal_mutable_response();
+  // @@protoc_insertion_point(field_mutable:ss.UpdateServiceStatus.response)
   return _msg;
 }
-inline void CenterServiceMap::set_allocated_response(::ss::CenterServiceMap_Response* response) {
+inline void UpdateServiceStatus::set_allocated_response(::ss::UpdateServiceStatus_Response* response) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
     delete _impl_.response_;
@@ -1797,7 +1894,7 @@ inline void CenterServiceMap::set_allocated_response(::ss::CenterServiceMap_Resp
     
   }
   _impl_.response_ = response;
-  // @@protoc_insertion_point(field_set_allocated:ss.CenterServiceMap.response)
+  // @@protoc_insertion_point(field_set_allocated:ss.UpdateServiceStatus.response)
 }
 
 #ifdef __GNUC__

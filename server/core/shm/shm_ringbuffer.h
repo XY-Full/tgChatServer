@@ -16,7 +16,7 @@ template<typename T>
 class ShmRingBuffer {
 public:
     // 构造函数 - 创建新的环形缓冲区
-    ShmRingBuffer(const std::string& shm_name, size_t ring_size);
+    ShmRingBuffer(const std::string& shm_name, size_t ring_size = 1 << 20);
     
     // 析构函数
     ~ShmRingBuffer();

@@ -19,7 +19,8 @@ message RegistToCenter
 
     message Response
     {
-        SSErrorCode err = 1;
+        SSErrorCode err             = 1;
+        string local_busd_shm_name  = 2;
     }
     
     Request     request     = 1;
@@ -36,7 +37,8 @@ message UpdateServiceStatus
 
     message Response
     {
-        repeated ServiceInfo service_info_map = 1;
+        SSErrorCode          err              = 1;
+        repeated ServiceInfo service_info_map = 2;
     }
     
     Request     request     = 1;

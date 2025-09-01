@@ -49,14 +49,13 @@ PROTOBUF_NAMESPACE_CLOSE
 enum SSMsgID : int {
   SS_HEART_BEAT = 0,
   SS_REGIST_TO_CENTER = 1,
-  SS_UPDATE_STATUS = 2,
-  SC_NOTIFY = 10000,
+  SS_UPDATE_SERVICE_STATUS = 2,
   SSMsgID_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
   SSMsgID_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
 };
 bool SSMsgID_IsValid(int value);
 constexpr SSMsgID SSMsgID_MIN = SS_HEART_BEAT;
-constexpr SSMsgID SSMsgID_MAX = SC_NOTIFY;
+constexpr SSMsgID SSMsgID_MAX = SS_UPDATE_SERVICE_STATUS;
 constexpr int SSMsgID_ARRAYSIZE = SSMsgID_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* SSMsgID_descriptor();
