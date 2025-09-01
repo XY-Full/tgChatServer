@@ -1,5 +1,7 @@
 #include "TcpClient.h"
+#include "GlobalSpace.h"
 #include "Log.h"
+#include "AppMsg.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -12,9 +14,8 @@
 #include <unistd.h>
 #endif
 
-TcpClient::TcpClient(const std::string &ip, int port, Channel<std::shared_ptr<NetPack>> *in,
-                     Channel<std::shared_ptr<NetPack>> *out, Timer *timer)
-    : ip_(ip), port_(port), recv_channel_(in), send_channel_(out), timer_(timer)
+TcpClient::TcpClient(const std::string &ip, int port, RecvHandler recv_handler)
+    : ip_(ip), port_(port), recv_handler_(recv_handler)
 {
 #ifdef _WIN32
     WSADATA wsa_data;
@@ -36,9 +37,8 @@ void TcpClient::start()
     connectToServer();
 
     recv_thread_ = std::thread(&TcpClient::recvLoop, this);
-    send_thread_ = std::thread(&TcpClient::sendLoop, this);
 
-    timer_->runEvery(1.0f, std::bind(&TcpClient::checkHeartbeat, this));
+    GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpClient::checkHeartbeat, this));
 }
 
 void TcpClient::stop()
@@ -47,8 +47,6 @@ void TcpClient::stop()
 
     if (recv_thread_.joinable())
         recv_thread_.join();
-    if (send_thread_.joinable())
-        send_thread_.join();
 
     std::lock_guard<std::mutex> lock(conn_mutex_);
     if (sock_ != -1)
@@ -88,10 +86,17 @@ void TcpClient::connectToServer()
 
 void TcpClient::recvLoop()
 {
+    if(!recv_handler_)
+    {
+        ELOG << "RecvHandler is not set";
+        return;
+    }
+
     while (running_)
     {
-        std::string len_buf;
-        if (!socket_->recvAll(len_buf, 4, true))
+        std::string pack;
+        // 读取消息仅做peek
+        if (!socket_->recvAll(pack, sizeof(Header), true))
         {
             ELOG << "Receive length failed. Reconnecting...";
             stop();
@@ -99,15 +104,15 @@ void TcpClient::recvLoop()
             return;
         }
 
-        int32_t len = *reinterpret_cast<const int32_t *>(len_buf.data());
-        if (len <= 0 || len > 10 * 1024 * 1024)
+        auto header = *reinterpret_cast<Header*>(pack.data());
+        if (header.pack_len_ <= 0)// || header.pack_len_ > 10 * 1024 * 1024)
         {
-            ELOG << "Invalid message length: " << len;
+            ELOG << "Invalid message length: " << header.pack_len_;
             continue;
         }
 
         std::string msg;
-        if (!socket_->recvAll(msg, len))
+        if (!socket_->recvAll(msg, header.pack_len_))
         {
             ELOG << "Receive message body failed. Reconnecting...";
             stop();
@@ -115,20 +120,22 @@ void TcpClient::recvLoop()
             return;
         }
 
-        auto netpack = std::make_shared<NetPack>();
-        netpack->deserialize(0, msg);
-        recv_channel_->push(netpack);
+        auto appmsg = reinterpret_cast<AppMsg*>(msg.data());
         last_active_time_ = std::chrono::steady_clock::now();
+
+        recv_handler_(*appmsg);
     }
 }
 
-void TcpClient::sendLoop()
+void TcpClient::send(char* data, uint32_t len)
 {
-    while (running_)
+    if (!running_)
     {
-        auto msg = send_channel_->pop();
-        socket_->sendAll(*msg->serialize());
+        ELOG << "Cannot send, client not running";
+        return;
     }
+
+    socket_->sendAll(std::string(data, len));
 }
 
 void TcpClient::checkHeartbeat()

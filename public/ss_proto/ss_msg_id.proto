@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+enum SSMsgID
+{
+    SS_HEART_BEAT               = 0; // 心跳
+    SS_REGIST_TO_CENTER         = 1; // 服务注册到center
+    SS_UPDATE_SERVICE_STATUS    = 2; // 服务更新当前状态
+}

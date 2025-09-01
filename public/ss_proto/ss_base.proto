@@ -1,0 +1,10 @@
+syntax = "proto3";
+package ss;
+
+message ServiceInfo
+{
+    string      name                    = 1;
+    string      ip                      = 2;
+    int32       port                    = 3;
+    string      shm_recv_buffer_name    = 4;
+}

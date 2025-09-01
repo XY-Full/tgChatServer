@@ -35,3 +35,7 @@ compile_proto_if_needed "$path/proto" "$path/proto_files" "${proto_files[@]}"
 cd "$path/ss_proto"
 proto_files=(*.proto)
 compile_proto_if_needed "$path/ss_proto" "$path/proto_files" "${proto_files[@]}"
+
+cd $path
+./msg_proto_mapper.py proto_files/msg_mapping_ss.h ss_proto
+./msg_proto_mapper.py proto_files/msg_mapping.h proto

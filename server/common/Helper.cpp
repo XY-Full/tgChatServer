@@ -10,7 +10,7 @@
 #include <string>
 #include "google/protobuf/message.h"
 #include "../core/network/AppMsg.h"
-#include "../core/shm/shm_slab.h"
+#include "../../public/proto_files/msg_mapping_ss.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -272,36 +272,47 @@ int64_t Helper::GenUID()
     return uid;
 }
 
-AppMsg* Helper::CreateSSPack(const google::protobuf::Message &message, uint32_t seq)
+uint32_t Helper::CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq)
 {
     static std::atomic<uint32_t> now_seq_{0};
-    static shmslab::ShmSlab shm_slab_{"SSPackShmSlab"};
 
     // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
     auto message_strlen = message.ByteSizeLong();
-    // 获取pb数据的类型名，依赖这个进行反序列化
-    auto message_name = message.GetTypeName();
+    int32_t msg_id = kMsgNameToId.at(message.GetTypeName());
+
+    auto shm_slab_ = GlobalSpace()->shm_slab_;
+
+    uint32_t data_len = message_strlen;
+    uint32_t pack_len = sizeof(AppMsg) + data_len;
 
     // 从slab中分配内存块
-    auto pack_shm_addr = shm_slab_.Alloc(message_strlen + sizeof(AppMsg)); // 申请AppMsg结构体+body数据大小的内存块
+    auto pack_shm_offset = shm_slab_.Alloc(pack_len); // 申请AppMsg结构体+body数据大小+类型名长度的内存块
+    auto pack_shm_addr = shm_slab_.off2ptr(pack_shm_offset);
     
     auto msg = reinterpret_cast<AppMsg *>(pack_shm_addr);
-    msg->type_ = Type::S2S;
-    if(seq == 0) msg->seq_ = now_seq_.fetch_add(1);
+    // 填充AppMsg Header
+    msg->header_.version_ = MAGIC_VERSION;
+    msg->header_.type_ = Type::S2S;
+    msg->header_.pack_len_ = pack_len;
+    if(seq == 0) msg->header_.seq_ = now_seq_.fetch_add(1);
+    else msg->header_.seq_ = seq;
 
-    msg->data_ = reinterpret_cast<char *>(pack_shm_addr) + sizeof(AppMsg); // body紧跟在AppMsg结构体后面
-    msg->data_len_ = message_name.size() + message_strlen; // body数据长度
-    msg->msg_name_len = message_name.size();// 类型名字在data_中的前缀长度
+    msg->data_ = reinterpret_cast<char *>(pack_shm_addr) + sizeof(AppMsg);  // body紧跟在AppMsg结构体后面
+    msg->data_len_ = data_len;                                              // body数据长度
+    msg->msg_id_ = msg_id;                                                  // 消息ID
 
     // pb数据序列化到data_中，需要预留前缀长度，填充类型名字
-    if (!message.SerializeToArray(msg->data_ + msg->msg_name_len, message_strlen))
+    if (!message.SerializeToArray(msg->data_, message_strlen))
     {
         ELOG << "Error to serialize message";
-        return nullptr;
+        return pack_shm_offset;
     }
-    
-    // 拷贝 message_name 到body头部
-    memcpy(msg->data_, message_name.data(), msg->msg_name_len);
 
-    return msg;
+    return pack_shm_offset;
+}
+
+void Helper::DeleteSSPack(uint32_t pack_shm_offset)
+{
+    auto pack_size = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack_shm_offset))->header_.pack_len_;
+    GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_size);
 }

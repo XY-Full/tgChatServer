@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <memory>
 
@@ -28,5 +29,6 @@ public:
     static int64_t timeGetTimeS();
     static int64_t timeGetTimeMS();
     static int64_t GenUID();
-    static AppMsg* CreateSSPack(const google::protobuf::Message &message, uint32_t seq = 0);
+    static uint32_t CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq = 0);
+    static void DeleteSSPack(uint32_t pack_shm_offset);
 };

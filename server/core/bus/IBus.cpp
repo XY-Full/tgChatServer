@@ -86,8 +86,8 @@ public:
             return false;
         }
 
-        auto msg = Helper::CreateSSPack(message);
-        bool result = local_ring_->Push(*msg);
+        auto pack_offset = Helper::CreateSSPack(message);
+        bool result = local_ring_->Push(pack_offset);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
@@ -121,6 +121,8 @@ public:
         return 0;
     }
 
+    // 此处在Recv的位置进行调用，如果是点对点通信，直接将包发回给对端
+    // Demo
     bool Reply(uint32_t req_id, const google::protobuf::Message& message)
     {
         if (!ready_)
@@ -129,10 +131,9 @@ public:
             return false;
         }
 
-        auto msg = Helper::CreateSSPack(message);
-        msg->seq_ = req_id + 1;
+        auto pack_offset = Helper::CreateSSPack(message, req_id + 1);
         
-        bool result = local_ring_->Push(*msg);
+        bool result = local_ring_->Push(pack_offset);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
@@ -155,13 +156,7 @@ private:
     {
         // 创建或连接到共享内存
         std::string shm_name = "/ibus_" + opts_.client_id;
-        local_ring_ = std::make_unique<ShmRingBuffer<AppMsg>>(shm_name, opts_.local_ring_size);
-
-        if (!local_ring_->IsValid())
-        {
-            ELOG << "Failed to initialize shared memory ring buffer";
-            return false;
-        }
+        local_ring_ = std::make_unique<ShmRingBuffer<uint32_t>>(shm_name, opts_.local_ring_size);
 
         ILOG << "Shared memory initialized: " << shm_name;
         return true;
@@ -213,7 +208,7 @@ private:
         std::vector<MessageHandler> handlers;
         {
             std::lock_guard lock(handlers_mutex_);
-            auto it = handlers_.find(msg.topic);
+            auto it = handlers_.find(msg.GetTypeName());
             if (it != handlers_.end())
             {
                 handlers = it->second;
@@ -314,7 +309,7 @@ private:
     std::mutex ready_mutex_;
     std::condition_variable ready_cv_;
 
-    std::unique_ptr<ShmRingBuffer<AppMsg>> local_ring_;
+    std::unique_ptr<ShmRingBuffer<uint32_t>> local_ring_;
     std::thread io_thread_;
     std::thread retry_thread_;
 

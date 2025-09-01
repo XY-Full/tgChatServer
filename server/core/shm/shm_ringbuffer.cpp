@@ -3,7 +3,7 @@
 #include <mutex>
 
 template <typename T>
-ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size, bool exclusive)
+ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size)
     : shm_name_(shm_name), ring_size_(ring_size), is_owner_(true)
 {
     // 计算所需共享内存大小
@@ -15,25 +15,11 @@ ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size, b
     {
         throw std::runtime_error("Failed to create shared memory");
     }
-
+    
     shm_addr_ = shm_manager_.GetAddress();
 
-    // 初始化共享内存
-    InitShm(true);
-}
-
-template <typename T>
-ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size, std::nullptr_t)
-    : shm_name_(shm_name), ring_size_(ring_size), is_owner_(false)
-{
-    // 计算所需共享内存大小
-    shm_size_ = CalculateShmSize();
-
-    // 打开现有共享内存
-    shm_addr_ = shm_manager_.Open(shm_name_, shm_size_, true);
-
-    // 初始化共享内存（不初始化头部）
-    InitShm(false);
+    bool needInit = result == SHM_CREATE ? true : false;
+    InitShm(needInit);
 }
 
 template <typename T> ShmRingBuffer<T>::~ShmRingBuffer()
@@ -41,9 +27,10 @@ template <typename T> ShmRingBuffer<T>::~ShmRingBuffer()
     if (shm_addr_)
     {
         // 如果是所有者，销毁共享内存
-        if (is_owner_)
+        // if (is_owner_)
+        // 共享内存中的数据均不做清除
         {
-            shm_manager_.Close(true);
+            shm_manager_.Close(false);
         }
     }
 }

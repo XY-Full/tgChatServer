@@ -13,5 +13,6 @@ public:
         }
     }
 
-    uint8_t msg_name_len;   // 表示消息的前n个字节是消息名
+    char src_name[16];      // 包来源服务名
+    char dst_name[16];      // 包目的服务(名)
 };

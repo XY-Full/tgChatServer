@@ -31,6 +31,8 @@
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
+#include "ss_base.pb.h"
+#include "ss_err_code.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_core_2eproto
@@ -46,16 +48,36 @@ struct TableStruct_core_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_core_2eproto;
 namespace ss {
+class CenterServiceMap;
+struct CenterServiceMapDefaultTypeInternal;
+extern CenterServiceMapDefaultTypeInternal _CenterServiceMap_default_instance_;
+class CenterServiceMap_Request;
+struct CenterServiceMap_RequestDefaultTypeInternal;
+extern CenterServiceMap_RequestDefaultTypeInternal _CenterServiceMap_Request_default_instance_;
+class CenterServiceMap_Response;
+struct CenterServiceMap_ResponseDefaultTypeInternal;
+extern CenterServiceMap_ResponseDefaultTypeInternal _CenterServiceMap_Response_default_instance_;
 class HeartBeat;
 struct HeartBeatDefaultTypeInternal;
 extern HeartBeatDefaultTypeInternal _HeartBeat_default_instance_;
 class RegistToCenter;
 struct RegistToCenterDefaultTypeInternal;
 extern RegistToCenterDefaultTypeInternal _RegistToCenter_default_instance_;
+class RegistToCenter_Request;
+struct RegistToCenter_RequestDefaultTypeInternal;
+extern RegistToCenter_RequestDefaultTypeInternal _RegistToCenter_Request_default_instance_;
+class RegistToCenter_Response;
+struct RegistToCenter_ResponseDefaultTypeInternal;
+extern RegistToCenter_ResponseDefaultTypeInternal _RegistToCenter_Response_default_instance_;
 }  // namespace ss
 PROTOBUF_NAMESPACE_OPEN
+template<> ::ss::CenterServiceMap* Arena::CreateMaybeMessage<::ss::CenterServiceMap>(Arena*);
+template<> ::ss::CenterServiceMap_Request* Arena::CreateMaybeMessage<::ss::CenterServiceMap_Request>(Arena*);
+template<> ::ss::CenterServiceMap_Response* Arena::CreateMaybeMessage<::ss::CenterServiceMap_Response>(Arena*);
 template<> ::ss::HeartBeat* Arena::CreateMaybeMessage<::ss::HeartBeat>(Arena*);
 template<> ::ss::RegistToCenter* Arena::CreateMaybeMessage<::ss::RegistToCenter>(Arena*);
+template<> ::ss::RegistToCenter_Request* Arena::CreateMaybeMessage<::ss::RegistToCenter_Request>(Arena*);
+template<> ::ss::RegistToCenter_Response* Arena::CreateMaybeMessage<::ss::RegistToCenter_Response>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace ss {
 
@@ -179,6 +201,311 @@ class HeartBeat final :
 };
 // -------------------------------------------------------------------
 
+class RegistToCenter_Request final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.RegistToCenter.Request) */ {
+ public:
+  inline RegistToCenter_Request() : RegistToCenter_Request(nullptr) {}
+  ~RegistToCenter_Request() override;
+  explicit PROTOBUF_CONSTEXPR RegistToCenter_Request(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  RegistToCenter_Request(const RegistToCenter_Request& from);
+  RegistToCenter_Request(RegistToCenter_Request&& from) noexcept
+    : RegistToCenter_Request() {
+    *this = ::std::move(from);
+  }
+
+  inline RegistToCenter_Request& operator=(const RegistToCenter_Request& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RegistToCenter_Request& operator=(RegistToCenter_Request&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const RegistToCenter_Request& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const RegistToCenter_Request* internal_default_instance() {
+    return reinterpret_cast<const RegistToCenter_Request*>(
+               &_RegistToCenter_Request_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    1;
+
+  friend void swap(RegistToCenter_Request& a, RegistToCenter_Request& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(RegistToCenter_Request* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(RegistToCenter_Request* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  RegistToCenter_Request* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<RegistToCenter_Request>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const RegistToCenter_Request& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const RegistToCenter_Request& from) {
+    RegistToCenter_Request::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(RegistToCenter_Request* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ss.RegistToCenter.Request";
+  }
+  protected:
+  explicit RegistToCenter_Request(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kLocalInfoFieldNumber = 1,
+  };
+  // .ss.ServiceInfo local_info = 1;
+  bool has_local_info() const;
+  private:
+  bool _internal_has_local_info() const;
+  public:
+  void clear_local_info();
+  const ::ss::ServiceInfo& local_info() const;
+  PROTOBUF_NODISCARD ::ss::ServiceInfo* release_local_info();
+  ::ss::ServiceInfo* mutable_local_info();
+  void set_allocated_local_info(::ss::ServiceInfo* local_info);
+  private:
+  const ::ss::ServiceInfo& _internal_local_info() const;
+  ::ss::ServiceInfo* _internal_mutable_local_info();
+  public:
+  void unsafe_arena_set_allocated_local_info(
+      ::ss::ServiceInfo* local_info);
+  ::ss::ServiceInfo* unsafe_arena_release_local_info();
+
+  // @@protoc_insertion_point(class_scope:ss.RegistToCenter.Request)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::ss::ServiceInfo* local_info_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_core_2eproto;
+};
+// -------------------------------------------------------------------
+
+class RegistToCenter_Response final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.RegistToCenter.Response) */ {
+ public:
+  inline RegistToCenter_Response() : RegistToCenter_Response(nullptr) {}
+  ~RegistToCenter_Response() override;
+  explicit PROTOBUF_CONSTEXPR RegistToCenter_Response(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  RegistToCenter_Response(const RegistToCenter_Response& from);
+  RegistToCenter_Response(RegistToCenter_Response&& from) noexcept
+    : RegistToCenter_Response() {
+    *this = ::std::move(from);
+  }
+
+  inline RegistToCenter_Response& operator=(const RegistToCenter_Response& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RegistToCenter_Response& operator=(RegistToCenter_Response&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const RegistToCenter_Response& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const RegistToCenter_Response* internal_default_instance() {
+    return reinterpret_cast<const RegistToCenter_Response*>(
+               &_RegistToCenter_Response_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    2;
+
+  friend void swap(RegistToCenter_Response& a, RegistToCenter_Response& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(RegistToCenter_Response* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(RegistToCenter_Response* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  RegistToCenter_Response* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<RegistToCenter_Response>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const RegistToCenter_Response& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const RegistToCenter_Response& from) {
+    RegistToCenter_Response::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(RegistToCenter_Response* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ss.RegistToCenter.Response";
+  }
+  protected:
+  explicit RegistToCenter_Response(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kErrFieldNumber = 1,
+  };
+  // .SSErrorCode err = 1;
+  void clear_err();
+  ::SSErrorCode err() const;
+  void set_err(::SSErrorCode value);
+  private:
+  ::SSErrorCode _internal_err() const;
+  void _internal_set_err(::SSErrorCode value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:ss.RegistToCenter.Response)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    int err_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_core_2eproto;
+};
+// -------------------------------------------------------------------
+
 class RegistToCenter final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.RegistToCenter) */ {
  public:
@@ -227,7 +554,7 @@ class RegistToCenter final :
                &_RegistToCenter_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    3;
 
   friend void swap(RegistToCenter& a, RegistToCenter& b) {
     a.Swap(&b);
@@ -297,49 +624,50 @@ class RegistToCenter final :
 
   // nested types ----------------------------------------------------
 
+  typedef RegistToCenter_Request Request;
+  typedef RegistToCenter_Response Response;
+
   // accessors -------------------------------------------------------
 
   enum : int {
-    kNameFieldNumber = 1,
-    kIpFieldNumber = 2,
-    kPortFieldNumber = 3,
+    kRequestFieldNumber = 1,
+    kResponseFieldNumber = 2,
   };
-  // string name = 1;
-  void clear_name();
-  const std::string& name() const;
-  template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_name(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_name();
-  PROTOBUF_NODISCARD std::string* release_name();
-  void set_allocated_name(std::string* name);
+  // .ss.RegistToCenter.Request request = 1;
+  bool has_request() const;
   private:
-  const std::string& _internal_name() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_name(const std::string& value);
-  std::string* _internal_mutable_name();
+  bool _internal_has_request() const;
   public:
+  void clear_request();
+  const ::ss::RegistToCenter_Request& request() const;
+  PROTOBUF_NODISCARD ::ss::RegistToCenter_Request* release_request();
+  ::ss::RegistToCenter_Request* mutable_request();
+  void set_allocated_request(::ss::RegistToCenter_Request* request);
+  private:
+  const ::ss::RegistToCenter_Request& _internal_request() const;
+  ::ss::RegistToCenter_Request* _internal_mutable_request();
+  public:
+  void unsafe_arena_set_allocated_request(
+      ::ss::RegistToCenter_Request* request);
+  ::ss::RegistToCenter_Request* unsafe_arena_release_request();
 
-  // string ip = 2;
-  void clear_ip();
-  const std::string& ip() const;
-  template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_ip(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_ip();
-  PROTOBUF_NODISCARD std::string* release_ip();
-  void set_allocated_ip(std::string* ip);
+  // .ss.RegistToCenter.Response response = 2;
+  bool has_response() const;
   private:
-  const std::string& _internal_ip() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_ip(const std::string& value);
-  std::string* _internal_mutable_ip();
+  bool _internal_has_response() const;
   public:
-
-  // int32 port = 3;
-  void clear_port();
-  int32_t port() const;
-  void set_port(int32_t value);
+  void clear_response();
+  const ::ss::RegistToCenter_Response& response() const;
+  PROTOBUF_NODISCARD ::ss::RegistToCenter_Response* release_response();
+  ::ss::RegistToCenter_Response* mutable_response();
+  void set_allocated_response(::ss::RegistToCenter_Response* response);
   private:
-  int32_t _internal_port() const;
-  void _internal_set_port(int32_t value);
+  const ::ss::RegistToCenter_Response& _internal_response() const;
+  ::ss::RegistToCenter_Response* _internal_mutable_response();
   public:
+  void unsafe_arena_set_allocated_response(
+      ::ss::RegistToCenter_Response* response);
+  ::ss::RegistToCenter_Response* unsafe_arena_release_response();
 
   // @@protoc_insertion_point(class_scope:ss.RegistToCenter)
  private:
@@ -349,9 +677,502 @@ class RegistToCenter final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr name_;
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr ip_;
-    int32_t port_;
+    ::ss::RegistToCenter_Request* request_;
+    ::ss::RegistToCenter_Response* response_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_core_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CenterServiceMap_Request final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.CenterServiceMap.Request) */ {
+ public:
+  inline CenterServiceMap_Request() : CenterServiceMap_Request(nullptr) {}
+  ~CenterServiceMap_Request() override;
+  explicit PROTOBUF_CONSTEXPR CenterServiceMap_Request(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CenterServiceMap_Request(const CenterServiceMap_Request& from);
+  CenterServiceMap_Request(CenterServiceMap_Request&& from) noexcept
+    : CenterServiceMap_Request() {
+    *this = ::std::move(from);
+  }
+
+  inline CenterServiceMap_Request& operator=(const CenterServiceMap_Request& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CenterServiceMap_Request& operator=(CenterServiceMap_Request&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CenterServiceMap_Request& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CenterServiceMap_Request* internal_default_instance() {
+    return reinterpret_cast<const CenterServiceMap_Request*>(
+               &_CenterServiceMap_Request_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    4;
+
+  friend void swap(CenterServiceMap_Request& a, CenterServiceMap_Request& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CenterServiceMap_Request* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CenterServiceMap_Request* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CenterServiceMap_Request* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CenterServiceMap_Request>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CenterServiceMap_Request& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CenterServiceMap_Request& from) {
+    CenterServiceMap_Request::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CenterServiceMap_Request* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ss.CenterServiceMap.Request";
+  }
+  protected:
+  explicit CenterServiceMap_Request(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kLocalInfoFieldNumber = 1,
+  };
+  // .ss.ServiceInfo local_info = 1;
+  bool has_local_info() const;
+  private:
+  bool _internal_has_local_info() const;
+  public:
+  void clear_local_info();
+  const ::ss::ServiceInfo& local_info() const;
+  PROTOBUF_NODISCARD ::ss::ServiceInfo* release_local_info();
+  ::ss::ServiceInfo* mutable_local_info();
+  void set_allocated_local_info(::ss::ServiceInfo* local_info);
+  private:
+  const ::ss::ServiceInfo& _internal_local_info() const;
+  ::ss::ServiceInfo* _internal_mutable_local_info();
+  public:
+  void unsafe_arena_set_allocated_local_info(
+      ::ss::ServiceInfo* local_info);
+  ::ss::ServiceInfo* unsafe_arena_release_local_info();
+
+  // @@protoc_insertion_point(class_scope:ss.CenterServiceMap.Request)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::ss::ServiceInfo* local_info_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_core_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CenterServiceMap_Response final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.CenterServiceMap.Response) */ {
+ public:
+  inline CenterServiceMap_Response() : CenterServiceMap_Response(nullptr) {}
+  ~CenterServiceMap_Response() override;
+  explicit PROTOBUF_CONSTEXPR CenterServiceMap_Response(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CenterServiceMap_Response(const CenterServiceMap_Response& from);
+  CenterServiceMap_Response(CenterServiceMap_Response&& from) noexcept
+    : CenterServiceMap_Response() {
+    *this = ::std::move(from);
+  }
+
+  inline CenterServiceMap_Response& operator=(const CenterServiceMap_Response& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CenterServiceMap_Response& operator=(CenterServiceMap_Response&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CenterServiceMap_Response& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CenterServiceMap_Response* internal_default_instance() {
+    return reinterpret_cast<const CenterServiceMap_Response*>(
+               &_CenterServiceMap_Response_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    5;
+
+  friend void swap(CenterServiceMap_Response& a, CenterServiceMap_Response& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CenterServiceMap_Response* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CenterServiceMap_Response* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CenterServiceMap_Response* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CenterServiceMap_Response>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CenterServiceMap_Response& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CenterServiceMap_Response& from) {
+    CenterServiceMap_Response::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CenterServiceMap_Response* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ss.CenterServiceMap.Response";
+  }
+  protected:
+  explicit CenterServiceMap_Response(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kServiceInfoMapFieldNumber = 1,
+  };
+  // repeated .ss.ServiceInfo service_info_map = 1;
+  int service_info_map_size() const;
+  private:
+  int _internal_service_info_map_size() const;
+  public:
+  void clear_service_info_map();
+  ::ss::ServiceInfo* mutable_service_info_map(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >*
+      mutable_service_info_map();
+  private:
+  const ::ss::ServiceInfo& _internal_service_info_map(int index) const;
+  ::ss::ServiceInfo* _internal_add_service_info_map();
+  public:
+  const ::ss::ServiceInfo& service_info_map(int index) const;
+  ::ss::ServiceInfo* add_service_info_map();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >&
+      service_info_map() const;
+
+  // @@protoc_insertion_point(class_scope:ss.CenterServiceMap.Response)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo > service_info_map_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_core_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CenterServiceMap final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ss.CenterServiceMap) */ {
+ public:
+  inline CenterServiceMap() : CenterServiceMap(nullptr) {}
+  ~CenterServiceMap() override;
+  explicit PROTOBUF_CONSTEXPR CenterServiceMap(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CenterServiceMap(const CenterServiceMap& from);
+  CenterServiceMap(CenterServiceMap&& from) noexcept
+    : CenterServiceMap() {
+    *this = ::std::move(from);
+  }
+
+  inline CenterServiceMap& operator=(const CenterServiceMap& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CenterServiceMap& operator=(CenterServiceMap&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CenterServiceMap& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CenterServiceMap* internal_default_instance() {
+    return reinterpret_cast<const CenterServiceMap*>(
+               &_CenterServiceMap_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    6;
+
+  friend void swap(CenterServiceMap& a, CenterServiceMap& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CenterServiceMap* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CenterServiceMap* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CenterServiceMap* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CenterServiceMap>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CenterServiceMap& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CenterServiceMap& from) {
+    CenterServiceMap::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CenterServiceMap* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ss.CenterServiceMap";
+  }
+  protected:
+  explicit CenterServiceMap(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  typedef CenterServiceMap_Request Request;
+  typedef CenterServiceMap_Response Response;
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kRequestFieldNumber = 1,
+    kResponseFieldNumber = 2,
+  };
+  // .ss.CenterServiceMap.Request request = 1;
+  bool has_request() const;
+  private:
+  bool _internal_has_request() const;
+  public:
+  void clear_request();
+  const ::ss::CenterServiceMap_Request& request() const;
+  PROTOBUF_NODISCARD ::ss::CenterServiceMap_Request* release_request();
+  ::ss::CenterServiceMap_Request* mutable_request();
+  void set_allocated_request(::ss::CenterServiceMap_Request* request);
+  private:
+  const ::ss::CenterServiceMap_Request& _internal_request() const;
+  ::ss::CenterServiceMap_Request* _internal_mutable_request();
+  public:
+  void unsafe_arena_set_allocated_request(
+      ::ss::CenterServiceMap_Request* request);
+  ::ss::CenterServiceMap_Request* unsafe_arena_release_request();
+
+  // .ss.CenterServiceMap.Response response = 2;
+  bool has_response() const;
+  private:
+  bool _internal_has_response() const;
+  public:
+  void clear_response();
+  const ::ss::CenterServiceMap_Response& response() const;
+  PROTOBUF_NODISCARD ::ss::CenterServiceMap_Response* release_response();
+  ::ss::CenterServiceMap_Response* mutable_response();
+  void set_allocated_response(::ss::CenterServiceMap_Response* response);
+  private:
+  const ::ss::CenterServiceMap_Response& _internal_response() const;
+  ::ss::CenterServiceMap_Response* _internal_mutable_response();
+  public:
+  void unsafe_arena_set_allocated_response(
+      ::ss::CenterServiceMap_Response* response);
+  ::ss::CenterServiceMap_Response* unsafe_arena_release_response();
+
+  // @@protoc_insertion_point(class_scope:ss.CenterServiceMap)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::ss::CenterServiceMap_Request* request_;
+    ::ss::CenterServiceMap_Response* response_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -370,131 +1191,628 @@ class RegistToCenter final :
 
 // -------------------------------------------------------------------
 
+// RegistToCenter_Request
+
+// .ss.ServiceInfo local_info = 1;
+inline bool RegistToCenter_Request::_internal_has_local_info() const {
+  return this != internal_default_instance() && _impl_.local_info_ != nullptr;
+}
+inline bool RegistToCenter_Request::has_local_info() const {
+  return _internal_has_local_info();
+}
+inline const ::ss::ServiceInfo& RegistToCenter_Request::_internal_local_info() const {
+  const ::ss::ServiceInfo* p = _impl_.local_info_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::ServiceInfo&>(
+      ::ss::_ServiceInfo_default_instance_);
+}
+inline const ::ss::ServiceInfo& RegistToCenter_Request::local_info() const {
+  // @@protoc_insertion_point(field_get:ss.RegistToCenter.Request.local_info)
+  return _internal_local_info();
+}
+inline void RegistToCenter_Request::unsafe_arena_set_allocated_local_info(
+    ::ss::ServiceInfo* local_info) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.local_info_);
+  }
+  _impl_.local_info_ = local_info;
+  if (local_info) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.RegistToCenter.Request.local_info)
+}
+inline ::ss::ServiceInfo* RegistToCenter_Request::release_local_info() {
+  
+  ::ss::ServiceInfo* temp = _impl_.local_info_;
+  _impl_.local_info_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::ss::ServiceInfo* RegistToCenter_Request::unsafe_arena_release_local_info() {
+  // @@protoc_insertion_point(field_release:ss.RegistToCenter.Request.local_info)
+  
+  ::ss::ServiceInfo* temp = _impl_.local_info_;
+  _impl_.local_info_ = nullptr;
+  return temp;
+}
+inline ::ss::ServiceInfo* RegistToCenter_Request::_internal_mutable_local_info() {
+  
+  if (_impl_.local_info_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ss::ServiceInfo>(GetArenaForAllocation());
+    _impl_.local_info_ = p;
+  }
+  return _impl_.local_info_;
+}
+inline ::ss::ServiceInfo* RegistToCenter_Request::mutable_local_info() {
+  ::ss::ServiceInfo* _msg = _internal_mutable_local_info();
+  // @@protoc_insertion_point(field_mutable:ss.RegistToCenter.Request.local_info)
+  return _msg;
+}
+inline void RegistToCenter_Request::set_allocated_local_info(::ss::ServiceInfo* local_info) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.local_info_);
+  }
+  if (local_info) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(local_info));
+    if (message_arena != submessage_arena) {
+      local_info = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, local_info, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.local_info_ = local_info;
+  // @@protoc_insertion_point(field_set_allocated:ss.RegistToCenter.Request.local_info)
+}
+
+// -------------------------------------------------------------------
+
+// RegistToCenter_Response
+
+// .SSErrorCode err = 1;
+inline void RegistToCenter_Response::clear_err() {
+  _impl_.err_ = 0;
+}
+inline ::SSErrorCode RegistToCenter_Response::_internal_err() const {
+  return static_cast< ::SSErrorCode >(_impl_.err_);
+}
+inline ::SSErrorCode RegistToCenter_Response::err() const {
+  // @@protoc_insertion_point(field_get:ss.RegistToCenter.Response.err)
+  return _internal_err();
+}
+inline void RegistToCenter_Response::_internal_set_err(::SSErrorCode value) {
+  
+  _impl_.err_ = value;
+}
+inline void RegistToCenter_Response::set_err(::SSErrorCode value) {
+  _internal_set_err(value);
+  // @@protoc_insertion_point(field_set:ss.RegistToCenter.Response.err)
+}
+
+// -------------------------------------------------------------------
+
 // RegistToCenter
 
-// string name = 1;
-inline void RegistToCenter::clear_name() {
-  _impl_.name_.ClearToEmpty();
+// .ss.RegistToCenter.Request request = 1;
+inline bool RegistToCenter::_internal_has_request() const {
+  return this != internal_default_instance() && _impl_.request_ != nullptr;
 }
-inline const std::string& RegistToCenter::name() const {
-  // @@protoc_insertion_point(field_get:ss.RegistToCenter.name)
-  return _internal_name();
+inline bool RegistToCenter::has_request() const {
+  return _internal_has_request();
 }
-template <typename ArgT0, typename... ArgT>
-inline PROTOBUF_ALWAYS_INLINE
-void RegistToCenter::set_name(ArgT0&& arg0, ArgT... args) {
- 
- _impl_.name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:ss.RegistToCenter.name)
+inline void RegistToCenter::clear_request() {
+  if (GetArenaForAllocation() == nullptr && _impl_.request_ != nullptr) {
+    delete _impl_.request_;
+  }
+  _impl_.request_ = nullptr;
 }
-inline std::string* RegistToCenter::mutable_name() {
-  std::string* _s = _internal_mutable_name();
-  // @@protoc_insertion_point(field_mutable:ss.RegistToCenter.name)
-  return _s;
+inline const ::ss::RegistToCenter_Request& RegistToCenter::_internal_request() const {
+  const ::ss::RegistToCenter_Request* p = _impl_.request_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::RegistToCenter_Request&>(
+      ::ss::_RegistToCenter_Request_default_instance_);
 }
-inline const std::string& RegistToCenter::_internal_name() const {
-  return _impl_.name_.Get();
+inline const ::ss::RegistToCenter_Request& RegistToCenter::request() const {
+  // @@protoc_insertion_point(field_get:ss.RegistToCenter.request)
+  return _internal_request();
 }
-inline void RegistToCenter::_internal_set_name(const std::string& value) {
-  
-  _impl_.name_.Set(value, GetArenaForAllocation());
-}
-inline std::string* RegistToCenter::_internal_mutable_name() {
-  
-  return _impl_.name_.Mutable(GetArenaForAllocation());
-}
-inline std::string* RegistToCenter::release_name() {
-  // @@protoc_insertion_point(field_release:ss.RegistToCenter.name)
-  return _impl_.name_.Release();
-}
-inline void RegistToCenter::set_allocated_name(std::string* name) {
-  if (name != nullptr) {
+inline void RegistToCenter::unsafe_arena_set_allocated_request(
+    ::ss::RegistToCenter_Request* request) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.request_);
+  }
+  _impl_.request_ = request;
+  if (request) {
     
   } else {
     
   }
-  _impl_.name_.SetAllocated(name, GetArenaForAllocation());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.name_.IsDefault()) {
-    _impl_.name_.Set("", GetArenaForAllocation());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.RegistToCenter.request)
+}
+inline ::ss::RegistToCenter_Request* RegistToCenter::release_request() {
+  
+  ::ss::RegistToCenter_Request* temp = _impl_.request_;
+  _impl_.request_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
   }
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:ss.RegistToCenter.name)
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
 }
-
-// string ip = 2;
-inline void RegistToCenter::clear_ip() {
-  _impl_.ip_.ClearToEmpty();
-}
-inline const std::string& RegistToCenter::ip() const {
-  // @@protoc_insertion_point(field_get:ss.RegistToCenter.ip)
-  return _internal_ip();
-}
-template <typename ArgT0, typename... ArgT>
-inline PROTOBUF_ALWAYS_INLINE
-void RegistToCenter::set_ip(ArgT0&& arg0, ArgT... args) {
- 
- _impl_.ip_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:ss.RegistToCenter.ip)
-}
-inline std::string* RegistToCenter::mutable_ip() {
-  std::string* _s = _internal_mutable_ip();
-  // @@protoc_insertion_point(field_mutable:ss.RegistToCenter.ip)
-  return _s;
-}
-inline const std::string& RegistToCenter::_internal_ip() const {
-  return _impl_.ip_.Get();
-}
-inline void RegistToCenter::_internal_set_ip(const std::string& value) {
+inline ::ss::RegistToCenter_Request* RegistToCenter::unsafe_arena_release_request() {
+  // @@protoc_insertion_point(field_release:ss.RegistToCenter.request)
   
-  _impl_.ip_.Set(value, GetArenaForAllocation());
+  ::ss::RegistToCenter_Request* temp = _impl_.request_;
+  _impl_.request_ = nullptr;
+  return temp;
 }
-inline std::string* RegistToCenter::_internal_mutable_ip() {
+inline ::ss::RegistToCenter_Request* RegistToCenter::_internal_mutable_request() {
   
-  return _impl_.ip_.Mutable(GetArenaForAllocation());
+  if (_impl_.request_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ss::RegistToCenter_Request>(GetArenaForAllocation());
+    _impl_.request_ = p;
+  }
+  return _impl_.request_;
 }
-inline std::string* RegistToCenter::release_ip() {
-  // @@protoc_insertion_point(field_release:ss.RegistToCenter.ip)
-  return _impl_.ip_.Release();
+inline ::ss::RegistToCenter_Request* RegistToCenter::mutable_request() {
+  ::ss::RegistToCenter_Request* _msg = _internal_mutable_request();
+  // @@protoc_insertion_point(field_mutable:ss.RegistToCenter.request)
+  return _msg;
 }
-inline void RegistToCenter::set_allocated_ip(std::string* ip) {
-  if (ip != nullptr) {
+inline void RegistToCenter::set_allocated_request(::ss::RegistToCenter_Request* request) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.request_;
+  }
+  if (request) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(request);
+    if (message_arena != submessage_arena) {
+      request = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, request, submessage_arena);
+    }
     
   } else {
     
   }
-  _impl_.ip_.SetAllocated(ip, GetArenaForAllocation());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.ip_.IsDefault()) {
-    _impl_.ip_.Set("", GetArenaForAllocation());
-  }
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:ss.RegistToCenter.ip)
+  _impl_.request_ = request;
+  // @@protoc_insertion_point(field_set_allocated:ss.RegistToCenter.request)
 }
 
-// int32 port = 3;
-inline void RegistToCenter::clear_port() {
-  _impl_.port_ = 0;
+// .ss.RegistToCenter.Response response = 2;
+inline bool RegistToCenter::_internal_has_response() const {
+  return this != internal_default_instance() && _impl_.response_ != nullptr;
 }
-inline int32_t RegistToCenter::_internal_port() const {
-  return _impl_.port_;
+inline bool RegistToCenter::has_response() const {
+  return _internal_has_response();
 }
-inline int32_t RegistToCenter::port() const {
-  // @@protoc_insertion_point(field_get:ss.RegistToCenter.port)
-  return _internal_port();
+inline void RegistToCenter::clear_response() {
+  if (GetArenaForAllocation() == nullptr && _impl_.response_ != nullptr) {
+    delete _impl_.response_;
+  }
+  _impl_.response_ = nullptr;
 }
-inline void RegistToCenter::_internal_set_port(int32_t value) {
+inline const ::ss::RegistToCenter_Response& RegistToCenter::_internal_response() const {
+  const ::ss::RegistToCenter_Response* p = _impl_.response_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::RegistToCenter_Response&>(
+      ::ss::_RegistToCenter_Response_default_instance_);
+}
+inline const ::ss::RegistToCenter_Response& RegistToCenter::response() const {
+  // @@protoc_insertion_point(field_get:ss.RegistToCenter.response)
+  return _internal_response();
+}
+inline void RegistToCenter::unsafe_arena_set_allocated_response(
+    ::ss::RegistToCenter_Response* response) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.response_);
+  }
+  _impl_.response_ = response;
+  if (response) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.RegistToCenter.response)
+}
+inline ::ss::RegistToCenter_Response* RegistToCenter::release_response() {
   
-  _impl_.port_ = value;
+  ::ss::RegistToCenter_Response* temp = _impl_.response_;
+  _impl_.response_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
 }
-inline void RegistToCenter::set_port(int32_t value) {
-  _internal_set_port(value);
-  // @@protoc_insertion_point(field_set:ss.RegistToCenter.port)
+inline ::ss::RegistToCenter_Response* RegistToCenter::unsafe_arena_release_response() {
+  // @@protoc_insertion_point(field_release:ss.RegistToCenter.response)
+  
+  ::ss::RegistToCenter_Response* temp = _impl_.response_;
+  _impl_.response_ = nullptr;
+  return temp;
+}
+inline ::ss::RegistToCenter_Response* RegistToCenter::_internal_mutable_response() {
+  
+  if (_impl_.response_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ss::RegistToCenter_Response>(GetArenaForAllocation());
+    _impl_.response_ = p;
+  }
+  return _impl_.response_;
+}
+inline ::ss::RegistToCenter_Response* RegistToCenter::mutable_response() {
+  ::ss::RegistToCenter_Response* _msg = _internal_mutable_response();
+  // @@protoc_insertion_point(field_mutable:ss.RegistToCenter.response)
+  return _msg;
+}
+inline void RegistToCenter::set_allocated_response(::ss::RegistToCenter_Response* response) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.response_;
+  }
+  if (response) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(response);
+    if (message_arena != submessage_arena) {
+      response = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, response, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.response_ = response;
+  // @@protoc_insertion_point(field_set_allocated:ss.RegistToCenter.response)
+}
+
+// -------------------------------------------------------------------
+
+// CenterServiceMap_Request
+
+// .ss.ServiceInfo local_info = 1;
+inline bool CenterServiceMap_Request::_internal_has_local_info() const {
+  return this != internal_default_instance() && _impl_.local_info_ != nullptr;
+}
+inline bool CenterServiceMap_Request::has_local_info() const {
+  return _internal_has_local_info();
+}
+inline const ::ss::ServiceInfo& CenterServiceMap_Request::_internal_local_info() const {
+  const ::ss::ServiceInfo* p = _impl_.local_info_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::ServiceInfo&>(
+      ::ss::_ServiceInfo_default_instance_);
+}
+inline const ::ss::ServiceInfo& CenterServiceMap_Request::local_info() const {
+  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.Request.local_info)
+  return _internal_local_info();
+}
+inline void CenterServiceMap_Request::unsafe_arena_set_allocated_local_info(
+    ::ss::ServiceInfo* local_info) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.local_info_);
+  }
+  _impl_.local_info_ = local_info;
+  if (local_info) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.CenterServiceMap.Request.local_info)
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Request::release_local_info() {
+  
+  ::ss::ServiceInfo* temp = _impl_.local_info_;
+  _impl_.local_info_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Request::unsafe_arena_release_local_info() {
+  // @@protoc_insertion_point(field_release:ss.CenterServiceMap.Request.local_info)
+  
+  ::ss::ServiceInfo* temp = _impl_.local_info_;
+  _impl_.local_info_ = nullptr;
+  return temp;
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Request::_internal_mutable_local_info() {
+  
+  if (_impl_.local_info_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ss::ServiceInfo>(GetArenaForAllocation());
+    _impl_.local_info_ = p;
+  }
+  return _impl_.local_info_;
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Request::mutable_local_info() {
+  ::ss::ServiceInfo* _msg = _internal_mutable_local_info();
+  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.Request.local_info)
+  return _msg;
+}
+inline void CenterServiceMap_Request::set_allocated_local_info(::ss::ServiceInfo* local_info) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.local_info_);
+  }
+  if (local_info) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(local_info));
+    if (message_arena != submessage_arena) {
+      local_info = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, local_info, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.local_info_ = local_info;
+  // @@protoc_insertion_point(field_set_allocated:ss.CenterServiceMap.Request.local_info)
+}
+
+// -------------------------------------------------------------------
+
+// CenterServiceMap_Response
+
+// repeated .ss.ServiceInfo service_info_map = 1;
+inline int CenterServiceMap_Response::_internal_service_info_map_size() const {
+  return _impl_.service_info_map_.size();
+}
+inline int CenterServiceMap_Response::service_info_map_size() const {
+  return _internal_service_info_map_size();
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Response::mutable_service_info_map(int index) {
+  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.Response.service_info_map)
+  return _impl_.service_info_map_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >*
+CenterServiceMap_Response::mutable_service_info_map() {
+  // @@protoc_insertion_point(field_mutable_list:ss.CenterServiceMap.Response.service_info_map)
+  return &_impl_.service_info_map_;
+}
+inline const ::ss::ServiceInfo& CenterServiceMap_Response::_internal_service_info_map(int index) const {
+  return _impl_.service_info_map_.Get(index);
+}
+inline const ::ss::ServiceInfo& CenterServiceMap_Response::service_info_map(int index) const {
+  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.Response.service_info_map)
+  return _internal_service_info_map(index);
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Response::_internal_add_service_info_map() {
+  return _impl_.service_info_map_.Add();
+}
+inline ::ss::ServiceInfo* CenterServiceMap_Response::add_service_info_map() {
+  ::ss::ServiceInfo* _add = _internal_add_service_info_map();
+  // @@protoc_insertion_point(field_add:ss.CenterServiceMap.Response.service_info_map)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ss::ServiceInfo >&
+CenterServiceMap_Response::service_info_map() const {
+  // @@protoc_insertion_point(field_list:ss.CenterServiceMap.Response.service_info_map)
+  return _impl_.service_info_map_;
+}
+
+// -------------------------------------------------------------------
+
+// CenterServiceMap
+
+// .ss.CenterServiceMap.Request request = 1;
+inline bool CenterServiceMap::_internal_has_request() const {
+  return this != internal_default_instance() && _impl_.request_ != nullptr;
+}
+inline bool CenterServiceMap::has_request() const {
+  return _internal_has_request();
+}
+inline void CenterServiceMap::clear_request() {
+  if (GetArenaForAllocation() == nullptr && _impl_.request_ != nullptr) {
+    delete _impl_.request_;
+  }
+  _impl_.request_ = nullptr;
+}
+inline const ::ss::CenterServiceMap_Request& CenterServiceMap::_internal_request() const {
+  const ::ss::CenterServiceMap_Request* p = _impl_.request_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::CenterServiceMap_Request&>(
+      ::ss::_CenterServiceMap_Request_default_instance_);
+}
+inline const ::ss::CenterServiceMap_Request& CenterServiceMap::request() const {
+  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.request)
+  return _internal_request();
+}
+inline void CenterServiceMap::unsafe_arena_set_allocated_request(
+    ::ss::CenterServiceMap_Request* request) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.request_);
+  }
+  _impl_.request_ = request;
+  if (request) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.CenterServiceMap.request)
+}
+inline ::ss::CenterServiceMap_Request* CenterServiceMap::release_request() {
+  
+  ::ss::CenterServiceMap_Request* temp = _impl_.request_;
+  _impl_.request_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::ss::CenterServiceMap_Request* CenterServiceMap::unsafe_arena_release_request() {
+  // @@protoc_insertion_point(field_release:ss.CenterServiceMap.request)
+  
+  ::ss::CenterServiceMap_Request* temp = _impl_.request_;
+  _impl_.request_ = nullptr;
+  return temp;
+}
+inline ::ss::CenterServiceMap_Request* CenterServiceMap::_internal_mutable_request() {
+  
+  if (_impl_.request_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ss::CenterServiceMap_Request>(GetArenaForAllocation());
+    _impl_.request_ = p;
+  }
+  return _impl_.request_;
+}
+inline ::ss::CenterServiceMap_Request* CenterServiceMap::mutable_request() {
+  ::ss::CenterServiceMap_Request* _msg = _internal_mutable_request();
+  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.request)
+  return _msg;
+}
+inline void CenterServiceMap::set_allocated_request(::ss::CenterServiceMap_Request* request) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.request_;
+  }
+  if (request) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(request);
+    if (message_arena != submessage_arena) {
+      request = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, request, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.request_ = request;
+  // @@protoc_insertion_point(field_set_allocated:ss.CenterServiceMap.request)
+}
+
+// .ss.CenterServiceMap.Response response = 2;
+inline bool CenterServiceMap::_internal_has_response() const {
+  return this != internal_default_instance() && _impl_.response_ != nullptr;
+}
+inline bool CenterServiceMap::has_response() const {
+  return _internal_has_response();
+}
+inline void CenterServiceMap::clear_response() {
+  if (GetArenaForAllocation() == nullptr && _impl_.response_ != nullptr) {
+    delete _impl_.response_;
+  }
+  _impl_.response_ = nullptr;
+}
+inline const ::ss::CenterServiceMap_Response& CenterServiceMap::_internal_response() const {
+  const ::ss::CenterServiceMap_Response* p = _impl_.response_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ss::CenterServiceMap_Response&>(
+      ::ss::_CenterServiceMap_Response_default_instance_);
+}
+inline const ::ss::CenterServiceMap_Response& CenterServiceMap::response() const {
+  // @@protoc_insertion_point(field_get:ss.CenterServiceMap.response)
+  return _internal_response();
+}
+inline void CenterServiceMap::unsafe_arena_set_allocated_response(
+    ::ss::CenterServiceMap_Response* response) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.response_);
+  }
+  _impl_.response_ = response;
+  if (response) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ss.CenterServiceMap.response)
+}
+inline ::ss::CenterServiceMap_Response* CenterServiceMap::release_response() {
+  
+  ::ss::CenterServiceMap_Response* temp = _impl_.response_;
+  _impl_.response_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::ss::CenterServiceMap_Response* CenterServiceMap::unsafe_arena_release_response() {
+  // @@protoc_insertion_point(field_release:ss.CenterServiceMap.response)
+  
+  ::ss::CenterServiceMap_Response* temp = _impl_.response_;
+  _impl_.response_ = nullptr;
+  return temp;
+}
+inline ::ss::CenterServiceMap_Response* CenterServiceMap::_internal_mutable_response() {
+  
+  if (_impl_.response_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ss::CenterServiceMap_Response>(GetArenaForAllocation());
+    _impl_.response_ = p;
+  }
+  return _impl_.response_;
+}
+inline ::ss::CenterServiceMap_Response* CenterServiceMap::mutable_response() {
+  ::ss::CenterServiceMap_Response* _msg = _internal_mutable_response();
+  // @@protoc_insertion_point(field_mutable:ss.CenterServiceMap.response)
+  return _msg;
+}
+inline void CenterServiceMap::set_allocated_response(::ss::CenterServiceMap_Response* response) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.response_;
+  }
+  if (response) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(response);
+    if (message_arena != submessage_arena) {
+      response = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, response, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.response_ = response;
+  // @@protoc_insertion_point(field_set_allocated:ss.CenterServiceMap.response)
 }
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 

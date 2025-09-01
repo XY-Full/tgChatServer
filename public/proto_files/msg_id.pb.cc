@@ -20,8 +20,6 @@ PROTOBUF_PRAGMA_INIT_SEG
 namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
-namespace MSGID {
-}  // namespace MSGID
 static const ::_pb::EnumDescriptor* file_level_enum_descriptors_msg_5fid_2eproto[1];
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_msg_5fid_2eproto = nullptr;
 const uint32_t TableStruct_msg_5fid_2eproto::offsets[1] = {};
@@ -29,14 +27,14 @@ static constexpr ::_pbi::MigrationSchema* schemas = nullptr;
 static constexpr ::_pb::Message* const* file_default_instances = nullptr;
 
 const char descriptor_table_protodef_msg_5fid_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\014msg_id.proto\022\005MSGID*~\n\005MsgID\022\021\n\rCS_HEA"
-  "RT_BEAT\020\000\022\032\n\026CS_PLAYER_SEND_MESSAGE\020\001\022\031\n"
-  "\025CS_PLAYER_REQ_MESSAGE\020\002\022\033\n\027CS_PLAYER_RE"
-  "Q_CHAT_INFO\020\003\022\016\n\tSC_NOTIFY\020\220Nb\006proto3"
+  "\n\014msg_id.proto*~\n\005MsgID\022\021\n\rCS_HEART_BEAT"
+  "\020\000\022\032\n\026CS_PLAYER_SEND_MESSAGE\020\001\022\031\n\025CS_PLA"
+  "YER_REQ_MESSAGE\020\002\022\033\n\027CS_PLAYER_REQ_CHAT_"
+  "INFO\020\003\022\016\n\tSC_NOTIFY\020\220Nb\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_msg_5fid_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_msg_5fid_2eproto = {
-    false, false, 157, descriptor_table_protodef_msg_5fid_2eproto,
+    false, false, 150, descriptor_table_protodef_msg_5fid_2eproto,
     "msg_id.proto",
     &descriptor_table_msg_5fid_2eproto_once, nullptr, 0, 0,
     schemas, file_default_instances, TableStruct_msg_5fid_2eproto::offsets,
@@ -49,7 +47,6 @@ PROTOBUF_ATTRIBUTE_WEAK const ::_pbi::DescriptorTable* descriptor_table_msg_5fid
 
 // Force running AddDescriptors() at dynamic initialization time.
 PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_msg_5fid_2eproto(&descriptor_table_msg_5fid_2eproto);
-namespace MSGID {
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* MsgID_descriptor() {
   ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&descriptor_table_msg_5fid_2eproto);
   return file_level_enum_descriptors_msg_5fid_2eproto[0];
@@ -69,7 +66,6 @@ bool MsgID_IsValid(int value) {
 
 
 // @@protoc_insertion_point(namespace_scope)
-}  // namespace MSGID
 PROTOBUF_NAMESPACE_OPEN
 PROTOBUF_NAMESPACE_CLOSE
 

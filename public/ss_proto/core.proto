@@ -1,16 +1,44 @@
 syntax = "proto3";
 package ss;
 
-// SS_HEART_BEAT           = 0; // 心跳
+import "ss_base.proto";
+import "ss_err_code.proto";
+
 message HeartBeat
 {
 
 }
 
-// SS_Regist_To_Center     = 1; // 注册到中心服
+// SS_REGIST_TO_CENTER = 1;
 message RegistToCenter
 {
-    string name = 1;
-    string ip = 2;
-    int32 port = 3;
+    message Request
+    {
+        ServiceInfo local_info = 1;
+    }
+
+    message Response
+    {
+        SSErrorCode err = 1;
+    }
+    
+    Request     request     = 1;
+    Response    response    = 2;
+}
+
+// SS_UPDATE_SERVICE_STATUS = 2;
+message UpdateServiceStatus
+{
+    message Request
+    {
+        ServiceInfo local_info = 1;
+    }
+
+    message Response
+    {
+        repeated ServiceInfo service_info_map = 1;
+    }
+    
+    Request     request     = 1;
+    Response    response    = 2;
 }
