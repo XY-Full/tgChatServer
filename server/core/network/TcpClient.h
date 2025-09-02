@@ -9,11 +9,12 @@
 #include <thread>
 #include <unordered_map>
 
+#include "MsgWrapper.h"
 #include "SocketWrapper.h"
 #include "../common/Timer.h"
 
-class AppMsg;
-using RecvHandler = std::function<void(const AppMsg &)>;
+class PackBase;
+using RecvHandler = std::function<void(std::shared_ptr<PackBase>)>;
 
 class TcpClient
 {

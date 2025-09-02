@@ -2,6 +2,7 @@
 #include "../../../../public/proto_files/core.pb.h"
 #include "../../../../public/proto_files/ss_msg_id.pb.h"
 #include "../../../common/GlobalSpace.h"
+#include "../network/MsgWrapper.h"
 #include <memory>
 #include <unistd.h>
 
@@ -11,7 +12,7 @@ void BusNet::init()
     std::string center_port = "3098";
 
     TcpClient_ = std::make_unique<TcpClient>(center_ip, std::stoi(center_port),
-                                             std::bind(&BusNet::onRecvMsg, this, std::placeholders::_1));
+                                             [this](std::shared_ptr<PackBase> msg) { this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg)); });
     TcpClient_->start();
 
     CenterMessageHandlers_ = {
@@ -22,7 +23,7 @@ void BusNet::init()
     GlobalSpace()->timer_->runEvery(5.0f, std::bind(&BusNet::UpdateServiceStatusReq, this));
 }
 
-std::shared_ptr<ServiceMap> BusNet::GetMap() const
+std::shared_ptr<ServiceMap> BusNet::GetServiceMap() const
 {
     return std::atomic_load(&ServiceMap_);
 }
@@ -41,26 +42,27 @@ std::shared_ptr<ss::ServiceInfo> BusNet::genServiceInfo()
 
 void BusNet::sendMsgToCenter(const google::protobuf::Message &msg)
 {
-    auto offset = Helper::CreateSSPack(msg);
-    auto pack_addr = reinterpret_cast<char *>(GlobalSpace()->shm_slab_.off2ptr(offset));
+    auto pack = Helper::CreateSSPack(msg);
+    auto pack_addr = reinterpret_cast<char *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
     auto pack_size = reinterpret_cast<AppMsg *>(pack_addr)->header_.pack_len_;
 
     TcpClient_->send(pack_addr, pack_size);
 
-    Helper::DeleteSSPack(offset);
+    Helper::DeleteSSPack(*pack);
 }
 
 // 接收到Center消息时，更新当前路由
 void BusNet::onRecvMsg(const AppMsg &msg)
 {
-    auto it = CenterMessageHandlers_.find(msg.msg_id_);
+    auto msg_id = msg.msg_id_;
+    auto it = CenterMessageHandlers_.find(msg_id);
     if (it != CenterMessageHandlers_.end())
     {
         it->second(msg);
     }
     else
     {
-        ELOG << "No handler found for center message with ID: " << msg.msg_id_;
+        ELOG << "No handler found for center message with MSGID: " << msg_id;
     }
 }
 
@@ -89,7 +91,7 @@ void BusNet::onCenterRegistResp(const AppMsg &msg)
     }
     ready_ = true;
 
-    LocalBusdShmBuffer_ = new ShmRingBuffer<uint32_t>(response.local_busd_shm_name());
+    LocalBusdShmBuffer_ = new ShmRingBuffer<AppMsgWrapper>(response.local_busd_shm_name());
 
     auto init_map = std::make_shared<ServiceMap>();
     std::atomic_store(&ServiceMap_, init_map);
@@ -132,25 +134,64 @@ void BusNet::onCenterUpdateServiceStatusResp(const AppMsg &msg)
     ILOG << "Update status success";
 }
 
-void BusNet::broadCast(const AppMsg &msg)
+void BusNet::broadCast(const AppMsgWrapper &msg)
 {
-    std::string local_ip = "127.0.0.1";    
-    for (const auto &[group_name, group_service_info] : *ServiceMap_)
+    // 广播包全权交给Busd进行分发
+    LocalBusdShmBuffer_->Push(msg);
+}
+
+void BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
+{
+    std::string local_ip = "127.0.0.1";
+    if (RouteCache_.find(serviceName) == RouteCache_.end())
     {
-        for(const auto &service_info : group_service_info)
+        genRouteCache(serviceName);
+    }
+
+    sendMsgByServiceInfo(RouteCache_[serviceName], msg);
+}
+
+void BusNet::sendMsgToGroup(const std::string &groupName, const AppMsgWrapper &msg)
+{
+    // 组播包全权交给Busd进行分发
+    LocalBusdShmBuffer_->Push(msg);
+}
+
+void BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg)
+{
+    std::string local_ip = "127.0.0.1";
+    std::string remote_ip = info.ip();
+
+    if (local_ip == remote_ip)
+    {
+        // 如果没有打开对端的ShmRingBuffer，那么打开一哈子
+        if (LocalServiceMap_.find(info.name()) == LocalServiceMap_.end())
         {
-            if(service_info.ip() == local_ip)
-            {
-                LocalBusdShmBuffer_->Push();
-            }
+            // 直接new一个ShmRingBuffer指向对端的ringbuffer
+            LocalServiceMap_[info.name()] = new ShmRingBuffer<AppMsgWrapper>(info.shm_recv_buffer_name());
         }
+
+        // 如果对方在本地，则直接推送到对端的ShmRingBuffer中
+        LocalServiceMap_[info.name()]->Push(msg);
+    }
+    else
+    {
+        // 对方不在本机则直接推送到Busd
+        LocalBusdShmBuffer_->Push(msg);
     }
 }
 
-void BusNet::sendMsgTo(std::string serviceName, const AppMsg &msg)
+void BusNet::genRouteCache(const std::string &serviceName)
 {
-}
+    ss::TraceRoute pb_msg;
+    pb_msg.mutable_request()->mutable_service_info()->CopyFrom(*genServiceInfo());
 
-void BusNet::sendMsgToGroup(std::string groupName, const AppMsg &msg)
-{
+    auto pack = Helper::CreateSSPack(pb_msg);
+
+    for (const auto &info : (*GetServiceMap())[serviceName])
+    {
+        sendMsgByServiceInfo(info, *pack);
+    }
+
+    Helper::DeleteSSPack(*pack);
 }

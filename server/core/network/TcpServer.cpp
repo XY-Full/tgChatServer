@@ -4,10 +4,11 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include "GlobalSpace.h"
+#include "PackBase.h"
 
-TcpServer::TcpServer(int port, Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *out,
-                     Channel<std::pair<int64_t, std::shared_ptr<NetPack>>> *in, Timer *loop)
-    : server_to_busd(out), busd_to_server(in), loop_(loop)
+TcpServer::TcpServer(int32_t port, RecvHandler recv_handler)
+    : recv_handler_(recv_handler)
 {
     server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
     int opt = 1;
@@ -40,8 +41,7 @@ void TcpServer::start()
 {
     running_ = true;
     accept_thread_ = std::thread(&TcpServer::acceptLoop, this);
-    out_thread_ = std::thread(&TcpServer::outConsumerLoop, this);
-    loop_->runEvery(1.0f, std::bind(&TcpServer::checkHeartbeats, this));
+    GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpServer::checkHeartbeats, this));
 }
 
 void TcpServer::stop()
@@ -49,8 +49,6 @@ void TcpServer::stop()
     running_ = false;
     if (accept_thread_.joinable())
         accept_thread_.join();
-    if (out_thread_.joinable())
-        out_thread_.join();
 }
 
 void TcpServer::acceptLoop()
@@ -72,43 +70,44 @@ void TcpServer::acceptLoop()
             {
                 int64_t conn_id = fd_to_conn_[fd];
                 std::string len_buf;
-                auto connPtr = conn_map_[conn_id];
-                if (!connPtr)
+                auto socket_ = conn_map_[conn_id];
+                if (!socket_)
                 {
                     ELOG << "Invalid connection ID " << conn_id << ", closing connection";
                     cleanupConnection(fd);
                     continue;
                 }
 
-                if (!connPtr->recvAll(len_buf, 4, true))
+                std::string pack;
+                // 读取消息仅做peek
+                if (!socket_->recvAll(pack, sizeof(Header), true))
                 {
-                    ELOG << "Failed to receive length from conn " << conn_id << ", closing connection";
-                    cleanupConnection(fd);
+                    ELOG << "Receive length failed. Reconnecting...";
+                    stop();
+                    start();
+                    return;
+                }
+
+                auto header = *reinterpret_cast<Header*>(pack.data());
+                if (header.pack_len_ <= 0)// || header.pack_len_ > 10 * 1024 * 1024)
+                {
+                    ELOG << "Invalid message length: " << header.pack_len_;
                     continue;
                 }
 
-                // 防止非数字导致长度超大
-                int32_t len = *reinterpret_cast<const int32_t *>(len_buf.data());
-                if (len <= 0 || len > 10 * 1024 * 1024)
+                std::string msg;
+                if (!socket_->recvAll(msg, header.pack_len_))
                 {
-                    ELOG << "Invalid message length: " << len << ", closing connection " << conn_id;
-                    cleanupConnection(fd);
-                    continue;
+                    ELOG << "Receive message body failed. Reconnecting...";
+                    stop();
+                    start();
+                    return;
                 }
 
-                std::string full_data;
-                if (!connPtr->recvAll(full_data, len))
-                {
-                    ELOG << "Failed to receive full message from conn " << conn_id << ", closing connection";
-                    cleanupConnection(fd);
-                    continue;
-                }
-
-                // ILOG << "recv from [" << conn_id << "] : " << full_data;
-                auto recv_pack = std::make_shared<NetPack>();
-                recv_pack->deserialize(conn_id, full_data);
-                server_to_busd->push({conn_id, recv_pack});
+                auto msg_base = std::make_shared<PackBase>(reinterpret_cast<PackBase*>(msg.data()));
                 last_active_time_[conn_id] = std::chrono::steady_clock::now();
+
+                recv_handler_(msg_base);
             }
         }
     }
@@ -154,18 +153,5 @@ void TcpServer::cleanupConnection(int fd)
         epoller_.remove(fd);
         ::close(fd);
         ILOG << "Closed connection: " << conn_id;
-    }
-}
-
-void TcpServer::outConsumerLoop()
-{
-    while (running_)
-    {
-        auto [conn_id, data] = busd_to_server->pop();
-        auto it = conn_map_.find(conn_id);
-        if (it != conn_map_.end())
-        {
-            it->second->sendAll(*data->serialize());
-        }
     }
 }

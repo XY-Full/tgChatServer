@@ -61,7 +61,6 @@ endif()
 # 添加子模块
 # -----------------------------
 add_subdirectory(../public proto)
-add_subdirectory(network)
 add_subdirectory(busd)
 add_subdirectory(logic)
 add_subdirectory(common)

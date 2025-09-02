@@ -2,11 +2,17 @@
 #include "google/protobuf/message.h"
 #include <arpa/inet.h>
 #include <cstring>
+#include <memory>
+#include <mutex>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include "../../common/Helper.h"
+#include "../../common/GlobalSpace.h"
+#include "../network/AppMsg.h"
+#include "../network/MsgWrapper.h"
+#include <condition_variable>
 
 namespace IBus
 {
@@ -78,16 +84,16 @@ public:
         return ready_cv_.wait_for(lock, timeout, [this] { return ready_.load(); });
     }
 
-    bool TriggerEvent(const google::protobuf::Message &message)
+    bool SendToNode(const google::protobuf::Message &message)
     {
         if (!ready_)
         {
-            ELOG << "Cannot publish, client not ready";
+            ELOG << "Cannot send, client not ready";
             return false;
         }
 
-        auto pack_offset = Helper::CreateSSPack(message);
-        bool result = local_ring_->Push(pack_offset);
+        auto pack = Helper::CreateSSPack(message);
+        bool result = local_ring_->Push(*pack);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
@@ -96,28 +102,44 @@ public:
         return result;
     }
 
-    bool RegistEvent(std::string topic, const MessageHandler &handler)
+    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler)
     {
-        std::lock_guard lock(handlers_mutex_);
-        handlers_[topic].push_back(handler);
+        msg_dispatcher_.RegistEvent(msg_id, handler);
 
-        ILOG << "Subscribed to topic: " << topic;
+        ILOG << "RegistEvent to msg_id: " << msg_id;
         return true;
     }
 
-    bool UnregistEvent(std::string topic)
+    bool UnregistEvent(uint32_t msg_id)
     {
-        std::lock_guard lock(handlers_mutex_);
-        handlers_.erase(topic);
+        msg_dispatcher_.UnregistEvent(msg_id);
 
-        ILOG << "Unsubscribed from topic: " << topic;
+        ILOG << "UnregistEvent from msg_id: " << msg_id;
         return true;
     }
 
-    uint64_t Request(const std::string &topic, const void *data, size_t len, const ResponseHandler &handler,
-                     std::chrono::milliseconds timeout)
+    uint64_t Request(const google::protobuf::Message& message, std::chrono::milliseconds timeout = std::chrono::seconds(3))
     {
-        // 此处需要协程，做同步等待
+        if (!ready_)
+        {
+            ELOG << "Cannot reply, client not ready";
+            return false;
+        }
+
+        auto pack = Helper::CreateSSPack(message);
+        
+        bool result = local_ring_->Push(*pack);
+        if (!result)
+        {
+            ELOG << "Failed to push message to local ring buffer";
+        }
+
+        auto pending_request = std::make_shared<PendingRequest>();
+        auto seq = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_))->header_.seq_;
+        pending_requests_[seq] = pending_request;
+        std::unique_lock<std::mutex> lock(pending_request->mutex);
+        pending_request->has_response.wait_for(lock, timeout);
+
         return 0;
     }
 
@@ -131,9 +153,9 @@ public:
             return false;
         }
 
-        auto pack_offset = Helper::CreateSSPack(message, req_id + 1);
+        auto pack = Helper::CreateSSPack(message, req_id);
         
-        bool result = local_ring_->Push(pack_offset);
+        bool result = local_ring_->Push(*pack);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
@@ -156,7 +178,7 @@ private:
     {
         // 创建或连接到共享内存
         std::string shm_name = "/ibus_" + opts_.client_id;
-        local_ring_ = std::make_unique<ShmRingBuffer<uint32_t>>(shm_name, opts_.local_ring_size);
+        local_ring_ = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(shm_name, opts_.local_ring_size);
 
         ILOG << "Shared memory initialized: " << shm_name;
         return true;
@@ -168,10 +190,18 @@ private:
 
         while (running_)
         {
-            Message msg;
-            if (local_ring_->Pop(msg, std::chrono::milliseconds(100)))
+            AppMsgWrapper msg;
+            if (local_ring_->Pop(msg))
             {
-                ProcessMessage(msg);
+                auto pack = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(msg.offset_));
+                if(pack->header_.type_ == Type::S2SRsp)
+                {
+                    HandleResponse(*pack);
+                }
+                else 
+                {
+                    msg_dispatcher_.onMsg(*pack);
+                }
             }
         }
 
@@ -191,98 +221,18 @@ private:
         ILOG << "Exiting retry loop";
     }
 
-    void ProcessMessage(const google::protobuf::Message &msg)
+    void HandleResponse(const AppMsg &msg)
     {
-        if (msg.flags & Message::Flags::RESPONSE)
-        {
-            HandleResponse(msg);
-        }
-        else
-        {
-            HandlePublish(msg);
-        }
-    }
+        if (msg.header_.type_ != Type::S2SRsp) return;
 
-    void HandlePublish(const google::protobuf::Message &msg)
-    {
-        std::vector<MessageHandler> handlers;
-        {
-            std::lock_guard lock(handlers_mutex_);
-            auto it = handlers_.find(msg.GetTypeName());
-            if (it != handlers_.end())
-            {
-                handlers = it->second;
-            }
-        }
-
-        for (const auto &handler : handlers)
-        {
-            try
-            {
-                handler(msg);
-            }
-            catch (const std::exception &e)
-            {
-                ELOG << "Handler exception: " << e.what();
-                stats_.errors++;
-            }
-        }
-
-        stats_.local_messages++;
-    }
-
-    void HandleResponse(const google::protobuf::Message &msg)
-    {
-        ResponseHandler handler;
-        {
-            std::lock_guard lock(pending_requests_mutex_);
-            auto it = pending_requests_.find(msg.request_id);
-            if (it != pending_requests_.end())
-            {
-                handler = it->second.handler;
-                pending_requests_.erase(it);
-            }
-        }
-
-        if (handler)
-        {
-            try
-            {
-                handler(msg, ErrorCode::OK);
-            }
-            catch (const std::exception &e)
-            {
-                ELOG << "Response handler exception: " << e.what();
-            }
-        }
-        else
-        {
-            WLOG << "No handler found for response with ID: " << msg.request_id;
+        auto it = pending_requests_.find(msg.header_.seq_);
+        if (it != pending_requests_.end()) {
+            it->second->has_response.notify_all();
         }
     }
 
     void CleanupExpiredRequests()
     {
-        auto now = std::chrono::steady_clock::now();
-        std::lock_guard lock(pending_requests_mutex_);
-        for (auto it = pending_requests_.begin(); it != pending_requests_.end();)
-        {
-            if (it->second.expires_at < now)
-            {
-                try
-                {
-                    it->second.handler(Message{}, ErrorCode::TIMEOUT);
-                }
-                catch (...)
-                {
-                }
-                it = pending_requests_.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
     }
 
     void Cleanup()
@@ -299,8 +249,8 @@ private:
 
     struct PendingRequest
     {
-        ResponseHandler handler;
-        std::chrono::steady_clock::time_point expires_at;
+        std::condition_variable has_response;
+        std::mutex mutex;
     };
 
     Options opts_;
@@ -309,14 +259,13 @@ private:
     std::mutex ready_mutex_;
     std::condition_variable ready_cv_;
 
-    std::unique_ptr<ShmRingBuffer<uint32_t>> local_ring_;
+    std::unique_ptr<ShmRingBuffer<AppMsgWrapper>> local_ring_;
     std::thread io_thread_;
     std::thread retry_thread_;
 
-    std::unordered_map<std::string, std::vector<MessageHandler>> handlers_;
-    std::mutex handlers_mutex_;
+    MsgDispatcher msg_dispatcher_;
 
-    std::unordered_map<uint64_t, PendingRequest> pending_requests_;
+    std::unordered_map<uint64_t, std::shared_ptr<PendingRequest>> pending_requests_;
     std::mutex pending_requests_mutex_;
 
     struct
@@ -349,41 +298,33 @@ bool BusClient::WaitReady(std::chrono::milliseconds timeout)
 }
 
 // BusClient公共接口实现
-bool BusClient::Publish(const std::string &topic, const void *data, size_t len, Message::Flags flags)
+bool BusClient::SendToNode(const google::protobuf::Message &message)
 {
-    return impl_->Publish(topic, data, len, flags);
+    return impl_->SendToNode(message);
 }
 
-bool BusClient::Subscribe(const std::string &topic, const MessageHandler &handler)
+bool BusClient::RegistEvent(uint32_t msg_id, const MessageHandler &handler)
 {
-    return impl_->Subscribe(topic, handler);
+    return impl_->RegistEvent(msg_id, handler);
 }
 
-bool BusClient::Unsubscribe(const std::string &topic)
+bool BusClient::UnregistEvent(uint32_t msg_id)
 {
-    return impl_->Unsubscribe(topic);
+    return impl_->UnregistEvent(msg_id);
 }
 
-uint64_t BusClient::Request(const std::string &topic, const void *data, size_t len, const ResponseHandler &handler,
-                            std::chrono::milliseconds timeout)
+uint64_t BusClient::Request(const google::protobuf::Message &message, std::chrono::milliseconds timeout)
 {
-    return impl_->Request(topic, data, len, handler, timeout);
+    return impl_->Request(message, timeout);
 }
 
-bool BusClient::Reply(uint64_t req_id, const void *data, size_t len)
+bool BusClient::Reply(uint64_t req_id, const google::protobuf::Message &msg)
 {
-    return impl_->Reply(req_id, data, len);
+    return impl_->Reply(req_id, msg);
 }
 
-Stats BusClient::GetStats() const
+void BusClient::GetStats() const
 {
-    return impl_->GetStats();
+    impl_->GetStats();
 }
-
-void BusClient::SetLogLevel(LogLevel level)
-{
-    // 这里可以添加日志级别设置逻辑
-    ILOG << "Log level set to: " << static_cast<int>(level);
-}
-
 } // namespace IBus

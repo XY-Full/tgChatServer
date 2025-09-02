@@ -14,6 +14,7 @@ namespace google
     }
 }
 
+class AppMsgWrapper;
 class AppMsg;
 
 class Helper
@@ -29,6 +30,6 @@ public:
     static int64_t timeGetTimeS();
     static int64_t timeGetTimeMS();
     static int64_t GenUID();
-    static uint32_t CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq = 0);
-    static void DeleteSSPack(uint32_t pack_shm_offset);
+    static std::shared_ptr<AppMsgWrapper> CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq = 0);
+    static void DeleteSSPack(const AppMsgWrapper& pack);
 };

@@ -10,6 +10,7 @@
 #include <string>
 #include "google/protobuf/message.h"
 #include "../core/network/AppMsg.h"
+#include "../core/network/MsgWrapper.h"
 #include "../../public/proto_files/msg_mapping_ss.h"
 
 #if defined(_WIN32)
@@ -272,13 +273,14 @@ int64_t Helper::GenUID()
     return uid;
 }
 
-uint32_t Helper::CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq)
+std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq)
 {
     static std::atomic<uint32_t> now_seq_{0};
+    auto pack = std::make_shared<AppMsgWrapper>();
 
     // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
     auto message_strlen = message.ByteSizeLong();
-    int32_t msg_id = kMsgNameToId.at(message.GetTypeName());
+    int32_t msg_id = kssMsgNameToId.at(message.GetTypeName());
 
     auto shm_slab_ = GlobalSpace()->shm_slab_;
 
@@ -292,10 +294,18 @@ uint32_t Helper::CreateSSPack(const google::protobuf::Message &message, const ui
     auto msg = reinterpret_cast<AppMsg *>(pack_shm_addr);
     // 填充AppMsg Header
     msg->header_.version_ = MAGIC_VERSION;
-    msg->header_.type_ = Type::S2S;
     msg->header_.pack_len_ = pack_len;
-    if(seq == 0) msg->header_.seq_ = now_seq_.fetch_add(1);
-    else msg->header_.seq_ = seq;
+    // seq传入为0，代表是req，否则为rsp
+    if(seq == 0)
+    {
+        msg->header_.seq_ = now_seq_.fetch_add(1);
+        msg->header_.type_ = Type::S2SReq;
+    }
+    else 
+    {
+        msg->header_.seq_ = seq;
+        msg->header_.type_ = Type::S2SRsp;
+    }
 
     msg->data_ = reinterpret_cast<char *>(pack_shm_addr) + sizeof(AppMsg);  // body紧跟在AppMsg结构体后面
     msg->data_len_ = data_len;                                              // body数据长度
@@ -305,14 +315,17 @@ uint32_t Helper::CreateSSPack(const google::protobuf::Message &message, const ui
     if (!message.SerializeToArray(msg->data_, message_strlen))
     {
         ELOG << "Error to serialize message";
-        return pack_shm_offset;
+        return nullptr;
     }
 
-    return pack_shm_offset;
+    pack->offset_ = pack_shm_offset;
+
+    return pack;
 }
 
-void Helper::DeleteSSPack(uint32_t pack_shm_offset)
+void Helper::DeleteSSPack(const AppMsgWrapper& pack)
 {
+    auto pack_shm_offset = pack.offset_;
     auto pack_size = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack_shm_offset))->header_.pack_len_;
     GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_size);
 }

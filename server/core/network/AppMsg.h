@@ -1,3 +1,5 @@
+#pragma once
+
 #include "PackBase.h"
 
 class AppMsg : public PackBase

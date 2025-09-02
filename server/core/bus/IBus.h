@@ -19,14 +19,17 @@
 #include <vector>
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
-#include "../network/AppMsg.h"
+#include "../../common/MsgDispatcher.h"
+
+class PackBase;
+class AppMsg;
+class AppMsgWrapper;
 
 namespace IBus
 {
 
 // 回调函数类型
-using MessageHandler = std::function<void(const google::protobuf::Message&)>;
-using ResponseHandler = std::function<void(const google::protobuf::Message&)>;
+using ResponseHandler = std::function<void(const AppMsg&)>;
 
 class BusClient
 {
@@ -56,14 +59,13 @@ public:
     bool WaitReady(std::chrono::milliseconds timeout = std::chrono::seconds(5));
 
     // 发布/订阅
-    bool Publish(PackBase& pack);
-    bool Subscribe(const std::string &topic, const MessageHandler &handler);
-    bool Unsubscribe(const std::string &topic);
+    bool SendToNode(const google::protobuf::Message &message);
+    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler);
+    bool UnregistEvent(uint32_t msg_id);
 
     // 请求/响应
-    uint64_t Request(const std::string &topic, const void *data, size_t len, const ResponseHandler &handler,
-                     std::chrono::milliseconds timeout = std::chrono::seconds(5));
-    bool Reply(uint64_t req_id, const void *data, size_t len);
+    uint64_t Request(const google::protobuf::Message &message, std::chrono::milliseconds timeout = std::chrono::seconds(3));
+    bool Reply(uint64_t req_id, const google::protobuf::Message &msg);
 
     // 管理接口
     void GetStats() const;

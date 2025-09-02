@@ -1,4 +1,4 @@
-#include "iApp.h"
+#include "IApp.h"
 #include "CommandLineParser.h"
 #include "ConfigManager.h"
 #include "SignalHandler.h"
