@@ -2,6 +2,7 @@
 #include "Log.h"
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include "GlobalSpace.h"
@@ -104,7 +105,7 @@ void TcpServer::acceptLoop()
                     return;
                 }
 
-                auto msg_base = std::make_shared<PackBase>(reinterpret_cast<PackBase*>(msg.data()));
+                auto msg_base = std::shared_ptr<PackBase>((PackBase*)(msg.data()));
                 last_active_time_[conn_id] = std::chrono::steady_clock::now();
 
                 recv_handler_(msg_base);

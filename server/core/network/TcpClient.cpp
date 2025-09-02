@@ -120,7 +120,7 @@ void TcpClient::recvLoop()
             return;
         }
 
-        auto msg_base = std::make_shared<AppMsg>(reinterpret_cast<PackBase*>(msg.data()));
+        auto msg_base = std::shared_ptr<PackBase>((PackBase*)(msg.data()));
         last_active_time_ = std::chrono::steady_clock::now();
 
         recv_handler_(msg_base);
