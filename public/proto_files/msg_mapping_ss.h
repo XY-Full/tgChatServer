@@ -9,27 +9,31 @@
 
 // clang-format off
 // Message name to ID mapping
-static const std::unordered_map<std::string, uint32_t> kMsgNameToId = {
+static const std::unordered_map<std::string, uint32_t> kssMsgNameToId = {
     {"RegistToCenter", 1},
     {"UpdateServiceStatus", 2},
+    {"TraceRoute", 3},
 };
 
 // ID to message name mapping
-static const std::unordered_map<uint32_t, std::string> kIdToMsgName = {
+static const std::unordered_map<uint32_t, std::string> kssIdToMsgName = {
     {1, "RegistToCenter"},
     {2, "UpdateServiceStatus"},
+    {3, "TraceRoute"},
 };
 
 // ID to msg_id string mapping
-static const std::unordered_map<uint32_t, std::string> kIdToMsgIdStr = {
+static const std::unordered_map<uint32_t, std::string> kssIdToMsgIdStr = {
     {1, "SS_REGIST_TO_CENTER"},
     {2, "SS_UPDATE_SERVICE_STATUS"},
+    {3, "SS_TRACE_ROUTE"},
 };
 
 // msg_id string to ID mapping
-static const std::unordered_map<std::string, uint32_t> kMsgIdStrToId = {
+static const std::unordered_map<std::string, uint32_t> kssMsgIdStrToId = {
     {"SS_REGIST_TO_CENTER", 1},
     {"SS_UPDATE_SERVICE_STATUS", 2},
+    {"SS_TRACE_ROUTE", 3},
 };
 
 // clang-format on

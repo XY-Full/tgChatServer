@@ -44,3 +44,21 @@ message UpdateServiceStatus
     Request     request     = 1;
     Response    response    = 2;
 }
+
+// SS_TRACE_ROUTE = 3;
+message TraceRoute
+{
+    message Request
+    {
+        ServiceInfo service_info = 1;
+    }
+
+    message Response
+    {
+        SSErrorCode err          = 1;
+        ServiceInfo service_info = 2;
+    }
+
+    Request     request     = 1;
+    Response    response    = 2;
+}

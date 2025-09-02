@@ -83,28 +83,28 @@ def generate_cpp_header(mappings: List[Dict[str, Tuple[int, str]]], output_path:
         
         # 生成消息类型到ID的映射
         f.write("// Message name to ID mapping\n")
-        f.write("static const std::unordered_map<std::string, uint32_t> kMsgNameToId = {\n")
+        f.write("static const std::unordered_map<std::string, uint32_t> k" + ss_prefix + "MsgNameToId = {\n")
         for msg_name, (msg_id, _) in sorted(merged_mapping.items(), key=lambda x: x[1][0]):
             f.write(f'    {{"{msg_name}", {msg_id}}},\n')
         f.write("};\n\n")
         
         # 生成ID到消息类型的映射
         f.write("// ID to message name mapping\n")
-        f.write("static const std::unordered_map<uint32_t, std::string> kIdToMsgName = {\n")
+        f.write("static const std::unordered_map<uint32_t, std::string> k" + ss_prefix + "IdToMsgName = {\n")
         for msg_name, (msg_id, _) in sorted(merged_mapping.items(), key=lambda x: x[1][0]):
             f.write(f'    {{{msg_id}, "{msg_name}"}},\n')
         f.write("};\n\n")
         
         # 生成ID到msg_id字符串的映射
         f.write("// ID to msg_id string mapping\n")
-        f.write("static const std::unordered_map<uint32_t, std::string> kIdToMsgIdStr = {\n")
+        f.write("static const std::unordered_map<uint32_t, std::string> k" + ss_prefix + "IdToMsgIdStr = {\n")
         for _, (msg_id, msg_id_str) in sorted(merged_mapping.items(), key=lambda x: x[1][0]):
             f.write(f'    {{{msg_id}, "{msg_id_str}"}},\n')
         f.write("};\n\n")
         
         # 生成msg_id字符串到ID的映射
         f.write("// msg_id string to ID mapping\n")
-        f.write("static const std::unordered_map<std::string, uint32_t> kMsgIdStrToId = {\n")
+        f.write("static const std::unordered_map<std::string, uint32_t> k" + ss_prefix + "MsgIdStrToId = {\n")
         for _, (msg_id, msg_id_str) in sorted(merged_mapping.items(), key=lambda x: x[1][0]):
             f.write(f'    {{"{msg_id_str}", {msg_id}}},\n')
         f.write("};\n")
@@ -118,10 +118,14 @@ def main():
     )
     parser.add_argument('output', help='Output header file path')
     parser.add_argument('inputs', nargs='+', help='Input proto files or directories')
+    parser.add_argument('is_client', help='true = client, false = server')
     parser.add_argument('--exclude', nargs='*', default=[], 
                        help='Exclude files containing these patterns')
     args = parser.parse_args()
     
+    global ss_prefix
+    ss_prefix = 'cs' if args.is_client == 'true' else 'ss'
+
     # 查找所有proto文件
     proto_files = find_proto_files(args.inputs, args.exclude)
     if not proto_files:

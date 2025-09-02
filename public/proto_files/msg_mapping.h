@@ -9,28 +9,28 @@
 
 // clang-format off
 // Message name to ID mapping
-static const std::unordered_map<std::string, uint32_t> kMsgNameToId = {
+static const std::unordered_map<std::string, uint32_t> kcsMsgNameToId = {
     {"PlayerSendMessage", 250},
     {"PlayerReqMessage", 251},
     {"Notify", 10000},
 };
 
 // ID to message name mapping
-static const std::unordered_map<uint32_t, std::string> kIdToMsgName = {
+static const std::unordered_map<uint32_t, std::string> kcsIdToMsgName = {
     {250, "PlayerSendMessage"},
     {251, "PlayerReqMessage"},
     {10000, "Notify"},
 };
 
 // ID to msg_id string mapping
-static const std::unordered_map<uint32_t, std::string> kIdToMsgIdStr = {
+static const std::unordered_map<uint32_t, std::string> kcsIdToMsgIdStr = {
     {250, "CS_PLAYER_SEND_MESSAGE"},
     {251, "CS_PLAYER_REQ_MESSAGE"},
     {10000, "SC_NOTIFY"},
 };
 
 // msg_id string to ID mapping
-static const std::unordered_map<std::string, uint32_t> kMsgIdStrToId = {
+static const std::unordered_map<std::string, uint32_t> kcsMsgIdStrToId = {
     {"CS_PLAYER_SEND_MESSAGE", 250},
     {"CS_PLAYER_REQ_MESSAGE", 251},
     {"SC_NOTIFY", 10000},
