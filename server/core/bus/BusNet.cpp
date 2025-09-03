@@ -3,6 +3,7 @@
 #include "../../../../public/proto_files/ss_msg_id.pb.h"
 #include "../../../common/GlobalSpace.h"
 #include "../network/MsgWrapper.h"
+#include "Helper.h"
 #include <memory>
 #include <unistd.h>
 
@@ -182,6 +183,8 @@ void BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapp
         // 对方不在本机则直接推送到Busd
         LocalBusdShmBuffer_->Push(msg);
     }
+    // 发送完之后释放内存
+    Helper::DeleteSSPack(msg);
 }
 
 void BusNet::genRouteCache(const std::string &serviceName)
