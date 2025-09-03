@@ -6,17 +6,20 @@
 #include <memory>
 #include <unistd.h>
 
-void BusNet::init()
+void BusNet::init(std::string shm_name)
 {
     std::string center_ip = "127.0.0.1";
     std::string center_port = "3098";
 
-    TcpClient_ = std::make_unique<TcpClient>(center_ip, std::stoi(center_port),
-                                             [this](std::shared_ptr<PackBase> msg) { this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg)); });
+    TcpClient_ =
+        std::make_unique<TcpClient>(center_ip, std::stoi(center_port), shm_name, [this](std::shared_ptr<PackBase> msg) {
+            this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg));
+        });
     TcpClient_->start();
 
     CenterMessageHandlers_ = {
-        {SSMsgID::SS_REGIST_TO_CENTER, std::bind(&BusNet::onCenterRegistResp, this, std::placeholders::_1)}};
+        {SSMsgID::SS_REGIST_TO_CENTER, std::bind(&BusNet::onCenterRegistResp, this, std::placeholders::_1)},
+        {SSMsgID::SS_UPDATE_SERVICE_STATUS, std::bind(&BusNet::onCenterUpdateServiceStatusResp, this, std::placeholders::_1)}};
 
     regist2Center();
 

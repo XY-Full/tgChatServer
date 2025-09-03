@@ -1,7 +1,10 @@
 #include "TcpClient.h"
+#include "AppMsg.h"
+#include "EventLoopWrapper.h"
 #include "GlobalSpace.h"
 #include "Log.h"
-#include "AppMsg.h"
+#include "PackBase.h"
+#include "TcpConnection.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -10,17 +13,20 @@
 #define close closesocket
 #else
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
 
-TcpClient::TcpClient(const std::string &ip, int port, RecvHandler recv_handler)
-    : ip_(ip), port_(port), recv_handler_(recv_handler)
+TcpClient::TcpClient(const std::string &ip, int port, std::string shm_name, RecvHandler recv_handler)
+    : ip_(ip), port_(port), recv_handler_(recv_handler), shm_name_(shm_name)
 {
 #ifdef _WIN32
     WSADATA wsa_data;
     WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
+
+    conn_ = std::make_shared<Connection>(sock_, -1, shm_name_, epoller_, recv_handler_, [this](int64_t) { stop(); });
 }
 
 TcpClient::~TcpClient()
@@ -36,8 +42,6 @@ void TcpClient::start()
     running_ = true;
     connectToServer();
 
-    recv_thread_ = std::thread(&TcpClient::recvLoop, this);
-
     GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpClient::checkHeartbeat, this));
 }
 
@@ -45,15 +49,7 @@ void TcpClient::stop()
 {
     running_ = false;
 
-    if (recv_thread_.joinable())
-        recv_thread_.join();
-
-    std::lock_guard<std::mutex> lock(conn_mutex_);
-    if (sock_ != -1)
-    {
-        close(sock_);
-        sock_ = -1;
-    }
+    conn_->close();
 }
 
 void TcpClient::connectToServer()
@@ -63,6 +59,13 @@ void TcpClient::connectToServer()
     {
         ELOG << "Failed to create socket.";
         return;
+    }
+
+    int opt = 1;
+    // 设置TCP_NODELAY减少小数据包的延迟
+    if (setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+    {
+        ELOG << "Failed to set TCP_NODELAY: " << strerror(errno);
     }
 
     sockaddr_in addr{};
@@ -78,56 +81,41 @@ void TcpClient::connectToServer()
         return;
     }
 
-    socket_ = std::make_unique<SocketWrapper>(sock_);
+    // 注册服务器socket到epoll
+    if (!epoller_.add(sock_, EventType::READ | EventType::EDGE_TRIGGER,
+                      [this](int fd, EventType events) { this->eventHandler(fd, events); }))
+    {
+        ELOG << "Failed to add server fd to epoller";
+        close(sock_);
+        exit(1);
+    }
     last_active_time_ = std::chrono::steady_clock::now();
 
     ILOG << "Connected to server " << ip_ << ":" << port_;
 }
 
-void TcpClient::recvLoop()
+void TcpClient::eventHandler(int fd, EventType events)
 {
-    if(!recv_handler_)
+    if ((events & EventType::RDHUP) != EventType::NONE)
     {
-        ELOG << "RecvHandler is not set";
-        return;
+        // 对端关闭连接
+        ILOG << "Connection closed by center server";
+        stop();
     }
-
-    while (running_)
+    else
     {
-        std::string pack;
-        // 读取消息仅做peek
-        if (!socket_->recvAll(pack, sizeof(Header), true))
+        if ((events & EventType::READ) != EventType::NONE)
         {
-            ELOG << "Receive length failed. Reconnecting...";
-            stop();
-            start();
-            return;
+            conn_->onReadable();
         }
-
-        auto header = *reinterpret_cast<Header*>(pack.data());
-        if (header.pack_len_ <= 0)// || header.pack_len_ > 10 * 1024 * 1024)
+        if ((events & EventType::WRITE) != EventType::NONE)
         {
-            ELOG << "Invalid message length: " << header.pack_len_;
-            continue;
+            conn_->onWritable();
         }
-
-        std::string msg;
-        if (!socket_->recvAll(msg, header.pack_len_))
-        {
-            ELOG << "Receive message body failed. Reconnecting...";
-            stop();
-            start();
-            return;
-        }
-
-        auto msg_base = std::shared_ptr<PackBase>((PackBase*)(msg.data()));
-        last_active_time_ = std::chrono::steady_clock::now();
-
-        recv_handler_(msg_base);
     }
 }
 
-void TcpClient::send(char* data, uint32_t len)
+void TcpClient::send(char *data, uint32_t len)
 {
     if (!running_)
     {
@@ -135,7 +123,7 @@ void TcpClient::send(char* data, uint32_t len)
         return;
     }
 
-    socket_->sendAll(std::string(data, len));
+    conn_->send((PackBase *)data);
 }
 
 void TcpClient::checkHeartbeat()

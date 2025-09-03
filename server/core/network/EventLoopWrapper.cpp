@@ -1,79 +1,134 @@
 #include "EventLoopWrapper.h"
-
-#if defined(__linux__)
-#include <sys/epoll.h>
-#include <unistd.h>
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-#include <sys/event.h>
-#include <sys/time.h>
-#include <unistd.h>
-#else
-#error "EventLoopWrapper is only for Linux/macOS/FreeBSD. Use IocpWrapper on Windows."
-#endif
+#include <stdexcept>
 
 EventLoopWrapper::EventLoopWrapper()
 {
-#if defined(__linux__)
-    loop_fd_ = epoll_create1(0);
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-    loop_fd_ = kqueue();
-#endif
+    epoll_fd_ = epoll_create1(0);
+    if (epoll_fd_ == -1)
+    {
+        throw std::runtime_error("Failed to create epoll instance: " + std::string(strerror(errno)));
+    }
+    events_.resize(64); // 初始大小，可根据需要调整
 }
 
 EventLoopWrapper::~EventLoopWrapper()
 {
-    if (loop_fd_ != -1)
-        ::close(loop_fd_);
+    if (epoll_fd_ != -1)
+    {
+        close(epoll_fd_);
+    }
 }
 
-bool EventLoopWrapper::add(int fd)
+bool EventLoopWrapper::add(int fd, EventType events, EventCallback callback)
 {
-#if defined(__linux__)
-    epoll_event ev{};
-    ev.events = EPOLLIN;
+    epoll_event ev;
+    ev.events = static_cast<uint32_t>(events); // 显式转换为 uint32_t
     ev.data.fd = fd;
-    return epoll_ctl(loop_fd_, EPOLL_CTL_ADD, fd, &ev) == 0;
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-    struct kevent ev{};
-    EV_SET(&ev, fd, EVFILT_READ, EV_ADD, 0, 0, nullptr);
-    return kevent(loop_fd_, &ev, 1, nullptr, 0, nullptr) == 0;
-#endif
+
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1)
+    {
+        return false;
+    }
+
+    monitored_events_[fd] = events;
+    callbacks_[fd] = callback;
+    return true;
+}
+
+bool EventLoopWrapper::modify(int fd, EventType events)
+{
+    auto it = monitored_events_.find(fd);
+    if (it == monitored_events_.end())
+    {
+        return false; // 文件描述符未注册
+    }
+
+    epoll_event ev;
+    ev.events = static_cast<uint32_t>(events); // 显式转换为 uint32_t
+    ev.data.fd = fd;
+
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1)
+    {
+        return false;
+    }
+
+    monitored_events_[fd] = events;
+    return true;
+}
+
+bool EventLoopWrapper::updateCallback(int fd, EventCallback callback)
+{
+    auto it = callbacks_.find(fd);
+    if (it == callbacks_.end())
+    {
+        return false; // 文件描述符未注册
+    }
+
+    callbacks_[fd] = callback;
+    return true;
 }
 
 bool EventLoopWrapper::remove(int fd)
 {
-#if defined(__linux__)
-    return epoll_ctl(loop_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0;
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-    struct kevent ev{};
-    EV_SET(&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, nullptr);
-    return kevent(loop_fd_, &ev, 1, nullptr, 0, nullptr) == 0;
-#endif
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == -1)
+    {
+        return false;
+    }
+
+    monitored_events_.erase(fd);
+    callbacks_.erase(fd);
+    return true;
 }
 
-std::vector<int> EventLoopWrapper::wait(int timeout_ms)
+int EventLoopWrapper::wait(int timeout_ms)
 {
-    std::vector<int> result;
-#if defined(__linux__)
-    epoll_event events[64];
-    int nfds = epoll_wait(loop_fd_, events, 64, timeout_ms);
-    if (nfds <= 0)
-        return result;
-    result.reserve(nfds);
-    for (int i = 0; i < nfds; ++i)
-        result.push_back(events[i].data.fd);
+    int nfds = epoll_wait(epoll_fd_, events_.data(), events_.size(), timeout_ms);
+    if (nfds == -1)
+    {
+        if (errno == EINTR)
+        {
+            return 0; // 被信号中断，不算错误
+        }
+        return -1; // 发生错误
+    }
 
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-    struct kevent events[64];
-    struct timespec ts;
-    ts.tv_sec = timeout_ms / 1000;
-    ts.tv_nsec = (timeout_ms % 1000) * 1000000;
-    int nfds = kevent(loop_fd_, nullptr, 0, events, 64, &ts);
-    if (nfds <= 0)
-        return result;
-    result.reserve(nfds);
+    static_assert(sizeof(epoll_event) == 12 || sizeof(epoll_event) == 16, 
+              "Unexpected epoll_event size");
+              
+    // 清空就绪事件列表并重新填充
+    ready_events_.clear();
     for (int i = 0; i < nfds; ++i)
-        result.push_back((int)events[i].ident);
-#endif
-    return result;
+    {
+        EventType type = static_cast<EventType>(events_[i].events); // 直接转换回 EventType
+        int32_t fd = events_[i].data.fd;
+        ready_events_.emplace_back(fd, type);
+    }
+
+    // 如果需要，动态调整事件缓冲区大小
+    if (nfds == static_cast<int>(events_.size()))
+    {
+        events_.resize(events_.size() * 2);
+    }
+
+    return nfds;
+}
+
+const std::vector<std::pair<int, EventType>> &EventLoopWrapper::getReadyEvents() const
+{
+    return ready_events_;
+}
+
+void EventLoopWrapper::processEvents()
+{
+    for (const auto &event : ready_events_)
+    {
+        int fd = event.first;
+        EventType events = event.second;
+
+        auto it = callbacks_.find(fd);
+        if (it != callbacks_.end() && it->second)
+        {
+            it->second(fd, events);
+        }
+    }
 }

@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include "shm_spinlock.h"
 #include <memory>
@@ -30,9 +31,15 @@ public:
     
     // 移动赋值运算符
     ShmRingBuffer& operator=(ShmRingBuffer&& other) noexcept;
+
+    // 批量写数据到缓冲区
+    bool Push(const T* items, size_t count);
     
     // 推送消息到缓冲区
     bool Push(const T& item);
+
+    // 批量从缓冲区弹出消息
+    bool Pop(T* items, size_t count);
     
     // 从缓冲区弹出消息
     bool Pop(T& item);

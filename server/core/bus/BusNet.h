@@ -20,7 +20,7 @@ public:
     BusNet();
     ~BusNet();
 
-    void init();
+    void init(std::string shm_name);
 
     void broadCast(const AppMsgWrapper &msg);
 

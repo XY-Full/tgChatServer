@@ -26,7 +26,7 @@ struct Header
 {
     uint8_t version_;   // 魔数包头版本
     Type type_;         // 包类型
-    uint16_t pack_len_; // 负载总长度
+    uint32_t pack_len_; // 负载总长度
     uint32_t seq_;      // 序列号
 };
 

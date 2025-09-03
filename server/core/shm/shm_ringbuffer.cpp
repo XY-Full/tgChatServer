@@ -114,6 +114,18 @@ template <typename T> void ShmRingBuffer<T>::InitShm(bool init_header)
     }
 }
 
+template <typename T> bool ShmRingBuffer<T>::Push(const T *items, size_t count)
+{
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (!Push(items[i]))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename T> bool ShmRingBuffer<T>::Push(const T &item)
 {
     if (IsFull())
@@ -125,6 +137,18 @@ template <typename T> bool ShmRingBuffer<T>::Push(const T &item)
     buffer_[header_->tail] = item;
     header_->tail = (header_->tail + 1) % ring_size_;
 
+    return true;
+}
+
+template <typename T> bool ShmRingBuffer<T>::Pop(T *items, size_t count)
+{
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (!Pop(items[i]))
+        {
+            return false;
+        }
+    }
     return true;
 }
 
