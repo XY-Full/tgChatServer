@@ -24,16 +24,16 @@ public:
 
     void broadCast(const AppMsgWrapper &msg);
 
-    void sendMsgTo(const std::string& serviceName, const AppMsgWrapper &msg);
+    bool sendMsgTo(const std::string& serviceName, const AppMsgWrapper &msg);
 
-    void sendMsgToGroup(const std::string& groupName, const AppMsgWrapper &msg);
+    bool sendMsgToGroup(const std::string& groupName, const AppMsgWrapper &msg);
 
     std::shared_ptr<ServiceMap> GetServiceMap() const;
 
     // 生成当前服务信息
     std::shared_ptr<ss::ServiceInfo> genServiceInfo();
 
-    void sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg);
+    bool sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg);
 
     void updateRouteCache(const std::string &serviceName, const ss::ServiceInfo &info);
 

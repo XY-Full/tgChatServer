@@ -317,9 +317,9 @@ bool BusClient::WaitReady(std::chrono::milliseconds timeout)
 }
 
 // BusClient公共接口实现
-bool BusClient::SendToNode(const google::protobuf::Message &message)
+bool BusClient::SendToNode(const std::string& service_name, const google::protobuf::Message &message)
 {
-    return impl_->SendToNode(message);
+    return impl_->SendToNode(service_name, message);
 }
 
 bool BusClient::RegistEvent(uint32_t msg_id, const MessageHandler &handler)

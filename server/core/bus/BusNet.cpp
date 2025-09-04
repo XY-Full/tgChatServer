@@ -149,7 +149,7 @@ void BusNet::broadCast(const AppMsgWrapper &msg)
     Helper::DeleteSSPack(msg);
 }
 
-void BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
+bool BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
 {
     std::string local_ip = "127.0.0.1";
     if (RouteCache_.find(serviceName) == RouteCache_.end())
@@ -158,17 +158,19 @@ void BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
     }
 
     sendMsgByServiceInfo(RouteCache_[serviceName], msg);
+    return true;
 }
 
-void BusNet::sendMsgToGroup(const std::string &groupName, const AppMsgWrapper &msg)
+bool BusNet::sendMsgToGroup(const std::string &groupName, const AppMsgWrapper &msg)
 {
     // 组播包全权交给Busd进行分发
     LocalBusdShmBuffer_->Push(msg);
     // 发送完之后释放内存
     Helper::DeleteSSPack(msg);
+    return true;
 }
 
-void BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg)
+bool BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg)
 {
     std::string local_ip = "127.0.0.1";
     std::string remote_ip = info.ip();
@@ -192,6 +194,7 @@ void BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapp
     }
     // 发送完之后释放内存
     Helper::DeleteSSPack(msg);
+    return true;
 }
 
 void BusNet::updateRouteCache(const std::string &serviceName, const ss::ServiceInfo &info)

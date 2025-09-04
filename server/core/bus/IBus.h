@@ -50,7 +50,7 @@ public:
     bool WaitReady(std::chrono::milliseconds timeout = std::chrono::seconds(5));
 
     
-    bool SendToNode(const google::protobuf::Message &message);          // 发送消息给某个node
+    bool SendToNode(const std::string& service_name, const google::protobuf::Message &message);          // 发送消息给某个node
     bool RegistEvent(uint32_t msg_id, const MessageHandler &handler);   // 注册事件
     bool UnregistEvent(uint32_t msg_id);
 
