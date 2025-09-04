@@ -1,10 +1,9 @@
 #pragma once
+#include "shm.h"
 #include "shm_spinlock.h"
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <new>
 
 namespace shmslab
 {
@@ -96,7 +95,7 @@ private:
     static uint32_t SizeClassIndex(uint32_t bytes);
     static uint32_t RoundToClassSize(uint32_t bytes);
 
-    // 内部：生成新页并挂到 class
+    // 生成新页并挂到 class
     uint32_t NewPage(uint32_t cls);
 
 private:
@@ -106,6 +105,7 @@ private:
     std::string shm_name_;
     // 现在是slab全局锁，未来可改为每class锁，或者每页锁，看后续性能有没有瓶颈
     ShmSpinLock lock_{shm_name_ + "_lock"};
+    SharedMemory shm_manager_;
 };
 
 } // namespace shmslab

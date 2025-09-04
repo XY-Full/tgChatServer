@@ -2,17 +2,11 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <thread>
-#include <unordered_map>
 
 #include "EventLoopWrapper.h"
 #include "MsgWrapper.h"
-#include "SocketWrapper.h"
-#include "../common/Timer.h"
 #include "TcpConnection.h"
 
 class PackBase;
@@ -25,13 +19,13 @@ public:
 
     ~TcpClient();
 
-    void start();
+    bool start();
     void stop();
     
-    void send(char* data, uint32_t len);
+    void send(std::shared_ptr<AppMsgWrapper> data);
 
 private:
-    void connectToServer();
+    bool connectToServer();
     void checkHeartbeat();
 
     void eventHandler(int fd, EventType events);

@@ -1,10 +1,10 @@
 #include "TcpClient.h"
-#include "AppMsg.h"
 #include "EventLoopWrapper.h"
 #include "GlobalSpace.h"
 #include "Log.h"
-#include "PackBase.h"
 #include "TcpConnection.h"
+#include "Timer.h"
+
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -37,12 +37,14 @@ TcpClient::~TcpClient()
 #endif
 }
 
-void TcpClient::start()
+bool TcpClient::start()
 {
     running_ = true;
-    connectToServer();
+    bool result = connectToServer();
 
     GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpClient::checkHeartbeat, this));
+
+    return result;
 }
 
 void TcpClient::stop()
@@ -52,13 +54,13 @@ void TcpClient::stop()
     conn_->close();
 }
 
-void TcpClient::connectToServer()
+bool TcpClient::connectToServer()
 {
     sock_ = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_ < 0)
     {
         ELOG << "Failed to create socket.";
-        return;
+        return false;
     }
 
     int opt = 1;
@@ -66,6 +68,7 @@ void TcpClient::connectToServer()
     if (setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
     {
         ELOG << "Failed to set TCP_NODELAY: " << strerror(errno);
+        return false;
     }
 
     sockaddr_in addr{};
@@ -78,7 +81,7 @@ void TcpClient::connectToServer()
         ELOG << "Failed to connect to server " << ip_ << ":" << port_;
         close(sock_);
         sock_ = -1;
-        return;
+        return false;
     }
 
     // 注册服务器socket到epoll
@@ -92,6 +95,7 @@ void TcpClient::connectToServer()
     last_active_time_ = std::chrono::steady_clock::now();
 
     ILOG << "Connected to server " << ip_ << ":" << port_;
+    return true;
 }
 
 void TcpClient::eventHandler(int fd, EventType events)
@@ -115,7 +119,7 @@ void TcpClient::eventHandler(int fd, EventType events)
     }
 }
 
-void TcpClient::send(char *data, uint32_t len)
+void TcpClient::send(std::shared_ptr<AppMsgWrapper> data)
 {
     if (!running_)
     {
@@ -123,7 +127,7 @@ void TcpClient::send(char *data, uint32_t len)
         return;
     }
 
-    conn_->send((PackBase *)data);
+    conn_->send(data);
 }
 
 void TcpClient::checkHeartbeat()

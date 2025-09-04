@@ -1,5 +1,5 @@
-#include "../../../common/Helper.h"
-#include "../network/TcpClient.h"
+#include "Helper.h"
+#include "network/TcpClient.h"
 #include "IBus.h"
 #include <memory>
 #include <unordered_map>
@@ -35,6 +35,8 @@ public:
 
     void sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg);
 
+    void updateRouteCache(const std::string &serviceName, const ss::ServiceInfo &info);
+
 private:
     void sendMsgToCenter(const google::protobuf::Message &msg);
 
@@ -68,5 +70,6 @@ private:
     std::unique_ptr<TcpClient> TcpClient_;
 
     bool ready_ = false;
+    bool has_center_ = false;
     std::unordered_map<uint32_t, CenterMessageHandler> CenterMessageHandlers_;
 };

@@ -12,7 +12,9 @@ target_include_directories(core
     ${CMAKE_SOURCE_DIR}/../third
     ${CMAKE_SOURCE_DIR}/../third/nlohmann-json
     ${CMAKE_SOURCE_DIR}/../third/libcopp/include
+    ${CMAKE_SOURCE_DIR}/../public/proto_files
     ${CMAKE_SOURCE_DIR}/common
+    ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/common/json_parser
 )
 

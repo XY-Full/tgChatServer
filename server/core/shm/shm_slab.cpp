@@ -2,7 +2,6 @@
 #include "shm.h"
 #include <cassert>
 #include <stdexcept>
-#include <thread>
 
 namespace shmslab
 {
@@ -52,9 +51,8 @@ uint32_t ShmSlab::RoundToClassSize(uint32_t bytes)
 ShmSlab::ShmSlab(const std::string& shm_name, uint32_t region_off, uint32_t region_size, uint32_t total)
     : shm_name_(shm_name), total_(total)
 {
-    SharedMemory shm;
-    auto is_create = shm.Open(shm_name_, total);
-    base_ = shm.GetAddress();
+    auto is_create = shm_manager_.Open(shm_name_, total);
+    base_ = shm_manager_.GetAddress();
     hdr_ = reinterpret_cast<SlabHeader *>(reinterpret_cast<uint8_t *>(base_) + region_off);
     if (is_create == SHM_CREATE)
     {

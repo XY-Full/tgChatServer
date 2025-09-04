@@ -1,4 +1,5 @@
 #include "IBus.h"
+#include "Log.h"
 #include "google/protobuf/message.h"
 #include <arpa/inet.h>
 #include <cstring>
@@ -8,11 +9,20 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "../../common/Helper.h"
-#include "../../common/GlobalSpace.h"
-#include "../network/AppMsg.h"
-#include "../network/MsgWrapper.h"
+#include "Helper.h"
+#include "GlobalSpace.h"
+#include "network/AppMsg.h"
+#include "network/MsgWrapper.h"
 #include <condition_variable>
+#include "ss_msg_id.pb.h"
+#include "shm/shm_ringbuffer.h"
+#include "shm/shm_slab.h"
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
+#include "BusNet.h"
 
 namespace IBus
 {
@@ -56,6 +66,9 @@ public:
         ready_ = true;
         ready_cv_.notify_all();
 
+        bus_net_->init(opts_.client_id);
+        RegistEvent(SSMsgID::SS_TRACE_ROUTE, std::bind(&Impl::onTraceRouteResp, this, std::placeholders::_1));
+
         ILOG << "BusClient started successfully";
         return true;
     }
@@ -84,7 +97,7 @@ public:
         return ready_cv_.wait_for(lock, timeout, [this] { return ready_.load(); });
     }
 
-    bool SendToNode(const google::protobuf::Message &message)
+    bool SendToNode(const std::string& service_name, const google::protobuf::Message &message)
     {
         if (!ready_)
         {
@@ -93,7 +106,7 @@ public:
         }
 
         auto pack = Helper::CreateSSPack(message);
-        bool result = local_ring_->Push(*pack);
+        bool result = bus_net_->sendMsgTo(service_name, *pack);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
@@ -231,6 +244,11 @@ private:
         }
     }
 
+    void onTraceRouteResp(const AppMsg &msg)
+    {
+
+    }
+
     void CleanupExpiredRequests()
     {
     }
@@ -264,6 +282,7 @@ private:
     std::thread retry_thread_;
 
     MsgDispatcher msg_dispatcher_;
+    BusNet *bus_net_;
 
     std::unordered_map<uint64_t, std::shared_ptr<PendingRequest>> pending_requests_;
     std::mutex pending_requests_mutex_;

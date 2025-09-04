@@ -5,6 +5,7 @@
 #include "../shm/shm_ringbuffer.h"
 
 class TcpServer;
+class AppMsgWrapper;
 
 using RecvHandler = std::function<void(std::shared_ptr<PackBase>)>;
 using CloseHandler = std::function<void(int64_t)>;
@@ -20,7 +21,7 @@ public:
     void onReadable();
     void onWritable();
 
-    void send(PackBase* pack);
+    void send(std::shared_ptr<AppMsgWrapper> pack);
 
     void updateActiveTime(); // 更新心跳
     std::chrono::time_point<std::chrono::steady_clock> lastActiveTime() const { return last_active_time_; }
@@ -34,9 +35,9 @@ private:
     std::chrono::steady_clock::time_point last_active_time_;
 
     // 接收缓冲区
-    ShmRingBuffer<char>* recv_buffer_;
+    ShmRingBuffer<uint8_t>* recv_buffer_;
     // 发送缓冲区
-    ShmRingBuffer<char>* send_buffer_;
+    ShmRingBuffer<std::shared_ptr<AppMsgWrapper>>* send_buffer_;
 
     EventLoopWrapper* epoller_;
     RecvHandler recv_handler_;

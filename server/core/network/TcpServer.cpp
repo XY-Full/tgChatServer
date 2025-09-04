@@ -1,4 +1,5 @@
 #include "TcpServer.h"
+#include <functional>
 #include "EventLoopWrapper.h"
 #include <arpa/inet.h>
 #include <cerrno>
@@ -13,6 +14,7 @@
 #include <unistd.h>
 #include "GlobalSpace.h"
 #include "Log.h"
+#include "MsgWrapper.h"
 #include <vector>
 
 TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name) : recv_handler_(recv_handler), shm_name_(shm_name)
@@ -272,7 +274,7 @@ void TcpServer::removeConnection(int64_t conn_id)
     }
 }
 
-int32_t TcpServer::send(int32_t conn_id, PackBase *pack)
+int32_t TcpServer::send(int32_t conn_id, std::shared_ptr<AppMsgWrapper> pack)
 {
     std::lock_guard<std::mutex> lock(conn_mutex_);
     auto it = conn_map_.find(conn_id);

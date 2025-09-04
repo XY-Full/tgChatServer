@@ -43,7 +43,13 @@ public:
     
     // 从缓冲区弹出消息
     bool Pop(T& item);
-    
+
+    // 推送消息到头部
+    bool PushFront(const T* item, size_t count = 1);
+
+    // 偷看消息
+    bool Peek(T* items, size_t count);
+
     // 尝试推送消息（非阻塞）
     bool TryPush(const T& item);
     

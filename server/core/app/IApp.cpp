@@ -3,21 +3,19 @@
 #include "ConfigManager.h"
 #include "SignalHandler.h"
 #include "TerminalInterface.h"
-#include <algorithm>
 #include <arpa/inet.h>
 #include <chrono>
 #include <cstring>
 #include <fcntl.h>
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <netinet/in.h>
 #include <signal.h>
-#include <sstream>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
+#include "GlobalSpace.h"
 
 // ========== IApp Implementation ==========
 

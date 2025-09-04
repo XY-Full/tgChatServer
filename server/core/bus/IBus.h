@@ -2,28 +2,19 @@
 #ifndef IBUS_CLIENT_H
 #define IBUS_CLIENT_H
 
-#include "../../common/Log.h"
-#include "../shm/shm_hashmap.h"
-#include "../shm/shm_ringbuffer.h"
-#include "../shm/shm_slab.h"
 
-#include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <thread>
-#include <unordered_map>
-#include <vector>
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
-#include "../../common/MsgDispatcher.h"
+#include "MsgDispatcher.h"
 
 class PackBase;
 class AppMsg;
 class AppMsgWrapper;
+class BusNet;
 
 namespace IBus
 {
@@ -58,9 +49,9 @@ public:
     void Stop();
     bool WaitReady(std::chrono::milliseconds timeout = std::chrono::seconds(5));
 
-    // 发布/订阅
-    bool SendToNode(const google::protobuf::Message &message);
-    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler);
+    
+    bool SendToNode(const google::protobuf::Message &message);          // 发送消息给某个node
+    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler);   // 注册事件
     bool UnregistEvent(uint32_t msg_id);
 
     // 请求/响应

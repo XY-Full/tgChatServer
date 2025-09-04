@@ -1,15 +1,16 @@
 #pragma once
 #include "EventLoopWrapper.h"
-#include "PackBase.h"
+#include "MsgWrapper.h"
 #include "TcpConnection.h"
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <thread>
 #include <unordered_map>
+
+class AppMsgWrapper;
 
 class TcpServer
 {
@@ -20,7 +21,7 @@ public:
 
     void start();
     void stop();
-    int32_t send(int32_t conn_id, PackBase *pack);
+    int32_t send(int32_t conn_id, std::shared_ptr<AppMsgWrapper> pack);
 
 private:
     void acceptLoop();

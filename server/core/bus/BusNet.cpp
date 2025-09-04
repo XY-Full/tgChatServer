@@ -1,8 +1,8 @@
 #include "BusNet.h"
-#include "../../../../public/proto_files/core.pb.h"
-#include "../../../../public/proto_files/ss_msg_id.pb.h"
-#include "../../../common/GlobalSpace.h"
-#include "../network/MsgWrapper.h"
+#include "core.pb.h"
+#include "ss_msg_id.pb.h"
+#include "GlobalSpace.h"
+#include "network/MsgWrapper.h"
 #include "Helper.h"
 #include <memory>
 #include <unistd.h>
@@ -16,7 +16,10 @@ void BusNet::init(std::string shm_name)
         std::make_unique<TcpClient>(center_ip, std::stoi(center_port), shm_name, [this](std::shared_ptr<PackBase> msg) {
             this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg));
         });
-    TcpClient_->start();
+    if(TcpClient_->start())
+    {
+        has_center_ = true;
+    }
 
     CenterMessageHandlers_ = {
         {SSMsgID::SS_REGIST_TO_CENTER, std::bind(&BusNet::onCenterRegistResp, this, std::placeholders::_1)},
@@ -46,11 +49,11 @@ std::shared_ptr<ss::ServiceInfo> BusNet::genServiceInfo()
 
 void BusNet::sendMsgToCenter(const google::protobuf::Message &msg)
 {
-    auto pack = Helper::CreateSSPack(msg);
-    auto pack_addr = reinterpret_cast<char *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
-    auto pack_size = reinterpret_cast<AppMsg *>(pack_addr)->header_.pack_len_;
+    if(!has_center_) return;
 
-    TcpClient_->send(pack_addr, pack_size);
+    auto pack = Helper::CreateSSPack(msg);
+
+    TcpClient_->send(pack);
 
     Helper::DeleteSSPack(*pack);
 }
@@ -142,6 +145,8 @@ void BusNet::broadCast(const AppMsgWrapper &msg)
 {
     // 广播包全权交给Busd进行分发
     LocalBusdShmBuffer_->Push(msg);
+    // 发送完之后释放内存
+    Helper::DeleteSSPack(msg);
 }
 
 void BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
@@ -159,6 +164,8 @@ void BusNet::sendMsgToGroup(const std::string &groupName, const AppMsgWrapper &m
 {
     // 组播包全权交给Busd进行分发
     LocalBusdShmBuffer_->Push(msg);
+    // 发送完之后释放内存
+    Helper::DeleteSSPack(msg);
 }
 
 void BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg)
@@ -185,6 +192,11 @@ void BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapp
     }
     // 发送完之后释放内存
     Helper::DeleteSSPack(msg);
+}
+
+void BusNet::updateRouteCache(const std::string &serviceName, const ss::ServiceInfo &info)
+{
+    RouteCache_[serviceName] = info;
 }
 
 void BusNet::genRouteCache(const std::string &serviceName)
