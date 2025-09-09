@@ -1,6 +1,7 @@
 #ifndef IAPP_H
 #define IAPP_H
 
+#include "bus/IBus.h"
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -191,16 +192,17 @@ private:
     std::chrono::steady_clock::time_point m_last_tick_time; ///< 上次tick时间
 
     // 核心组件
-    std::unique_ptr<ConfigManager> m_config_manager; ///< 配置管理器
-    std::unique_ptr<SignalHandler> m_signal_handler; ///< 信号处理器
-    std::unique_ptr<CommandLineParser> m_cmd_parser; ///< 命令行解析器
-    std::unique_ptr<TerminalInterface> m_terminal;   ///< 终端接口
+    std::unique_ptr<ConfigManager> m_config_manager;    ///< 配置管理器
+    std::unique_ptr<SignalHandler> m_signal_handler;    ///< 信号处理器
+    std::unique_ptr<CommandLineParser> m_cmd_parser;    ///< 命令行解析器
+    std::unique_ptr<TerminalInterface> m_terminal;      ///< 终端接口
+    std::unique_ptr<IBus::BusClient> m_bus_client;      ///< 消息总线>
 
     // 线程相关
-    std::thread m_tick_thread;     ///< 定时器线程
-    std::thread m_terminal_thread; ///< 终端接口线程
-    std::mutex m_mutex;            ///< 互斥锁
-    std::condition_variable m_cv;  ///< 条件变量
+    std::thread m_tick_thread;                          ///< 定时器线程
+    std::thread m_terminal_thread;                      ///< 终端接口线程
+    std::mutex m_mutex;                                 ///< 互斥锁
+    std::condition_variable m_cv;                       ///< 条件变量
 
     // 用户注册的回调函数
     std::map<std::string, std::function<void(const std::string &)>> m_arg_callbacks;
@@ -216,8 +218,7 @@ private:
 #define IAPP_MAIN(AppClass)                                                                                            \
     int main(int argc, char *argv[])                                                                                   \
     {                                                                                                                  \
-        AppClass app;                                                                                                  \
-        return app.run(argc, argv);                                                                                    \
+        return AppClass::getInstance().run(argc, argv);                                                                \
     }
 
 #endif // IAPP_H

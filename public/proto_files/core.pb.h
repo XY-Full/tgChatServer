@@ -1340,9 +1340,10 @@ class TraceRoute_Request final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kServiceInfoFieldNumber = 1,
+    kServiceInfoFieldNumber = 2,
+    kSendTimeFieldNumber = 1,
   };
-  // .ss.ServiceInfo service_info = 1;
+  // .ss.ServiceInfo service_info = 2;
   bool has_service_info() const;
   private:
   bool _internal_has_service_info() const;
@@ -1360,6 +1361,15 @@ class TraceRoute_Request final :
       ::ss::ServiceInfo* service_info);
   ::ss::ServiceInfo* unsafe_arena_release_service_info();
 
+  // int64 send_time = 1;
+  void clear_send_time();
+  int64_t send_time() const;
+  void set_send_time(int64_t value);
+  private:
+  int64_t _internal_send_time() const;
+  void _internal_set_send_time(int64_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ss.TraceRoute.Request)
  private:
   class _Internal;
@@ -1369,6 +1379,7 @@ class TraceRoute_Request final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::ss::ServiceInfo* service_info_;
+    int64_t send_time_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1497,10 +1508,11 @@ class TraceRoute_Response final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kServiceInfoFieldNumber = 2,
+    kServiceInfoFieldNumber = 3,
+    kSendTimeFieldNumber = 2,
     kErrFieldNumber = 1,
   };
-  // .ss.ServiceInfo service_info = 2;
+  // .ss.ServiceInfo service_info = 3;
   bool has_service_info() const;
   private:
   bool _internal_has_service_info() const;
@@ -1517,6 +1529,15 @@ class TraceRoute_Response final :
   void unsafe_arena_set_allocated_service_info(
       ::ss::ServiceInfo* service_info);
   ::ss::ServiceInfo* unsafe_arena_release_service_info();
+
+  // int64 send_time = 2;
+  void clear_send_time();
+  int64_t send_time() const;
+  void set_send_time(int64_t value);
+  private:
+  int64_t _internal_send_time() const;
+  void _internal_set_send_time(int64_t value);
+  public:
 
   // .SSErrorCode err = 1;
   void clear_err();
@@ -1536,6 +1557,7 @@ class TraceRoute_Response final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::ss::ServiceInfo* service_info_;
+    int64_t send_time_;
     int err_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -1668,10 +1690,11 @@ class TraceRoute final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kRequestFieldNumber = 1,
-    kResponseFieldNumber = 2,
+    kRequestFieldNumber = 2,
+    kResponseFieldNumber = 3,
+    kIsReqFieldNumber = 1,
   };
-  // .ss.TraceRoute.Request request = 1;
+  // .ss.TraceRoute.Request request = 2;
   bool has_request() const;
   private:
   bool _internal_has_request() const;
@@ -1689,7 +1712,7 @@ class TraceRoute final :
       ::ss::TraceRoute_Request* request);
   ::ss::TraceRoute_Request* unsafe_arena_release_request();
 
-  // .ss.TraceRoute.Response response = 2;
+  // .ss.TraceRoute.Response response = 3;
   bool has_response() const;
   private:
   bool _internal_has_response() const;
@@ -1707,6 +1730,15 @@ class TraceRoute final :
       ::ss::TraceRoute_Response* response);
   ::ss::TraceRoute_Response* unsafe_arena_release_response();
 
+  // bool is_req = 1;
+  void clear_is_req();
+  bool is_req() const;
+  void set_is_req(bool value);
+  private:
+  bool _internal_is_req() const;
+  void _internal_set_is_req(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ss.TraceRoute)
  private:
   class _Internal;
@@ -1717,6 +1749,7 @@ class TraceRoute final :
   struct Impl_ {
     ::ss::TraceRoute_Request* request_;
     ::ss::TraceRoute_Response* response_;
+    bool is_req_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -2418,7 +2451,27 @@ inline void UpdateServiceStatus::set_allocated_response(::ss::UpdateServiceStatu
 
 // TraceRoute_Request
 
-// .ss.ServiceInfo service_info = 1;
+// int64 send_time = 1;
+inline void TraceRoute_Request::clear_send_time() {
+  _impl_.send_time_ = int64_t{0};
+}
+inline int64_t TraceRoute_Request::_internal_send_time() const {
+  return _impl_.send_time_;
+}
+inline int64_t TraceRoute_Request::send_time() const {
+  // @@protoc_insertion_point(field_get:ss.TraceRoute.Request.send_time)
+  return _internal_send_time();
+}
+inline void TraceRoute_Request::_internal_set_send_time(int64_t value) {
+  
+  _impl_.send_time_ = value;
+}
+inline void TraceRoute_Request::set_send_time(int64_t value) {
+  _internal_set_send_time(value);
+  // @@protoc_insertion_point(field_set:ss.TraceRoute.Request.send_time)
+}
+
+// .ss.ServiceInfo service_info = 2;
 inline bool TraceRoute_Request::_internal_has_service_info() const {
   return this != internal_default_instance() && _impl_.service_info_ != nullptr;
 }
@@ -2527,7 +2580,27 @@ inline void TraceRoute_Response::set_err(::SSErrorCode value) {
   // @@protoc_insertion_point(field_set:ss.TraceRoute.Response.err)
 }
 
-// .ss.ServiceInfo service_info = 2;
+// int64 send_time = 2;
+inline void TraceRoute_Response::clear_send_time() {
+  _impl_.send_time_ = int64_t{0};
+}
+inline int64_t TraceRoute_Response::_internal_send_time() const {
+  return _impl_.send_time_;
+}
+inline int64_t TraceRoute_Response::send_time() const {
+  // @@protoc_insertion_point(field_get:ss.TraceRoute.Response.send_time)
+  return _internal_send_time();
+}
+inline void TraceRoute_Response::_internal_set_send_time(int64_t value) {
+  
+  _impl_.send_time_ = value;
+}
+inline void TraceRoute_Response::set_send_time(int64_t value) {
+  _internal_set_send_time(value);
+  // @@protoc_insertion_point(field_set:ss.TraceRoute.Response.send_time)
+}
+
+// .ss.ServiceInfo service_info = 3;
 inline bool TraceRoute_Response::_internal_has_service_info() const {
   return this != internal_default_instance() && _impl_.service_info_ != nullptr;
 }
@@ -2616,7 +2689,27 @@ inline void TraceRoute_Response::set_allocated_service_info(::ss::ServiceInfo* s
 
 // TraceRoute
 
-// .ss.TraceRoute.Request request = 1;
+// bool is_req = 1;
+inline void TraceRoute::clear_is_req() {
+  _impl_.is_req_ = false;
+}
+inline bool TraceRoute::_internal_is_req() const {
+  return _impl_.is_req_;
+}
+inline bool TraceRoute::is_req() const {
+  // @@protoc_insertion_point(field_get:ss.TraceRoute.is_req)
+  return _internal_is_req();
+}
+inline void TraceRoute::_internal_set_is_req(bool value) {
+  
+  _impl_.is_req_ = value;
+}
+inline void TraceRoute::set_is_req(bool value) {
+  _internal_set_is_req(value);
+  // @@protoc_insertion_point(field_set:ss.TraceRoute.is_req)
+}
+
+// .ss.TraceRoute.Request request = 2;
 inline bool TraceRoute::_internal_has_request() const {
   return this != internal_default_instance() && _impl_.request_ != nullptr;
 }
@@ -2706,7 +2799,7 @@ inline void TraceRoute::set_allocated_request(::ss::TraceRoute_Request* request)
   // @@protoc_insertion_point(field_set_allocated:ss.TraceRoute.request)
 }
 
-// .ss.TraceRoute.Response response = 2;
+// .ss.TraceRoute.Response response = 3;
 inline bool TraceRoute::_internal_has_response() const {
   return this != internal_default_instance() && _impl_.response_ != nullptr;
 }

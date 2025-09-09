@@ -1,6 +1,7 @@
 #include "Helper.h"
 #include "network/TcpClient.h"
 #include "IBus.h"
+#include "ss_base.pb.h"
 #include <memory>
 #include <unordered_map>
 
@@ -10,9 +11,16 @@ namespace ss
 {
 class ServiceInfo;
 }
+class BusClient;
 
 using CenterMessageHandler = std::function<void(const AppMsg &)>;
-using ServiceMap = std::unordered_map<std::string, std::vector<ss::ServiceInfo>>;
+using ServiceMap = std::unordered_map<std::string_view, std::vector<ss::ServiceInfo>>;
+
+struct ServiceRouteCache
+{
+    uint64_t delay = 0;
+    ss::ServiceInfo info;
+};
 
 class BusNet
 {
@@ -24,25 +32,27 @@ public:
 
     void broadCast(const AppMsgWrapper &msg);
 
-    bool sendMsgTo(const std::string& serviceName, const AppMsgWrapper &msg);
+    bool sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg);
 
-    bool sendMsgToGroup(const std::string& groupName, const AppMsgWrapper &msg);
+    bool sendMsgToGroup(const std::string_view& groupName, const AppMsgWrapper &msg);
 
     std::shared_ptr<ServiceMap> GetServiceMap() const;
 
     // 生成当前服务信息
     std::shared_ptr<ss::ServiceInfo> genServiceInfo();
 
-    bool sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg);
-
-    void updateRouteCache(const std::string &serviceName, const ss::ServiceInfo &info);
-
+    // 接受路由缓存包
+    void onRecvRouteCache(AppMsgPtr msg);
+    
 private:
     void sendMsgToCenter(const google::protobuf::Message &msg);
 
-    void genRouteCache(const std::string& serviceName);
+    // 生成路由缓存
+    void genRouteCache(const std::string_view& serviceName);
 
     void onRecvMsg(const AppMsg &msg);
+
+    bool sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg, bool delete_msg = true);
 
     // 向center注册
     void regist2Center();
@@ -62,7 +72,7 @@ private:
     std::shared_ptr<ServiceMap> ServiceMap_;
 
     // 路由缓存
-    std::unordered_map<std::string, ss::ServiceInfo> RouteCache_;
+    std::unordered_map<std::string_view, std::shared_ptr<ServiceRouteCache>> RouteCache_;
 
     // 本机的所有服务对端共享内存通道 map<服务名, ShmRingBuffer>
     std::unordered_map<std::string, ShmRingBuffer<AppMsgWrapper> *> LocalServiceMap_;

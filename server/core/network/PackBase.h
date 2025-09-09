@@ -18,7 +18,7 @@ enum class Type : uint8_t
     C2S = 1, // 客户端->服务端
     S2C = 2, // 服务端->客户端
     S2SReq = 3, // 服务端->服务端Req
-    S2SRsp = 3, // 服务端->服务端Rsp
+    S2SRsp = 4, // 服务端->服务端Rsp
 };
 
 // 包头部结构

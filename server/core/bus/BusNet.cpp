@@ -1,11 +1,26 @@
 #include "BusNet.h"
-#include "core.pb.h"
-#include "ss_msg_id.pb.h"
 #include "GlobalSpace.h"
-#include "network/MsgWrapper.h"
 #include "Helper.h"
+#include "Timer.h"
+#include "core.pb.h"
+#include "network/MsgWrapper.h"
+#include "ss_msg_id.pb.h"
 #include <memory>
 #include <unistd.h>
+
+BusNet::~BusNet()
+{
+    if (TcpClient_)
+    {
+        TcpClient_->stop();
+    }
+
+    delete LocalBusdShmBuffer_;
+    for(const auto& it : LocalServiceMap_)
+    {
+        delete it.second;
+    }
+}
 
 void BusNet::init(std::string shm_name)
 {
@@ -16,14 +31,15 @@ void BusNet::init(std::string shm_name)
         std::make_unique<TcpClient>(center_ip, std::stoi(center_port), shm_name, [this](std::shared_ptr<PackBase> msg) {
             this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg));
         });
-    if(TcpClient_->start())
+    if (TcpClient_->start())
     {
         has_center_ = true;
     }
 
     CenterMessageHandlers_ = {
         {SSMsgID::SS_REGIST_TO_CENTER, std::bind(&BusNet::onCenterRegistResp, this, std::placeholders::_1)},
-        {SSMsgID::SS_UPDATE_SERVICE_STATUS, std::bind(&BusNet::onCenterUpdateServiceStatusResp, this, std::placeholders::_1)}};
+        {SSMsgID::SS_UPDATE_SERVICE_STATUS,
+         std::bind(&BusNet::onCenterUpdateServiceStatusResp, this, std::placeholders::_1)}};
 
     regist2Center();
 
@@ -49,7 +65,8 @@ std::shared_ptr<ss::ServiceInfo> BusNet::genServiceInfo()
 
 void BusNet::sendMsgToCenter(const google::protobuf::Message &msg)
 {
-    if(!has_center_) return;
+    if (!has_center_)
+        return;
 
     auto pack = Helper::CreateSSPack(msg);
 
@@ -149,7 +166,7 @@ void BusNet::broadCast(const AppMsgWrapper &msg)
     Helper::DeleteSSPack(msg);
 }
 
-bool BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
+bool BusNet::sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg)
 {
     std::string local_ip = "127.0.0.1";
     if (RouteCache_.find(serviceName) == RouteCache_.end())
@@ -157,11 +174,11 @@ bool BusNet::sendMsgTo(const std::string &serviceName, const AppMsgWrapper &msg)
         genRouteCache(serviceName);
     }
 
-    sendMsgByServiceInfo(RouteCache_[serviceName], msg);
+    sendMsgByServiceInfo(RouteCache_[serviceName]->info, msg);
     return true;
 }
 
-bool BusNet::sendMsgToGroup(const std::string &groupName, const AppMsgWrapper &msg)
+bool BusNet::sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg)
 {
     // 组播包全权交给Busd进行分发
     LocalBusdShmBuffer_->Push(msg);
@@ -170,7 +187,7 @@ bool BusNet::sendMsgToGroup(const std::string &groupName, const AppMsgWrapper &m
     return true;
 }
 
-bool BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg)
+bool BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg, bool delete_msg)
 {
     std::string local_ip = "127.0.0.1";
     std::string remote_ip = info.ip();
@@ -193,26 +210,81 @@ bool BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapp
         LocalBusdShmBuffer_->Push(msg);
     }
     // 发送完之后释放内存
-    Helper::DeleteSSPack(msg);
+    if (delete_msg)
+        Helper::DeleteSSPack(msg);
     return true;
 }
 
-void BusNet::updateRouteCache(const std::string &serviceName, const ss::ServiceInfo &info)
-{
-    RouteCache_[serviceName] = info;
-}
-
-void BusNet::genRouteCache(const std::string &serviceName)
+void BusNet::genRouteCache(const std::string_view &serviceName)
 {
     ss::TraceRoute pb_msg;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto duration = now.time_since_epoch();
+    auto send_time = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+
     pb_msg.mutable_request()->mutable_service_info()->CopyFrom(*genServiceInfo());
+    pb_msg.mutable_request()->set_send_time(send_time);
+    pb_msg.set_is_req(true);
 
     auto pack = Helper::CreateSSPack(pb_msg);
 
-    for (const auto &info : (*GetServiceMap())[serviceName])
-    {
-        sendMsgByServiceInfo(info, *pack);
-    }
+    sendMsgToGroup(serviceName, *pack);
+}
 
-    Helper::DeleteSSPack(*pack);
+void BusNet::onRecvRouteCache(AppMsgPtr msg)
+{
+    ss::TraceRoute pb_msg;
+    pb_msg.ParseFromArray(msg->data_, msg->data_len_);
+    // 收到远端请求的路由包
+    if (pb_msg.is_req())
+    {
+        ss::TraceRoute rsp_msg;
+        rsp_msg.mutable_response()->set_err(SSErrorCode::Error_success);
+        // 回传对方的send_time
+        rsp_msg.mutable_response()->set_send_time(pb_msg.request().send_time());
+        rsp_msg.mutable_response()->mutable_service_info()->CopyFrom(*genServiceInfo());
+
+        auto pack = Helper::CreateSSPack(rsp_msg);
+
+        sendMsgByServiceInfo(pb_msg.request().service_info(), *pack);
+    }
+    // 收到远端回传的路由包
+    else
+    {
+        // 获取现在的高精度时间
+        auto now = std::chrono::high_resolution_clock::now();
+        auto duration = now.time_since_epoch();
+        auto send_time = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+
+        auto response = pb_msg.response();
+        if (response.err() != SSErrorCode::Error_success)
+        {
+            ELOG << "Recv route cache failed, error code: " << SSErrorCode_Name(response.err());
+            return;
+        }
+
+        // 计算延迟
+        auto delay = send_time - response.send_time();
+        // 如果路由缓存中不存在这个服务，则缓存一下
+        if(RouteCache_.find(response.service_info().name()) == RouteCache_.end())
+        {
+            RouteCache_[response.service_info().name()]->delay = delay;
+            RouteCache_[response.service_info().name()]->info.CopyFrom(response.service_info());
+            ILOG << "New add route cache from " << response.service_info().name() << " success, delay: " << delay;
+        }
+        // 如果路由缓存中存在，但是新服务的延迟更低，则更新
+        else if(delay > 0 && delay < RouteCache_[response.service_info().name()]->delay)
+        {
+            
+            RouteCache_[response.service_info().name()]->delay = delay;
+            RouteCache_[response.service_info().name()]->info.CopyFrom(response.service_info());
+            ILOG << "Update route cache from " << response.service_info().name() << " success, delay: " << delay;
+        }
+        else
+        {
+            ELOG << "Recv route cache from " << response.service_info().name() << " failed, delay: " << delay;
+            return;
+        }
+    }
 }

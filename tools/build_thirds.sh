@@ -148,7 +148,7 @@ build_libcopp() {
   git_clone "$url" "$tag" "libcopp-$ver"
 
   cd "$THIRD_DIR/libcopp-$ver"
-  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$THIRD_DIR/libcopp
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$THIRD_DIR/libcopp -DLIBCOPP_ENABLE_SEGMENTED_STACKS=YES -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_CXX_EXTENSIONS=OFF
   cd build
   make -j$NPROC && make install
   cd "$ROOT_DIR"

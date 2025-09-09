@@ -117,6 +117,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 PROTOBUF_CONSTEXPR TraceRoute_Request::TraceRoute_Request(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.service_info_)*/nullptr
+  , /*decltype(_impl_.send_time_)*/int64_t{0}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TraceRoute_RequestDefaultTypeInternal {
   PROTOBUF_CONSTEXPR TraceRoute_RequestDefaultTypeInternal()
@@ -130,6 +131,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 PROTOBUF_CONSTEXPR TraceRoute_Response::TraceRoute_Response(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.service_info_)*/nullptr
+  , /*decltype(_impl_.send_time_)*/int64_t{0}
   , /*decltype(_impl_.err_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TraceRoute_ResponseDefaultTypeInternal {
@@ -145,6 +147,7 @@ PROTOBUF_CONSTEXPR TraceRoute::TraceRoute(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.request_)*/nullptr
   , /*decltype(_impl_.response_)*/nullptr
+  , /*decltype(_impl_.is_req_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TraceRouteDefaultTypeInternal {
   PROTOBUF_CONSTEXPR TraceRouteDefaultTypeInternal()
@@ -219,6 +222,7 @@ const uint32_t TableStruct_core_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::ss::TraceRoute_Request, _impl_.send_time_),
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute_Request, _impl_.service_info_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute_Response, _internal_metadata_),
@@ -227,6 +231,7 @@ const uint32_t TableStruct_core_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute_Response, _impl_.err_),
+  PROTOBUF_FIELD_OFFSET(::ss::TraceRoute_Response, _impl_.send_time_),
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute_Response, _impl_.service_info_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute, _internal_metadata_),
@@ -234,6 +239,7 @@ const uint32_t TableStruct_core_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::ss::TraceRoute, _impl_.is_req_),
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute, _impl_.request_),
   PROTOBUF_FIELD_OFFSET(::ss::TraceRoute, _impl_.response_),
 };
@@ -246,8 +252,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 36, -1, -1, sizeof(::ss::UpdateServiceStatus_Response)},
   { 44, -1, -1, sizeof(::ss::UpdateServiceStatus)},
   { 52, -1, -1, sizeof(::ss::TraceRoute_Request)},
-  { 59, -1, -1, sizeof(::ss::TraceRoute_Response)},
-  { 67, -1, -1, sizeof(::ss::TraceRoute)},
+  { 60, -1, -1, sizeof(::ss::TraceRoute_Response)},
+  { 69, -1, -1, sizeof(::ss::TraceRoute)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -277,13 +283,14 @@ const char descriptor_table_protodef_core_2eproto[] PROTOBUF_SECTION_VARIABLE(pr
   "eStatus.Response\032.\n\007Request\022#\n\nlocal_inf"
   "o\030\001 \001(\0132\017.ss.ServiceInfo\032P\n\010Response\022\031\n\003"
   "err\030\001 \001(\0162\014.SSErrorCode\022)\n\020service_info_"
-  "map\030\002 \003(\0132\017.ss.ServiceInfo\"\340\001\n\nTraceRout"
-  "e\022\'\n\007request\030\001 \001(\0132\026.ss.TraceRoute.Reque"
-  "st\022)\n\010response\030\002 \001(\0132\027.ss.TraceRoute.Res"
-  "ponse\0320\n\007Request\022%\n\014service_info\030\001 \001(\0132\017"
-  ".ss.ServiceInfo\032L\n\010Response\022\031\n\003err\030\001 \001(\016"
-  "2\014.SSErrorCode\022%\n\014service_info\030\002 \001(\0132\017.s"
-  "s.ServiceInfob\006proto3"
+  "map\030\002 \003(\0132\017.ss.ServiceInfo\"\226\002\n\nTraceRout"
+  "e\022\016\n\006is_req\030\001 \001(\010\022\'\n\007request\030\002 \001(\0132\026.ss."
+  "TraceRoute.Request\022)\n\010response\030\003 \001(\0132\027.s"
+  "s.TraceRoute.Response\032C\n\007Request\022\021\n\tsend"
+  "_time\030\001 \001(\003\022%\n\014service_info\030\002 \001(\0132\017.ss.S"
+  "erviceInfo\032_\n\010Response\022\031\n\003err\030\001 \001(\0162\014.SS"
+  "ErrorCode\022\021\n\tsend_time\030\002 \001(\003\022%\n\014service_"
+  "info\030\003 \001(\0132\017.ss.ServiceInfob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_core_2eproto_deps[2] = {
   &::descriptor_table_ss_5fbase_2eproto,
@@ -291,7 +298,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_core_2eproto_deps[2
 };
 static ::_pbi::once_flag descriptor_table_core_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_core_2eproto = {
-    false, false, 781, descriptor_table_protodef_core_2eproto,
+    false, false, 835, descriptor_table_protodef_core_2eproto,
     "core.proto",
     &descriptor_table_core_2eproto_once, descriptor_table_core_2eproto_deps, 2, 10,
     schemas, file_default_instances, TableStruct_core_2eproto::offsets,
@@ -1701,12 +1708,14 @@ TraceRoute_Request::TraceRoute_Request(const TraceRoute_Request& from)
   TraceRoute_Request* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.service_info_){nullptr}
+    , decltype(_impl_.send_time_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   if (from._internal_has_service_info()) {
     _this->_impl_.service_info_ = new ::ss::ServiceInfo(*from._impl_.service_info_);
   }
+  _this->_impl_.send_time_ = from._impl_.send_time_;
   // @@protoc_insertion_point(copy_constructor:ss.TraceRoute.Request)
 }
 
@@ -1716,6 +1725,7 @@ inline void TraceRoute_Request::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.service_info_){nullptr}
+    , decltype(_impl_.send_time_){int64_t{0}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -1748,6 +1758,7 @@ void TraceRoute_Request::Clear() {
     delete _impl_.service_info_;
   }
   _impl_.service_info_ = nullptr;
+  _impl_.send_time_ = int64_t{0};
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1757,9 +1768,17 @@ const char* TraceRoute_Request::_InternalParse(const char* ptr, ::_pbi::ParseCon
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .ss.ServiceInfo service_info = 1;
+      // int64 send_time = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.send_time_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .ss.ServiceInfo service_info = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_service_info(), ptr);
           CHK_(ptr);
         } else
@@ -1794,10 +1813,16 @@ uint8_t* TraceRoute_Request::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .ss.ServiceInfo service_info = 1;
+  // int64 send_time = 1;
+  if (this->_internal_send_time() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_send_time(), target);
+  }
+
+  // .ss.ServiceInfo service_info = 2;
   if (this->_internal_has_service_info()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::service_info(this),
+      InternalWriteMessage(2, _Internal::service_info(this),
         _Internal::service_info(this).GetCachedSize(), target, stream);
   }
 
@@ -1817,11 +1842,16 @@ size_t TraceRoute_Request::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .ss.ServiceInfo service_info = 1;
+  // .ss.ServiceInfo service_info = 2;
   if (this->_internal_has_service_info()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.service_info_);
+  }
+
+  // int64 send_time = 1;
+  if (this->_internal_send_time() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_send_time());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -1846,6 +1876,9 @@ void TraceRoute_Request::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, con
     _this->_internal_mutable_service_info()->::ss::ServiceInfo::MergeFrom(
         from._internal_service_info());
   }
+  if (from._internal_send_time() != 0) {
+    _this->_internal_set_send_time(from._internal_send_time());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -1863,7 +1896,12 @@ bool TraceRoute_Request::IsInitialized() const {
 void TraceRoute_Request::InternalSwap(TraceRoute_Request* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.service_info_, other->_impl_.service_info_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(TraceRoute_Request, _impl_.send_time_)
+      + sizeof(TraceRoute_Request::_impl_.send_time_)
+      - PROTOBUF_FIELD_OFFSET(TraceRoute_Request, _impl_.service_info_)>(
+          reinterpret_cast<char*>(&_impl_.service_info_),
+          reinterpret_cast<char*>(&other->_impl_.service_info_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata TraceRoute_Request::GetMetadata() const {
@@ -1900,6 +1938,7 @@ TraceRoute_Response::TraceRoute_Response(const TraceRoute_Response& from)
   TraceRoute_Response* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.service_info_){nullptr}
+    , decltype(_impl_.send_time_){}
     , decltype(_impl_.err_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -1907,7 +1946,9 @@ TraceRoute_Response::TraceRoute_Response(const TraceRoute_Response& from)
   if (from._internal_has_service_info()) {
     _this->_impl_.service_info_ = new ::ss::ServiceInfo(*from._impl_.service_info_);
   }
-  _this->_impl_.err_ = from._impl_.err_;
+  ::memcpy(&_impl_.send_time_, &from._impl_.send_time_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.err_) -
+    reinterpret_cast<char*>(&_impl_.send_time_)) + sizeof(_impl_.err_));
   // @@protoc_insertion_point(copy_constructor:ss.TraceRoute.Response)
 }
 
@@ -1917,6 +1958,7 @@ inline void TraceRoute_Response::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.service_info_){nullptr}
+    , decltype(_impl_.send_time_){int64_t{0}}
     , decltype(_impl_.err_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -1950,7 +1992,9 @@ void TraceRoute_Response::Clear() {
     delete _impl_.service_info_;
   }
   _impl_.service_info_ = nullptr;
-  _impl_.err_ = 0;
+  ::memset(&_impl_.send_time_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.err_) -
+      reinterpret_cast<char*>(&_impl_.send_time_)) + sizeof(_impl_.err_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1969,9 +2013,17 @@ const char* TraceRoute_Response::_InternalParse(const char* ptr, ::_pbi::ParseCo
         } else
           goto handle_unusual;
         continue;
-      // .ss.ServiceInfo service_info = 2;
+      // int64 send_time = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.send_time_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .ss.ServiceInfo service_info = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr = ctx->ParseMessage(_internal_mutable_service_info(), ptr);
           CHK_(ptr);
         } else
@@ -2013,10 +2065,16 @@ uint8_t* TraceRoute_Response::_InternalSerialize(
       1, this->_internal_err(), target);
   }
 
-  // .ss.ServiceInfo service_info = 2;
+  // int64 send_time = 2;
+  if (this->_internal_send_time() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(2, this->_internal_send_time(), target);
+  }
+
+  // .ss.ServiceInfo service_info = 3;
   if (this->_internal_has_service_info()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(2, _Internal::service_info(this),
+      InternalWriteMessage(3, _Internal::service_info(this),
         _Internal::service_info(this).GetCachedSize(), target, stream);
   }
 
@@ -2036,11 +2094,16 @@ size_t TraceRoute_Response::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .ss.ServiceInfo service_info = 2;
+  // .ss.ServiceInfo service_info = 3;
   if (this->_internal_has_service_info()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.service_info_);
+  }
+
+  // int64 send_time = 2;
+  if (this->_internal_send_time() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_send_time());
   }
 
   // .SSErrorCode err = 1;
@@ -2070,6 +2133,9 @@ void TraceRoute_Response::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, co
   if (from._internal_has_service_info()) {
     _this->_internal_mutable_service_info()->::ss::ServiceInfo::MergeFrom(
         from._internal_service_info());
+  }
+  if (from._internal_send_time() != 0) {
+    _this->_internal_set_send_time(from._internal_send_time());
   }
   if (from._internal_err() != 0) {
     _this->_internal_set_err(from._internal_err());
@@ -2133,6 +2199,7 @@ TraceRoute::TraceRoute(const TraceRoute& from)
   new (&_impl_) Impl_{
       decltype(_impl_.request_){nullptr}
     , decltype(_impl_.response_){nullptr}
+    , decltype(_impl_.is_req_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -2142,6 +2209,7 @@ TraceRoute::TraceRoute(const TraceRoute& from)
   if (from._internal_has_response()) {
     _this->_impl_.response_ = new ::ss::TraceRoute_Response(*from._impl_.response_);
   }
+  _this->_impl_.is_req_ = from._impl_.is_req_;
   // @@protoc_insertion_point(copy_constructor:ss.TraceRoute)
 }
 
@@ -2152,6 +2220,7 @@ inline void TraceRoute::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.request_){nullptr}
     , decltype(_impl_.response_){nullptr}
+    , decltype(_impl_.is_req_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -2189,6 +2258,7 @@ void TraceRoute::Clear() {
     delete _impl_.response_;
   }
   _impl_.response_ = nullptr;
+  _impl_.is_req_ = false;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -2198,17 +2268,25 @@ const char* TraceRoute::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .ss.TraceRoute.Request request = 1;
+      // bool is_req = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.is_req_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .ss.TraceRoute.Request request = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_request(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .ss.TraceRoute.Response response = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+      // .ss.TraceRoute.Response response = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr = ctx->ParseMessage(_internal_mutable_response(), ptr);
           CHK_(ptr);
         } else
@@ -2243,17 +2321,23 @@ uint8_t* TraceRoute::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .ss.TraceRoute.Request request = 1;
+  // bool is_req = 1;
+  if (this->_internal_is_req() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(1, this->_internal_is_req(), target);
+  }
+
+  // .ss.TraceRoute.Request request = 2;
   if (this->_internal_has_request()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::request(this),
+      InternalWriteMessage(2, _Internal::request(this),
         _Internal::request(this).GetCachedSize(), target, stream);
   }
 
-  // .ss.TraceRoute.Response response = 2;
+  // .ss.TraceRoute.Response response = 3;
   if (this->_internal_has_response()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(2, _Internal::response(this),
+      InternalWriteMessage(3, _Internal::response(this),
         _Internal::response(this).GetCachedSize(), target, stream);
   }
 
@@ -2273,18 +2357,23 @@ size_t TraceRoute::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .ss.TraceRoute.Request request = 1;
+  // .ss.TraceRoute.Request request = 2;
   if (this->_internal_has_request()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.request_);
   }
 
-  // .ss.TraceRoute.Response response = 2;
+  // .ss.TraceRoute.Response response = 3;
   if (this->_internal_has_response()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.response_);
+  }
+
+  // bool is_req = 1;
+  if (this->_internal_is_req() != 0) {
+    total_size += 1 + 1;
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -2313,6 +2402,9 @@ void TraceRoute::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PRO
     _this->_internal_mutable_response()->::ss::TraceRoute_Response::MergeFrom(
         from._internal_response());
   }
+  if (from._internal_is_req() != 0) {
+    _this->_internal_set_is_req(from._internal_is_req());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -2331,8 +2423,8 @@ void TraceRoute::InternalSwap(TraceRoute* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TraceRoute, _impl_.response_)
-      + sizeof(TraceRoute::_impl_.response_)
+      PROTOBUF_FIELD_OFFSET(TraceRoute, _impl_.is_req_)
+      + sizeof(TraceRoute::_impl_.is_req_)
       - PROTOBUF_FIELD_OFFSET(TraceRoute, _impl_.request_)>(
           reinterpret_cast<char*>(&_impl_.request_),
           reinterpret_cast<char*>(&other->_impl_.request_));

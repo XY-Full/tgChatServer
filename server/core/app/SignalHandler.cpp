@@ -1,5 +1,4 @@
 #include "SignalHandler.h"
-#include <algorithm>
 #include <condition_variable>
 #include <csignal>
 #include <cstring>
@@ -10,6 +9,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <thread>
+#include <mutex>
+#include <queue>
+#include <signal.h>
+#include <atomic>
+#include <map>
 
 // 静态成员初始化
 SignalHandler *SignalHandler::s_instance = nullptr;

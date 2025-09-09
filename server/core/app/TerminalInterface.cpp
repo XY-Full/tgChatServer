@@ -1,5 +1,4 @@
 #include "TerminalInterface.h"
-#include <algorithm>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>

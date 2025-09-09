@@ -1,8 +1,10 @@
 #include "IApp.h"
 #include "CommandLineParser.h"
-#include "ConfigManager.h"
+#include "GlobalSpace.h"
 #include "SignalHandler.h"
 #include "TerminalInterface.h"
+#include "Timer.h"
+#include "jsonParser/ConfigManager.h"
 #include <arpa/inet.h>
 #include <chrono>
 #include <cstring>
@@ -15,7 +17,6 @@
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
-#include "GlobalSpace.h"
 
 // ========== IApp Implementation ==========
 
@@ -94,6 +95,8 @@ void IApp::stop()
     }
 
     m_terminal->stop();
+
+    delete GlobalSpace()->timer_;
 }
 
 ConfigManager &IApp::getContext()
@@ -262,6 +265,11 @@ bool IApp::initialize(int argc, char *argv[])
 
     // 启动线程
     m_tick_thread = std::thread(&IApp::tickThread, this);
+
+    // 设置全局变量
+    GlobalSpace()->bus_ = m_bus_client.get();
+    GlobalSpace()->configMgr_ = m_config_manager.get();
+    GlobalSpace()->timer_ = new Timer();
 
     return true;
 }

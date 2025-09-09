@@ -1,28 +1,27 @@
 #include "IBus.h"
+#include "BusNet.h"
+#include "GlobalSpace.h"
+#include "Helper.h"
 #include "Log.h"
+#include "coroutine/CoroutineScheduler.h"
 #include "google/protobuf/message.h"
+#include "network/AppMsg.h"
+#include "network/MsgWrapper.h"
+#include "shm/shm_ringbuffer.h"
+#include "shm/shm_slab.h"
+#include "ss_msg_id.pb.h"
 #include <arpa/inet.h>
+#include <atomic>
+#include <condition_variable>
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include "Helper.h"
-#include "GlobalSpace.h"
-#include "network/AppMsg.h"
-#include "network/MsgWrapper.h"
-#include <condition_variable>
-#include "ss_msg_id.pb.h"
-#include "shm/shm_ringbuffer.h"
-#include "shm/shm_slab.h"
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include <thread>
-#include <unordered_map>
-#include "BusNet.h"
+#include <unistd.h>
 
 namespace IBus
 {
@@ -34,6 +33,10 @@ class BusClient::Impl
 public:
     explicit Impl(const Options &opts) : opts_(opts), running_(false), ready_(false)
     {
+        message_handlers_map_[Type::C2S] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
+        message_handlers_map_[Type::S2C] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
+        message_handlers_map_[Type::S2SReq] = std::bind(&Impl::HandleRequest, this, std::placeholders::_1);
+        message_handlers_map_[Type::S2SRsp] = std::bind(&Impl::HandleResponse, this, std::placeholders::_1);
         ILOG << "BusClient::Impl created with client_id: " << opts.client_id;
     }
 
@@ -59,9 +62,11 @@ public:
             return false;
         }
 
+        bus_net_ = std::make_unique<BusNet>();
+        msg_dispatcher_ = std::make_unique<MsgDispatcher>();
+
         // 启动工作线程
         io_thread_ = std::thread(&Impl::IoLoop, this);
-        retry_thread_ = std::thread(&Impl::RetryLoop, this);
 
         ready_ = true;
         ready_cv_.notify_all();
@@ -83,8 +88,6 @@ public:
 
         if (io_thread_.joinable())
             io_thread_.join();
-        if (retry_thread_.joinable())
-            retry_thread_.join();
 
         Cleanup();
 
@@ -97,7 +100,7 @@ public:
         return ready_cv_.wait_for(lock, timeout, [this] { return ready_.load(); });
     }
 
-    bool SendToNode(const std::string& service_name, const google::protobuf::Message &message)
+    bool SendToNode(const std::string &service_name, const google::protobuf::Message &message)
     {
         if (!ready_)
         {
@@ -115,9 +118,26 @@ public:
         return result;
     }
 
+    bool SendToNode(const std::string_view &service_name, const AppMsgWrapper &pack)
+    {
+        if (!ready_)
+        {
+            ELOG << "Cannot send, client not ready";
+            return false;
+        }
+
+        bool result = bus_net_->sendMsgTo(service_name, pack);
+        if (!result)
+        {
+            ELOG << "Failed to push message to local ring buffer";
+        }
+
+        return result;
+    }
+
     bool RegistEvent(uint32_t msg_id, const MessageHandler &handler)
     {
-        msg_dispatcher_.RegistEvent(msg_id, handler);
+        msg_dispatcher_->RegistEvent(msg_id, handler);
 
         ILOG << "RegistEvent to msg_id: " << msg_id;
         return true;
@@ -125,40 +145,57 @@ public:
 
     bool UnregistEvent(uint32_t msg_id)
     {
-        msg_dispatcher_.UnregistEvent(msg_id);
+        msg_dispatcher_->UnregistEvent(msg_id);
 
         ILOG << "UnregistEvent from msg_id: " << msg_id;
         return true;
     }
 
-    uint64_t Request(const google::protobuf::Message& message, std::chrono::milliseconds timeout = std::chrono::seconds(3))
+    bool SSRegistEvent(uint32_t msg_id, const MessageHandler &handler)
+    {
+        ss_msg_dispatcher_->RegistEvent(msg_id, handler);
+
+        ILOG << "SSRegistEvent to msg_id: " << msg_id;
+        return true;
+    }
+
+    bool SSUnregistEvent(uint32_t msg_id)
+    {
+        ss_msg_dispatcher_->UnregistEvent(msg_id);
+
+        ILOG << "SSUnregistEvent from msg_id: " << msg_id;
+        return true;
+    }
+
+    AppMsgPtr Request(const std::string &service_name, const google::protobuf::Message &message)
     {
         if (!ready_)
         {
             ELOG << "Cannot reply, client not ready";
-            return false;
+            return nullptr;
         }
 
         auto pack = Helper::CreateSSPack(message);
-        
-        bool result = local_ring_->Push(*pack);
+        reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_))->co_id_ = CUR_CO_ID;
+
+        bool result = SendToNode(service_name, *pack);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
         }
 
-        auto pending_request = std::make_shared<PendingRequest>();
-        auto seq = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_))->header_.seq_;
-        pending_requests_[seq] = pending_request;
-        std::unique_lock<std::mutex> lock(pending_request->mutex);
-        pending_request->has_response.wait_for(lock, timeout);
+        auto rsp_msg = CoroutineScheduler::yield();
+        if (!rsp_msg)
+        {
+            ELOG << "Failed to request " << service_name;
+            throw std::runtime_error("Failed to request " + service_name);
+        }
 
-        return 0;
+        return rsp_msg;
     }
 
     // 此处在Recv的位置进行调用，如果是点对点通信，直接将包发回给对端
-    // Demo
-    bool Reply(uint32_t req_id, const google::protobuf::Message& message)
+    bool Reply(const AppMsg &req_msg, const google::protobuf::Message &rsp_msg)
     {
         if (!ready_)
         {
@@ -166,12 +203,14 @@ public:
             return false;
         }
 
-        auto pack = Helper::CreateSSPack(message, req_id);
-        
-        bool result = local_ring_->Push(*pack);
+        auto co_id = req_msg.co_id_;
+        auto pack = Helper::CreateSSPack(rsp_msg, Type::S2SRsp, co_id);
+
+        bool result = SendToNode(req_msg.src_name_, *pack);
         if (!result)
         {
-            ELOG << "Failed to push message to local ring buffer";
+            ELOG << "Failed to send message when reply to " << co_id;
+            return result;
         }
 
         return result;
@@ -206,51 +245,54 @@ private:
             AppMsgWrapper msg;
             if (local_ring_->Pop(msg))
             {
-                auto pack = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(msg.offset_));
-                if(pack->header_.type_ == Type::S2SRsp)
-                {
-                    HandleResponse(*pack);
-                }
-                else 
-                {
-                    msg_dispatcher_.onMsg(*pack);
-                }
+                auto offset = msg.offset_;
+                auto pack = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(offset));
+
+                auto packPtr = std::shared_ptr<AppMsg>(
+                    pack, [offset](AppMsg *p) { GlobalSpace()->shm_slab_.Free(offset, p->header_.pack_len_); });
+
+                // 将处理response的函数放在协程中处理
+                co_scheduler_->schedule([&]() { message_handlers_map_[packPtr->header_.type_](packPtr); });
             }
         }
 
         ILOG << "Exiting IO loop";
     }
 
-    void RetryLoop()
+    void HandleRequest(AppMsgPtr msg)
     {
-        ILOG << "Starting retry loop";
+        if (msg->header_.type_ != Type::S2SReq)
+            return;
 
-        while (running_)
+        ss_msg_dispatcher_->onMsg(msg);
+    }
+
+    void HandleResponse(AppMsgPtr msg)
+    {
+        if (msg->header_.type_ != Type::S2SRsp)
+            return;
+
+        auto co_id = msg->co_id_;
+        if (co_id == 0)
         {
-            CleanupExpiredRequests();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            ELOG << "Invalid co_id: " << co_id;
+            return;
         }
 
-        ILOG << "Exiting retry loop";
+        co_scheduler_->resume(co_id, msg);
     }
 
-    void HandleResponse(const AppMsg &msg)
+    void HandleCSMsg(AppMsgPtr msg)
     {
-        if (msg.header_.type_ != Type::S2SRsp) return;
+        if (msg->header_.type_ != Type::C2S && msg->header_.type_ != Type::S2C)
+            return;
 
-        auto it = pending_requests_.find(msg.header_.seq_);
-        if (it != pending_requests_.end()) {
-            it->second->has_response.notify_all();
-        }
+        msg_dispatcher_->onMsg(msg);
     }
 
-    void onTraceRouteResp(const AppMsg &msg)
+    void onTraceRouteResp(AppMsgPtr msg)
     {
-
-    }
-
-    void CleanupExpiredRequests()
-    {
+        bus_net_->onRecvRouteCache(msg);
     }
 
     void Cleanup()
@@ -259,40 +301,30 @@ private:
         ILOG << "Cleanup completed";
     }
 
-    uint64_t NextRequestId()
-    {
-        static std::atomic<uint64_t> counter{1};
-        return counter.fetch_add(1);
-    }
-
-    struct PendingRequest
-    {
-        std::condition_variable has_response;
-        std::mutex mutex;
-    };
-
     Options opts_;
     std::atomic<bool> running_;
     std::atomic<bool> ready_;
     std::mutex ready_mutex_;
     std::condition_variable ready_cv_;
 
+    // 本地收消息缓存队列
     std::unique_ptr<ShmRingBuffer<AppMsgWrapper>> local_ring_;
+    // 接受消息线程
     std::thread io_thread_;
-    std::thread retry_thread_;
 
-    MsgDispatcher msg_dispatcher_;
-    BusNet *bus_net_;
+    // 与客户端通信时注册的分发器
+    std::unique_ptr<MsgDispatcher> msg_dispatcher_;
+    // 与服务端通信时注册的分发器
+    std::unique_ptr<MsgDispatcher> ss_msg_dispatcher_;
 
-    std::unordered_map<uint64_t, std::shared_ptr<PendingRequest>> pending_requests_;
-    std::mutex pending_requests_mutex_;
+    // 不同bus之间通信的网络组件
+    std::unique_ptr<BusNet> bus_net_;
 
-    struct
-    {
-        std::atomic<uint64_t> local_messages{0};
-        std::atomic<uint64_t> remote_messages{0};
-        std::atomic<uint64_t> errors{0};
-    } stats_;
+    // 各种请求对应的处理函数表
+    std::unordered_map<Type, std::function<void(AppMsgPtr msg)>> message_handlers_map_;
+
+    // 协程调度器
+    std::unique_ptr<CoroutineScheduler> co_scheduler_;
 };
 
 // BusClient 包装实现
@@ -317,7 +349,7 @@ bool BusClient::WaitReady(std::chrono::milliseconds timeout)
 }
 
 // BusClient公共接口实现
-bool BusClient::SendToNode(const std::string& service_name, const google::protobuf::Message &message)
+bool BusClient::SendToNode(const std::string &service_name, const google::protobuf::Message &message)
 {
     return impl_->SendToNode(service_name, message);
 }
@@ -332,14 +364,14 @@ bool BusClient::UnregistEvent(uint32_t msg_id)
     return impl_->UnregistEvent(msg_id);
 }
 
-uint64_t BusClient::Request(const google::protobuf::Message &message, std::chrono::milliseconds timeout)
+AppMsgPtr BusClient::Request(const std::string &service_name, const google::protobuf::Message &message)
 {
-    return impl_->Request(message, timeout);
+    return impl_->Request(service_name, message);
 }
 
-bool BusClient::Reply(uint64_t req_id, const google::protobuf::Message &msg)
+bool BusClient::Reply(const AppMsg &req_msg, const google::protobuf::Message &msg)
 {
-    return impl_->Reply(req_id, msg);
+    return impl_->Reply(req_msg, msg);
 }
 
 void BusClient::GetStats() const

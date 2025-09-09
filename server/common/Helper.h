@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include "../core/network/AppMsg.h"
 
 #define BOT_TOKEN "7860009277:AAEvFHoZqJIeYVReYOoS62m5GjYWVIDfXNo"
 
@@ -30,6 +31,6 @@ public:
     static int64_t timeGetTimeS();
     static int64_t timeGetTimeMS();
     static int64_t GenUID();
-    static std::shared_ptr<AppMsgWrapper> CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq = 0);
+    static std::shared_ptr<AppMsgWrapper> CreateSSPack(const google::protobuf::Message &message, Type type = Type::S2SReq, const uint64_t& co_id = 0);
     static void DeleteSSPack(const AppMsgWrapper& pack);
 };

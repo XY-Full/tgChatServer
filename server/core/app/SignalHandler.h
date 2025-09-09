@@ -1,17 +1,10 @@
 #ifndef SIGNAL_HANDLER_H
 #define SIGNAL_HANDLER_H
 
-#include <atomic>
 #include <functional>
-#include <map>
 #include <memory>
-#include <mutex>
-#include <queue>
 #include <set>
-#include <signal.h>
 #include <string>
-#include <thread>
-#include <vector>
 
 /**
  * @brief 信号类型枚举

@@ -50,15 +50,18 @@ message TraceRoute
 {
     message Request
     {
-        ServiceInfo service_info = 1;
+        int64       send_time    = 1;
+        ServiceInfo service_info = 2;
     }
 
     message Response
     {
         SSErrorCode err          = 1;
-        ServiceInfo service_info = 2;
+        int64       send_time    = 2;
+        ServiceInfo service_info = 3;
     }
 
-    Request     request     = 1;
-    Response    response    = 2;
+    bool        is_req      = 1;
+    Request     request     = 2;
+    Response    response    = 3;
 }

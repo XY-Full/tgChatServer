@@ -273,7 +273,7 @@ int64_t Helper::GenUID()
     return uid;
 }
 
-std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Message &message, const uint32_t& seq)
+std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Message &message, Type type, const uint64_t& co_id)
 {
     static std::atomic<uint32_t> now_seq_{0};
     auto pack = std::make_shared<AppMsgWrapper>();
@@ -295,17 +295,13 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
     // 填充AppMsg Header
     msg->header_.version_ = MAGIC_VERSION;
     msg->header_.pack_len_ = pack_len;
-    // seq传入为0，代表是req，否则为rsp
-    if(seq == 0)
+    msg->header_.seq_ = now_seq_.fetch_add(1);
+    // co_id传入为0，代表是req，否则为rsp
+    if(co_id != 0)
     {
-        msg->header_.seq_ = now_seq_.fetch_add(1);
-        msg->header_.type_ = Type::S2SReq;
+        msg->co_id_ = co_id;
     }
-    else 
-    {
-        msg->header_.seq_ = seq;
-        msg->header_.type_ = Type::S2SRsp;
-    }
+    msg->header_.type_ = type;
 
     msg->data_ = reinterpret_cast<char *>(pack_shm_addr) + sizeof(AppMsg);  // body紧跟在AppMsg结构体后面
     msg->data_len_ = data_len;                                              // body数据长度

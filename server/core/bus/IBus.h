@@ -25,15 +25,15 @@ using ResponseHandler = std::function<void(const AppMsg&)>;
 class BusClient
 {
 public:
-    struct Options
-    {
-        std::string client_id;
-        std::string busd_addr = "127.0.0.1:5555";
-        size_t local_ring_size = 1 << 20; // 1MB
-        size_t max_remote_msg = 1 << 16;  // 64KB
-        bool enable_trace = false;
-        std::chrono::milliseconds reconnect_interval{100};
-    };
+    // struct Options
+    // {
+    //     std::string zone_id = "";
+    //     std::string plat_id = "";
+    //     std::string service_id = "";
+    //     std::string service_id = "";
+    //     std::string busd_addr = "127.0.0.1:5555";
+    //     size_t local_ring_size = 1 << 20; // 1MB
+    // };
 
     explicit BusClient(const Options &opts);
     ~BusClient();
@@ -55,8 +55,8 @@ public:
     bool UnregistEvent(uint32_t msg_id);
 
     // 请求/响应
-    uint64_t Request(const google::protobuf::Message &message, std::chrono::milliseconds timeout = std::chrono::seconds(3));
-    bool Reply(uint64_t req_id, const google::protobuf::Message &msg);
+    AppMsgPtr Request(const std::string& service_name, const google::protobuf::Message &message);
+    bool Reply(const AppMsg& req_msg, const google::protobuf::Message &msg);
 
     // 管理接口
     void GetStats() const;

@@ -8,7 +8,7 @@
 
 namespace google { namespace protobuf { class Message; } }
 
-using MessageHandler = std::function<void(const AppMsg&)>;
+using MessageHandler = std::function<void(std::shared_ptr<AppMsg>)>;
 
 class MsgDispatcher
 {
@@ -29,9 +29,9 @@ public:
         return true;
     }
 
-    bool onMsg(const AppMsg& msg)
+    bool onMsg(std::shared_ptr<AppMsg> msg)
     {
-        auto it = handlers_.find(msg.msg_id_);
+        auto it = handlers_.find(msg->msg_id_);
         if (it != handlers_.end())
         {
             for (const auto &handler : it->second)
