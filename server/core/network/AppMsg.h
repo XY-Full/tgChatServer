@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PackBase.h"
+#include <memory>
 
 #pragma pack(push, 1)
 

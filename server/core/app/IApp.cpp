@@ -27,6 +27,7 @@ IApp::IApp(const std::string &app_name)
     m_signal_handler = std::make_unique<SignalHandler>();
     m_cmd_parser = std::make_unique<CommandLineParser>();
     m_terminal = std::make_unique<TerminalInterface>();
+    m_bus_client = std::make_unique<IBus::BusClient>(*m_config_manager);
 
     m_last_tick_time = std::chrono::steady_clock::now();
 }
@@ -121,7 +122,7 @@ bool IApp::initialize(int argc, char *argv[])
 
     // 加载配置文件
     std::string config_file = m_cmd_parser->getValue("config");
-    if (!m_config_manager->loadConfig(config_file, true))
+    if (!m_config_manager->loadConfig(config_file, false))
     {
         std::cerr << "Failed to load config file: " << config_file << std::endl;
         return false;

@@ -1,7 +1,7 @@
 #include "ConfigManager.h"
 #include "JsonParser.h"
+#include "Log.h"
 #include <filesystem>
-#include <iostream>
 
 // 定义默认配置
 static const char *DEFAULT_CONFIG_CONTENT = R"({
@@ -62,7 +62,7 @@ public:
         }
         catch (const std::filesystem::filesystem_error &e)
         {
-            std::cerr << "Error getting file modified time for " << path << ": " << e.what() << std::endl;
+            ELOG << "Error getting file modified time for " << path << ": " << e.what();
             return std::chrono::system_clock::time_point::min();
         }
     }
@@ -73,7 +73,7 @@ public:
         nlohmann::json defaultConfig;
         if (!parser->loadFromString(DEFAULT_CONFIG_CONTENT, defaultConfig))
         {
-            std::cerr << "Error: Failed to parse default config content." << std::endl;
+            ELOG << "Error: Failed to parse default config content.";
             return false;
         }
         return parser->saveToFile(filePath, defaultConfig);
@@ -92,8 +92,8 @@ public:
             }
             catch (const nlohmann::json::exception &e)
             {
-                std::cerr << "Warning: Type mismatch for key '" << key << "'. " << e.what()
-                          << ". Returning default value." << std::endl;
+                ELOG << "Warning: Type mismatch for key '" << key << "'. " << e.what()
+                          << ". Returning default value.";
             }
         }
         return defaultValue;
@@ -119,8 +119,8 @@ public:
             }
             catch (const nlohmann::json::exception &e)
             {
-                std::cerr << "Warning: Type mismatch for key '" << key << "'. " << e.what()
-                          << ". Returning default value." << std::endl;
+                ELOG << "Warning: Type mismatch for key '" << key << "'. " << e.what()
+                          << ". Returning default value.";
             }
         }
         return defaultValue;
@@ -156,16 +156,16 @@ bool ConfigManager::loadConfig(const std::string &config_file, bool auto_create)
     {
         if (auto_create)
         {
-            std::cout << "Config file not found, creating default: " << config_file << std::endl;
+            ILOG << "Config file not found, creating default: " << config_file;
             if (!m_impl->createDefaultConfig(config_file))
             {
-                std::cerr << "Error: Failed to create default config file." << std::endl;
+                ELOG << "Error: Failed to create default config file.";
                 return false;
             }
         }
         else
         {
-            std::cerr << "Error: Config file not found and auto_create is false: " << config_file << std::endl;
+            ELOG << "Error: Config file not found and auto_create is false: " << config_file;
             return false;
         }
     }
@@ -185,7 +185,7 @@ bool ConfigManager::saveConfig(const std::string &config_file)
     std::string target_file = config_file.empty() ? m_impl->config_file_path : config_file;
     if (target_file.empty())
     {
-        std::cerr << "Error: No config file path specified for saving." << std::endl;
+        ELOG << "Error: No config file path specified for saving.";
         return false;
     }
 
@@ -362,7 +362,7 @@ void ConfigManager::hotReloadMonitorThread()
         {
             if (isConfigFileModified())
             {
-                std::cout << "Config file modified, reloading: " << m_impl->config_file_path << std::endl;
+                ILOG << "Config file modified, reloading: " << m_impl->config_file_path;
                 // Acquire lock before reloading to prevent race conditions
                 std::lock_guard<std::mutex> lock(m_impl->config_mutex);
                 if (m_impl->parser->loadFromFile(m_impl->config_file_path, m_impl->config_root))
@@ -372,7 +372,7 @@ void ConfigManager::hotReloadMonitorThread()
                 }
                 else
                 {
-                    std::cerr << "Error reloading config file: " << m_impl->config_file_path << std::endl;
+                    ELOG << "Error reloading config file: " << m_impl->config_file_path;
                 }
             }
         }

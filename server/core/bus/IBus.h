@@ -10,6 +10,7 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
 #include "MsgDispatcher.h"
+#include "jsonParser/ConfigManager.h"
 
 class PackBase;
 class AppMsg;
@@ -25,17 +26,7 @@ using ResponseHandler = std::function<void(const AppMsg&)>;
 class BusClient
 {
 public:
-    // struct Options
-    // {
-    //     std::string zone_id = "";
-    //     std::string plat_id = "";
-    //     std::string service_id = "";
-    //     std::string service_id = "";
-    //     std::string busd_addr = "127.0.0.1:5555";
-    //     size_t local_ring_size = 1 << 20; // 1MB
-    // };
-
-    explicit BusClient(const Options &opts);
+    explicit BusClient(const ConfigManager& config_manager);
     ~BusClient();
 
     // 禁止拷贝，允许移动

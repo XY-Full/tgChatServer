@@ -26,7 +26,8 @@ TcpClient::TcpClient(const std::string &ip, int port, std::string shm_name, Recv
     WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 
-    conn_ = std::make_shared<Connection>(sock_, -1, shm_name_, epoller_, recv_handler_, [this](int64_t) { stop(); });
+    conn_ = std::make_shared<Connection>(sock_, -1, epoller_, recv_handler_, [this](int64_t) { stop(); }, tcp_recv_buffer_);
+    tcp_recv_buffer_ = new ShmRingBuffer<uint8_t>(shm_name_ + "_tcp_recv");
 }
 
 TcpClient::~TcpClient()
@@ -35,6 +36,8 @@ TcpClient::~TcpClient()
 #ifdef _WIN32
     WSACleanup();
 #endif
+
+    delete tcp_recv_buffer_;
 }
 
 bool TcpClient::start()

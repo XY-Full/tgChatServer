@@ -1,12 +1,7 @@
 #ifndef PACK_BASE_H
 #define PACK_BASE_H
 
-#include "../../common/Log.h"
-#include <chrono>
 #include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
 
 #define MAGIC_VERSION 0x01
 
@@ -28,6 +23,7 @@ struct Header
     Type type_;         // 包类型
     uint32_t pack_len_; // 负载总长度
     uint32_t seq_;      // 序列号
+    uint64_t conn_id_;  // connid
 };
 
 class PackBase

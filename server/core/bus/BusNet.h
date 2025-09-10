@@ -7,6 +7,36 @@
 
 #define EXTRACT_APPMSG_WRAPPER(msg) (reinterpret_cast<AppMsg *>(msg.offset_))
 
+struct Options
+{
+    // =======配置参数=======
+    uint8_t region_id = 0;
+    uint8_t zone_id = 0;
+    uint8_t service_id = 0;
+    uint8_t instance_id = 0;
+    size_t local_ring_size = 1 << 20; // 1MB
+    std::string local_ip = "127.0.0.1";
+    std::string local_port = "3089";
+    std::string center_ip = "";
+    std::string center_port = "";
+    // =======配置参数=======
+
+    std::string client_id = "";
+
+    Options(const ConfigManager& config_manager)
+    {
+        region_id = config_manager.getValue<uint8_t>("region_id", 0);
+        zone_id = config_manager.getValue<uint8_t>("zone_id", 0);
+        service_id = config_manager.getValue<uint8_t>("service_id", 0);
+        instance_id = config_manager.getValue<uint8_t>("instance_id", 0);
+
+        local_ring_size = config_manager.getValue<size_t>("local_ring_size", 1 << 20);
+
+        client_id = std::to_string(region_id) + "." + std::to_string(zone_id) + "." + std::to_string(service_id) + "." + std::to_string(instance_id);
+    }
+};
+
+
 namespace ss
 {
 class ServiceInfo;
@@ -28,7 +58,7 @@ public:
     BusNet();
     ~BusNet();
 
-    void init(std::string shm_name);
+    void init(std::shared_ptr<Options> opts);
 
     void broadCast(const AppMsgWrapper &msg);
 
@@ -82,4 +112,5 @@ private:
     bool ready_ = false;
     bool has_center_ = false;
     std::unordered_map<uint32_t, CenterMessageHandler> CenterMessageHandlers_;
+    std::shared_ptr<Options> opts_;
 };

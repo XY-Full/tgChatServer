@@ -1,7 +1,5 @@
 #include "CommandLineParser.h"
-#include <algorithm>
 #include <iostream>
-#include <sstream>
 
 CommandLineParser::CommandLineParser() : m_terminal_mode(false), m_help_mode(false)
 {

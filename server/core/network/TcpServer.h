@@ -2,6 +2,7 @@
 #include "EventLoopWrapper.h"
 #include "MsgWrapper.h"
 #include "TcpConnection.h"
+#include "shm/shm_ringbuffer.h"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -11,6 +12,8 @@
 #include <unordered_map>
 
 class AppMsgWrapper;
+
+using RecvHandler = std::function<void(int64_t, std::shared_ptr<PackBase>)>;
 
 class TcpServer
 {
@@ -37,6 +40,7 @@ private:
     std::unordered_map<int64_t, std::shared_ptr<Connection>> conn_map_;
     std::unordered_map<int, int64_t> fd_to_conn_; // 快速查找映射
     std::atomic<int64_t> next_conn_id_{0};
+    ShmRingBuffer<uint8_t>* recv_buffer_;
 
     EventLoopWrapper epoller_;
     RecvHandler recv_handler_;

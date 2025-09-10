@@ -8,9 +8,9 @@
 #include "EventLoopWrapper.h"
 #include "MsgWrapper.h"
 #include "TcpConnection.h"
+#include "shm/shm_ringbuffer.h"
 
 class PackBase;
-using RecvHandler = std::function<void(std::shared_ptr<PackBase>)>;
 
 class TcpClient
 {
@@ -44,6 +44,7 @@ private:
     std::shared_ptr<Connection> conn_;
 
     std::string shm_name_;
+    ShmRingBuffer<uint8_t>* tcp_recv_buffer_;
 
     RecvHandler recv_handler_;
 };

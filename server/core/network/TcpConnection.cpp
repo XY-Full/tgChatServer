@@ -9,12 +9,14 @@
 #include <memory>
 #include <unistd.h>
 
-Connection::Connection(int fd, int64_t conn_id, const std::string& shm_name, EventLoopWrapper& epoller, RecvHandler recv_handler, CloseHandler close_handler)
-    : fd_(fd), conn_id_(conn_id), epoller_(&epoller), recv_handler_(recv_handler), close_handler_(close_handler)
+Connection::Connection(int fd, int64_t conn_id, EventLoopWrapper &epoller,
+                       RecvHandler recv_handler, CloseHandler close_handler, ShmRingBuffer<uint8_t> *recv_buffer)
+    : fd_(fd), conn_id_(conn_id), epoller_(&epoller), recv_handler_(recv_handler), close_handler_(close_handler), recv_buffer_(recv_buffer)
 {
     updateActiveTime();
-    send_buffer_ = new ShmRingBuffer<std::shared_ptr<AppMsgWrapper>>(shm_name + "_send");
-    recv_buffer_ = new ShmRingBuffer<uint8_t>(shm_name + "_recv");
+
+    // 初始化部分发送状态
+    partial_send_offset_ = 0;
 }
 
 Connection::~Connection()
@@ -30,6 +32,10 @@ void Connection::onReadable()
         ssize_t n = read(fd_, buffer, sizeof(buffer));
         if (n > 0)
         {
+            // 在接收数据前添加连接ID头
+            uint8_t header[sizeof(int64_t)];
+            memcpy(header, &conn_id_, sizeof(conn_id_));
+            recv_buffer_->Push(header, sizeof(header));
             recv_buffer_->Push(buffer, n);
             updateActiveTime();
         }
@@ -55,54 +61,89 @@ void Connection::onReadable()
 
 void Connection::onWritable()
 {
-    // 发送发送缓冲区中的数据
-    if (send_buffer_->IsEmpty())
+    // 处理部分发送的数据
+    if (!partial_send_buffer_.empty())
     {
-        return;
-    }
+        ssize_t sent = write(fd_, partial_send_buffer_.data() + partial_send_offset_,
+                             partial_send_buffer_.size() - partial_send_offset_);
 
-    std::shared_ptr<AppMsgWrapper> pack;
-    send_buffer_->Pop(pack);
-
-    auto pack_ptr = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
-
-    struct msghdr msg = {0};
-    struct iovec iov;
-    
-    iov.iov_base = pack_ptr;
-    iov.iov_len = pack_ptr->header_.pack_len_;
-    
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    
-    ssize_t sent = sendmsg(fd_, &msg, MSG_ZEROCOPY);
-    if (sent > 0)
-    {
-        updateActiveTime();
-    }
-    else
-    {
-        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        if (sent > 0)
         {
-            ELOG << "Write error, conn_id: " << conn_id_ << ", errno: " << errno;
-            close_handler_(conn_id_);
-        }
-    }
+            partial_send_offset_ += sent;
+            updateActiveTime();
 
-    // 如果发送缓冲区为空，取消监听写事件
-    if (send_buffer_->IsEmpty())
-    {
-        epoller_->modify(fd_, EventType::READ | EventType::EDGE_TRIGGER | EventType::RDHUP);
+            // 检查是否发送完成
+            if (partial_send_offset_ >= partial_send_buffer_.size())
+            {
+                partial_send_buffer_.clear();
+                partial_send_offset_ = 0;
+
+                // 发送完成，取消写事件监听
+                epoller_->modify(fd_, EventType::READ | EventType::EDGE_TRIGGER | EventType::RDHUP);
+            }
+        }
+        else
+        {
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                ELOG << "Partial write error, conn_id: " << conn_id_ << ", errno: " << errno;
+                close_handler_(conn_id_);
+            }
+        }
+        return;
     }
 }
 
 void Connection::send(std::shared_ptr<AppMsgWrapper> pack)
 {
-    // 将数据追加到发送缓冲区
-    send_buffer_->Push(pack);
+    auto pack_ptr = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
+    pack_ptr->header_.conn_id_ = conn_id_;
 
-    // 如果发送缓冲区非空，需要监听写事件
-    epoller_->modify(fd_, EventType::READ | EventType::WRITE | EventType::EDGE_TRIGGER | EventType::RDHUP);
+    // 尝试直接发送
+    struct msghdr msg = {0};
+    struct iovec iov;
+
+    iov.iov_base = pack_ptr;
+    iov.iov_len = pack_ptr->header_.pack_len_;
+
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    ssize_t sent = sendmsg(fd_, &msg, MSG_ZEROCOPY);
+
+    if (sent == static_cast<ssize_t>(pack_ptr->header_.pack_len_))
+    {
+        // 完整发送
+        updateActiveTime();
+    }
+    else if (sent > 0)
+    {
+        // 部分发送，保存剩余数据
+        partial_send_buffer_.resize(pack_ptr->header_.pack_len_ - sent);
+        memcpy(partial_send_buffer_.data(), reinterpret_cast<uint8_t *>(pack_ptr) + sent, partial_send_buffer_.size());
+        partial_send_offset_ = 0;
+
+        // 注册写事件继续发送
+        epoller_->modify(fd_, EventType::READ | EventType::WRITE | EventType::EDGE_TRIGGER | EventType::RDHUP);
+    }
+    else
+    {
+        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            ELOG << "Direct send error, conn_id: " << conn_id_ << ", errno: " << errno;
+            close_handler_(conn_id_);
+        }
+        else
+        {
+            // 暂时无法发送，保存整个包
+            partial_send_buffer_.resize(pack_ptr->header_.pack_len_);
+            memcpy(partial_send_buffer_.data(), reinterpret_cast<uint8_t *>(pack_ptr), pack_ptr->header_.pack_len_);
+            partial_send_offset_ = 0;
+
+            // 注册写事件
+            epoller_->modify(fd_, EventType::READ | EventType::WRITE | EventType::EDGE_TRIGGER | EventType::RDHUP);
+        }
+    }
 }
 
 void Connection::updateActiveTime()
@@ -122,21 +163,31 @@ void Connection::close()
 void Connection::processRecvBuffer()
 {
     // 解析接收缓冲区中的数据包
-    while (recv_buffer_->Size() >= sizeof(Header))
+    while (recv_buffer_->Size() >= sizeof(Header) + sizeof(int64_t))
     {
+        // 先读取连接ID头
+        int64_t recv_conn_id = 0;
+        recv_buffer_->Pop(reinterpret_cast<uint8_t *>(&recv_conn_id), sizeof(recv_conn_id));
+
         auto msg_base = std::make_shared<PackBase>();
         recv_buffer_->Pop(reinterpret_cast<uint8_t *>(msg_base.get()), sizeof(Header));
+
+        // 设置消息头中的连接ID
+        msg_base->header_.conn_id_ = recv_conn_id;
 
         if (unlikely(msg_base->header_.pack_len_ <= 0 || recv_buffer_->Size() < msg_base->header_.pack_len_))
         {
             // 将剩下的数据返还给接收缓冲区
             recv_buffer_->PushFront(reinterpret_cast<uint8_t *>(msg_base.get()), sizeof(Header));
+            recv_buffer_->PushFront(reinterpret_cast<uint8_t *>(&recv_conn_id), sizeof(recv_conn_id));
             break; // 数据不完整，等待更多数据
         }
 
-        // 刚刚读取了Header，现在把剩下的数据读进来
+        // 读取剩余数据
         recv_buffer_->Pop(reinterpret_cast<uint8_t *>(msg_base.get()) + sizeof(Header),
                           msg_base->header_.pack_len_ - sizeof(Header));
-        recv_handler_(msg_base);
+
+        // 修复回调调用，添加连接ID参数
+        recv_handler_(recv_conn_id, msg_base);
     }
 }

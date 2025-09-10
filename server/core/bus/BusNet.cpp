@@ -22,13 +22,11 @@ BusNet::~BusNet()
     }
 }
 
-void BusNet::init(std::string shm_name)
+void BusNet::init(std::shared_ptr<Options> opts)
 {
-    std::string center_ip = "127.0.0.1";
-    std::string center_port = "3098";
-
+    opts_ = opts;
     TcpClient_ =
-        std::make_unique<TcpClient>(center_ip, std::stoi(center_port), shm_name, [this](std::shared_ptr<PackBase> msg) {
+        std::make_unique<TcpClient>(opts_->center_ip, std::stoi(opts_->center_port), opts_->client_id, [this](uint64_t conn_id, std::shared_ptr<PackBase> msg) {
             this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg));
         });
     if (TcpClient_->start())

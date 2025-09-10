@@ -31,13 +31,13 @@ uint64_t BusClient::now_seq_ = 0;
 class BusClient::Impl
 {
 public:
-    explicit Impl(const Options &opts) : opts_(opts), running_(false), ready_(false)
+    explicit Impl(const ConfigManager &config_manager) : opts_(std::make_shared<Options>(config_manager)), running_(false), ready_(false)
     {
         message_handlers_map_[Type::C2S] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
         message_handlers_map_[Type::S2C] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
         message_handlers_map_[Type::S2SReq] = std::bind(&Impl::HandleRequest, this, std::placeholders::_1);
         message_handlers_map_[Type::S2SRsp] = std::bind(&Impl::HandleResponse, this, std::placeholders::_1);
-        ILOG << "BusClient::Impl created with client_id: " << opts.client_id;
+        ILOG << "BusClient::Impl created with client_id: " << opts_->client_id;
     }
 
     ~Impl()
@@ -71,7 +71,7 @@ public:
         ready_ = true;
         ready_cv_.notify_all();
 
-        bus_net_->init(opts_.client_id);
+        bus_net_->init(opts_);
         RegistEvent(SSMsgID::SS_TRACE_ROUTE, std::bind(&Impl::onTraceRouteResp, this, std::placeholders::_1));
 
         ILOG << "BusClient started successfully";
@@ -229,8 +229,8 @@ private:
     bool InitSharedMemory()
     {
         // 创建或连接到共享内存
-        std::string shm_name = "/ibus_" + opts_.client_id;
-        local_ring_ = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(shm_name, opts_.local_ring_size);
+        std::string shm_name = "/ibus_" + opts_->client_id;
+        local_ring_ = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(shm_name, opts_->local_ring_size);
 
         ILOG << "Shared memory initialized: " << shm_name;
         return true;
@@ -301,7 +301,7 @@ private:
         ILOG << "Cleanup completed";
     }
 
-    Options opts_;
+    std::shared_ptr<Options> opts_;
     std::atomic<bool> running_;
     std::atomic<bool> ready_;
     std::mutex ready_mutex_;
@@ -328,7 +328,7 @@ private:
 };
 
 // BusClient 包装实现
-BusClient::BusClient(const Options &opts) : impl_(std::make_unique<Impl>(opts))
+BusClient::BusClient(const ConfigManager &config_manager) : impl_(std::make_unique<Impl>(config_manager))
 {
 }
 BusClient::~BusClient() = default;

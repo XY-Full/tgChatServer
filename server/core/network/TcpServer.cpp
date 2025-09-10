@@ -1,23 +1,25 @@
 #include "TcpServer.h"
-#include <functional>
 #include "EventLoopWrapper.h"
+#include "GlobalSpace.h"
+#include "Log.h"
+#include "MsgWrapper.h"
+#include "Timer.h"
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
+#include <functional>
 #include <memory>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
-#include <netinet/tcp.h>
 #include <unistd.h>
-#include "GlobalSpace.h"
-#include "Log.h"
-#include "MsgWrapper.h"
 #include <vector>
 
-TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name) : recv_handler_(recv_handler), shm_name_(shm_name)
+TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name)
+    : recv_handler_(recv_handler), shm_name_(shm_name)
 {
     server_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (server_fd_ == -1)
@@ -73,6 +75,8 @@ TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_nam
         close(server_fd_);
         exit(1);
     }
+
+    recv_buffer_ = new ShmRingBuffer<uint8_t>(shm_name_ + "_tcp_recv");
 }
 
 TcpServer::~TcpServer()
@@ -82,6 +86,8 @@ TcpServer::~TcpServer()
     {
         ::close(server_fd_);
     }
+
+    delete recv_buffer_;
 }
 
 void TcpServer::start()
@@ -158,9 +164,13 @@ void TcpServer::handleNewConnection(int fd)
         }
 
         int64_t conn_id = next_conn_id_++;
-        auto conn = std::make_shared<Connection>(client_fd, conn_id, shm_name_, epoller_, recv_handler_, [this](int64_t conn_id) {
-            removeConnection(conn_id);
-        });
+        auto conn = std::make_shared<Connection>(
+            client_fd, conn_id, epoller_,
+            [this](int64_t conn_id, std::shared_ptr<PackBase> msg) {
+                // 传递连接ID给recv_handler
+                this->recv_handler_(conn_id, msg);
+            },
+            [this](int64_t conn_id) { removeConnection(conn_id); }, recv_buffer_);
 
         // 注册客户端连接事件处理
         if (!epoller_.add(client_fd, EventType::READ | EventType::EDGE_TRIGGER | EventType::RDHUP,
