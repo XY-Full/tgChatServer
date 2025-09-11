@@ -103,46 +103,45 @@ endif()
 # 添加子模块
 # -----------------------------
 add_subdirectory(../public proto)
-add_subdirectory(busd)
-add_subdirectory(logic)
 add_subdirectory(common)
 add_subdirectory(core)
+add_subdirectory(center)
 
 # -----------------------------
 # 可执行文件
 # -----------------------------
-add_executable(server main.cpp)
-
-target_link_libraries(server
-    PRIVATE
-    network
-	busd_core
-	core
-    logic_modules
-	common
-	proto
-    pthread
-)
+# add_executable(server main.cpp)
+# 
+# target_link_libraries(server
+#     PRIVATE
+#     network
+# 	busd_core
+# 	core
+#     logic_modules
+# 	common
+# 	proto
+#     pthread
+# )
 
 # -----------------------------
 # 平台特定依赖
 # -----------------------------
-if(APPLE)
-    message(STATUS "Configuring for macOS")
-    target_link_libraries(server PRIVATE
-        "-framework CoreFoundation"
-        "-framework Security"
-        "-framework SystemConfiguration"
-        "iconv"
-    )
-else()
-    message(STATUS "Configuring for Linux")
-    target_link_libraries(server PRIVATE
-	    CURL::libcurl
-	    OpenSSL::SSL
-        OpenSSL::Crypto
-	    ZLIB::ZLIB
-        pthread
-        dl
-    )
-endif()
+# if(APPLE)
+#     message(STATUS "Configuring for macOS")
+#     target_link_libraries(server PRIVATE
+#         "-framework CoreFoundation"
+#         "-framework Security"
+#         "-framework SystemConfiguration"
+#         "iconv"
+#     )
+# else()
+#     message(STATUS "Configuring for Linux")
+#     target_link_libraries(server PRIVATE
+# 	    CURL::libcurl
+# 	    OpenSSL::SSL
+#         OpenSSL::Crypto
+# 	    ZLIB::ZLIB
+#         pthread
+#         dl
+#     )
+# endif()

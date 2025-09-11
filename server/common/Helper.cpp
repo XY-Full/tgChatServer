@@ -1,6 +1,5 @@
 #include "Helper.h"
 #include "GlobalSpace.h"
-#include "JsonConfigNode.h"
 #include "Log.h"
 #include <atomic>
 #include <chrono>
@@ -9,9 +8,10 @@
 #include <stdexcept>
 #include <string>
 #include "google/protobuf/message.h"
-#include "../core/network/AppMsg.h"
-#include "../core/network/MsgWrapper.h"
-#include "../../public/proto_files/msg_mapping_ss.h"
+#include "network/AppMsg.h"
+#include "network/MsgWrapper.h"
+#include "msg_mapping_ss.h"
+#include "jsonParser/ConfigManager.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -201,7 +201,7 @@ void Helper::sendTgMessage(const std::string &chat_id, const std::string &text)
     {
         std::string escaped_text = curl_easy_escape(curl, text.c_str(), text.length());
         std::string base_url = "https://api.telegram.org/bot";
-        std::string token = (*(GlobalSpace()->configMgr_))["telegram"]["bot_token"].value<std::string>();
+        std::string token = GlobalSpace()->configMgr_->getValue<std::string>("telegram.bot_token", "");
         std::string url = base_url + token + "/sendMessage?chat_id=" + chat_id + "&text=" + escaped_text;
 
         // std::cout << "URL: " << url << std::endl;

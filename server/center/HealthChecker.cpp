@@ -41,8 +41,7 @@ void HealthChecker::loop()
         }
         catch (const std::exception &e)
         {
-            std::cerr << "HealthChecker 异常: " << e.what()
-                      << " ";
+            std::cerr << "HealthChecker 异常: " << e.what() << " ";
         }
         std::this_thread::sleep_for(interval_);
     }

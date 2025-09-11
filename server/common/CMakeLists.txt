@@ -14,6 +14,9 @@ target_include_directories(common
     ${CMAKE_SOURCE_DIR}/../third
     ${CMAKE_SOURCE_DIR}/../third/nlohmann-json
     ${CMAKE_SOURCE_DIR}/../third/httplib
+    ${CMAKE_SOURCE_DIR}/../public/proto_files
+    ${CMAKE_SOURCE_DIR}/core
+    ${CMAKE_SOURCE_DIR}/core/common
 )
 
 target_include_directories(common PUBLIC ${Protobuf_INCLUDE_DIRS})
