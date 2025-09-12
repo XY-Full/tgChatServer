@@ -20,4 +20,8 @@ target_link_libraries(center
 	core
 	common
 	proto
+    CURL::libcurl
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ZLIB::ZLIB
 )

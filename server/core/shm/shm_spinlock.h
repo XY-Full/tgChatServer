@@ -6,9 +6,8 @@ struct ShmSpinLock
 {
     ShmLock lock_;
 
-    void InitUnlocked(std::string name)
+    explicit ShmSpinLock(const std::string& name) : lock_(name)
     {
-        lock_ = ShmLock(name);
     }
 
     void Destroy()

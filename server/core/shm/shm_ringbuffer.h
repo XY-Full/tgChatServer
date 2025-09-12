@@ -16,6 +16,9 @@ struct RingBufferHeader {
 template<typename T>
 class ShmRingBuffer {
 public:
+    // 空构造函数
+    ShmRingBuffer() {}
+
     // 构造函数 - 创建新的环形缓冲区
     ShmRingBuffer(const std::string& shm_name, size_t ring_size = 1 << 20);
     

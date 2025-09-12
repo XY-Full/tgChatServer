@@ -12,4 +12,4 @@ target_include_directories(proto
                             ${CMAKE_SOURCE_DIR}/proto_files
                             )
                             
-target_include_directories(proto PUBLIC protobuf)
+target_link_libraries(proto PUBLIC ${Protobuf_LIBRARIES})

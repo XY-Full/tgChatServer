@@ -18,4 +18,4 @@ target_include_directories(core
     ${CMAKE_CURRENT_LIST_DIR}/common
 )
 
-target_include_directories(core PUBLIC copp cotask)
+target_link_libraries(core PUBLIC libcopp::copp libcopp::cotask)

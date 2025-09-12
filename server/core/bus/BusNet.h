@@ -55,7 +55,6 @@ struct ServiceRouteCache
 class BusNet
 {
 public:
-    BusNet();
     ~BusNet();
 
     void init(std::shared_ptr<Options> opts);

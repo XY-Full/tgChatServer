@@ -211,4 +211,20 @@ template <>
 void ConfigManager::setValue<std::vector<std::string>>(const std::string &key, const std::vector<std::string> &value,
                                                        bool notify);
 
+// 添加新的整数类型特化声明
+template <> uint8_t ConfigManager::getValue<uint8_t>(const std::string &key, const uint8_t &default_value) const;
+template <> void ConfigManager::setValue<uint8_t>(const std::string &key, const uint8_t &value, bool notify);
+
+template <> int16_t ConfigManager::getValue<int16_t>(const std::string &key, const int16_t &default_value) const;
+template <> void ConfigManager::setValue<int16_t>(const std::string &key, const int16_t &value, bool notify);
+
+template <> uint16_t ConfigManager::getValue<uint16_t>(const std::string &key, const uint16_t &default_value) const;
+template <> void ConfigManager::setValue<uint16_t>(const std::string &key, const uint16_t &value, bool notify);
+
+template <> int64_t ConfigManager::getValue<int64_t>(const std::string &key, const int64_t &default_value) const;
+template <> void ConfigManager::setValue<int64_t>(const std::string &key, const int64_t &value, bool notify);
+
+template <> uint64_t ConfigManager::getValue<uint64_t>(const std::string &key, const uint64_t &default_value) const;
+template <> void ConfigManager::setValue<uint64_t>(const std::string &key, const uint64_t &value, bool notify);
+
 #endif // CONFIG_MANAGER_H

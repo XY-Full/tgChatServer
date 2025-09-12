@@ -29,7 +29,6 @@ struct Header
 class PackBase
 {
 public:
-    PackBase();
     virtual ~PackBase()
     {
         if (data_)

@@ -1,8 +1,13 @@
 #include "shm_ringbuffer.h"
 #include "GlobalSpace.h"
+#include "network/MsgWrapper.h"
 #include "shm.h"
 #include <cstring>
 #include <mutex>
+
+class AppMsgWrapper;
+template class ShmRingBuffer<AppMsgWrapper>;
+template class ShmRingBuffer<unsigned char>;
 
 template <typename T>
 ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size)
@@ -94,8 +99,7 @@ template <typename T> void ShmRingBuffer<T>::InitShm(bool init_header)
     buffer_ = reinterpret_cast<T *>(header_ + 1);
 
     // 初始化锁
-    lock_ = std::make_unique<ShmSpinLock>();
-    lock_->InitUnlocked(shm_name_ + "_lock_");
+    lock_ = std::make_unique<ShmSpinLock>(shm_name_ + "_lock_");
 
     // 如果需要，初始化头部
     if (init_header)

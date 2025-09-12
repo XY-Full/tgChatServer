@@ -444,3 +444,64 @@ void ConfigManager::setValue<std::vector<std::string>>(const std::string &key, c
     if (notify)
         fireEvent(EventType::CONFIG_CHANGED, key);
 }
+
+// 添加新的整数类型特化实现
+template <> uint8_t ConfigManager::getValue<uint8_t>(const std::string &key, const uint8_t &default_value) const
+{
+    return m_impl->getJsonValue(key, default_value);
+}
+
+template <> void ConfigManager::setValue<uint8_t>(const std::string &key, const uint8_t &value, bool notify)
+{
+    m_impl->setJsonValue(key, value);
+    if (notify)
+        fireEvent(EventType::CONFIG_CHANGED, key);
+}
+
+template <> int16_t ConfigManager::getValue<int16_t>(const std::string &key, const int16_t &default_value) const
+{
+    return m_impl->getJsonValue(key, default_value);
+}
+
+template <> void ConfigManager::setValue<int16_t>(const std::string &key, const int16_t &value, bool notify)
+{
+    m_impl->setJsonValue(key, value);
+    if (notify)
+        fireEvent(EventType::CONFIG_CHANGED, key);
+}
+
+template <> uint16_t ConfigManager::getValue<uint16_t>(const std::string &key, const uint16_t &default_value) const
+{
+    return m_impl->getJsonValue(key, default_value);
+}
+
+template <> void ConfigManager::setValue<uint16_t>(const std::string &key, const uint16_t &value, bool notify)
+{
+    m_impl->setJsonValue(key, value);
+    if (notify)
+        fireEvent(EventType::CONFIG_CHANGED, key);
+}
+
+template <> int64_t ConfigManager::getValue<int64_t>(const std::string &key, const int64_t &default_value) const
+{
+    return m_impl->getJsonValue(key, default_value);
+}
+
+template <> void ConfigManager::setValue<int64_t>(const std::string &key, const int64_t &value, bool notify)
+{
+    m_impl->setJsonValue(key, value);
+    if (notify)
+        fireEvent(EventType::CONFIG_CHANGED, key);
+}
+
+template <> uint64_t ConfigManager::getValue<uint64_t>(const std::string &key, const uint64_t &default_value) const
+{
+    return m_impl->getJsonValue(key, default_value);
+}
+
+template <> void ConfigManager::setValue<uint64_t>(const std::string &key, const uint64_t &value, bool notify)
+{
+    m_impl->setJsonValue(key, value);
+    if (notify)
+        fireEvent(EventType::CONFIG_CHANGED, key);
+}
