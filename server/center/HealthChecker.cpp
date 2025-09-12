@@ -34,7 +34,7 @@ void HealthChecker::loop()
                 for (auto &inst : kv.second)
                 {
                     bool ok = probe_instance(inst);
-                    inst->healthy.store(ok);
+                    inst->healthy = ok;
                 }
             }
             reg_.cleanup_expired();

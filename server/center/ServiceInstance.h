@@ -17,13 +17,12 @@ struct ServiceInstance
     uint32_t weight = 1;                         // 负载均衡权重
     std::map<std::string, std::string> metadata; // 可选元数据
 
-    // 运行时字段（线程安全）
-    std::atomic<bool> healthy{true};
-    std::atomic<uint64_t> connections{0};
+    bool healthy{true};
+    uint64_t connections{0};
     std::chrono::steady_clock::time_point last_seen = std::chrono::steady_clock::now();
 
     // 平均延迟（微秒），用于延迟感知 LB。用原子整型表示微秒整数。
-    std::atomic<uint64_t> avg_latency_us{0};
+    uint64_t avg_latency_us{0};
 
     std::string to_string() const;
 

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <mutex>
 
 void ServiceRegistry::register_instance(const ServiceInstancePtr &inst, std::chrono::seconds ttl)
 {
@@ -48,7 +49,7 @@ ServiceInstances ServiceRegistry::get_instances(const std::string &svc_name, boo
         return out;
     for (auto &p : it->second)
     {
-        if (!only_healthy || p->healthy.load())
+        if (!only_healthy || p->healthy)
             out.push_back(p);
     }
     return out;

@@ -64,10 +64,10 @@ void HttpServer::start()
             j["address"] = p->address;
             j["port"] = p->port;
             j["weight"] = p->weight;
-            j["healthy"] = p->healthy.load();
-            j["connections"] = p->connections.load();
+            j["healthy"] = p->healthy;
+            j["connections"] = p->connections;
             j["metadata"] = p->metadata;
-            j["avg_latency_us"] = p->avg_latency_us.load();
+            j["avg_latency_us"] = p->avg_latency_us;
             arr.push_back(j);
         }
         res.status = 200;
@@ -106,7 +106,7 @@ void HttpServer::start()
         out["port"] = chosen->port;
         out["weight"] = chosen->weight;
         out["metadata"] = chosen->metadata;
-        out["avg_latency_us"] = chosen->avg_latency_us.load();
+        out["avg_latency_us"] = chosen->avg_latency_us;
         res.status = 200;
         res.set_content(out.dump(), "application/json");
     });
@@ -146,7 +146,7 @@ void HttpServer::start()
             return;
         }
 
-        chosen->connections.fetch_add(1);
+        chosen->connections += 1;
         httplib::Client proxy_cli(chosen->address.c_str(), chosen->port);
         proxy_cli.set_connection_timeout(std::chrono::seconds(2));
         proxy_cli.set_read_timeout(std::chrono::seconds(10));
@@ -166,7 +166,7 @@ void HttpServer::start()
             res.status = 502;
             res.set_content("bad gateway", "text/plain");
         }
-        chosen->connections.fetch_sub(1);
+        chosen->connections -= 1;
     });
 
     svr.Post(R"(^/proxy/([A-Za-z0-9_.-]+)/(.+)$)", [&](const httplib::Request &req, httplib::Response &res) {
@@ -197,7 +197,7 @@ void HttpServer::start()
             return;
         }
 
-        chosen->connections.fetch_add(1);
+        chosen->connections += 1;
         httplib::Client proxy_cli(chosen->address.c_str(), chosen->port);
         proxy_cli.set_connection_timeout(std::chrono::seconds(2));
         proxy_cli.set_read_timeout(std::chrono::seconds(10));
@@ -216,7 +216,7 @@ void HttpServer::start()
             res.status = 502;
             res.set_content("bad gateway", "text/plain");
         }
-        chosen->connections.fetch_sub(1);
+        chosen->connections -= 1;
     });
 
     std::cout << "HttpServer listening on " << port_ << " ";

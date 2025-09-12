@@ -57,7 +57,7 @@ public:
         uint64_t best_conn = std::numeric_limits<uint64_t>::max();
         for (auto &p : instances)
         {
-            uint64_t c = p->connections.load();
+            uint64_t c = p->connections;
             if (!best || c < best_conn)
             {
                 best = p;
@@ -174,7 +174,7 @@ public:
         uint64_t best_lat = UINT64_MAX;
         for (auto &p : instances)
         {
-            uint64_t lat = p->avg_latency_us.load();
+            uint64_t lat = p->avg_latency_us;
             if (lat == 0)
                 lat = UINT64_MAX / 2; // 未知延迟视为很高
             if (!best || lat < best_lat)
