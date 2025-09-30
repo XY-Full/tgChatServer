@@ -42,8 +42,8 @@ public:
 
     
     bool SendToNode(const std::string& service_name, const google::protobuf::Message &message);          // 发送消息给某个node
-    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler);   // 注册事件
-    bool UnregistEvent(uint32_t msg_id);
+    bool RegistMessage(uint32_t msg_id, const MessageHandler &handler);   // 注册事件
+    bool UnregistMessage(uint32_t msg_id);
 
     // 请求/响应
     AppMsgPtr Request(const std::string& service_name, const google::protobuf::Message &message);

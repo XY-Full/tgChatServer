@@ -13,7 +13,7 @@ using MessageHandler = std::function<void(std::shared_ptr<AppMsg>)>;
 class MsgDispatcher
 {
 public:
-    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler)
+    bool RegistMessage(uint32_t msg_id, const MessageHandler &handler)
     {
         handlers_[msg_id].push_back(handler);
 
@@ -21,7 +21,7 @@ public:
         return true;
     }
 
-    bool UnregistEvent(uint32_t msg_id)
+    bool UnregistMessage(uint32_t msg_id)
     {
         handlers_.erase(msg_id);
 

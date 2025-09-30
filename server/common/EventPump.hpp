@@ -11,17 +11,17 @@ class EventPump;
 template <typename T, std::size_t N> struct EventRegisterImpl
 {
     template <typename MemberFunc>
-    static void registEvent(EventPump *, MemberFunc, typename MemberFuncArgs<MemberFunc>::OwnerType *)
+    static void registMessage(EventPump *, MemberFunc, typename MemberFuncArgs<MemberFunc>::OwnerType *)
     {
     }
 
     template <typename MemberFunc>
-    static void registEvent(EventPump *, const char *, MemberFunc, typename MemberFuncArgs<MemberFunc>::OwnerType *)
+    static void registMessage(EventPump *, const char *, MemberFunc, typename MemberFuncArgs<MemberFunc>::OwnerType *)
     {
     }
 
     template <typename MemberFunc>
-    static void registEvent(EventPump *, uint32_t, MemberFunc, typename MemberFuncArgs<MemberFunc>::OwnerType *)
+    static void registMessage(EventPump *, uint32_t, MemberFunc, typename MemberFuncArgs<MemberFunc>::OwnerType *)
     {
     }
 };
@@ -47,7 +47,7 @@ public:
         using MessageType = typename std::remove_const_sharedptr_ref<Arg1Type>::type;
         static_assert(std::is_base_of<::google::protobuf::Message, MessageType>::value,
                       "the second argv only support protobuf");
-        EventRegisterImpl<MessageType, MemberFuncArgs<MemberFunc>::ArgCount>::registEvent(this, mfn, owner);
+        EventRegisterImpl<MessageType, MemberFuncArgs<MemberFunc>::ArgCount>::registMessage(this, mfn, owner);
     }
 
     template <typename MemberFunc>
@@ -57,7 +57,7 @@ public:
         using MessageType = typename std::remove_const_sharedptr_ref<Arg1Type>::type;
         static_assert(std::is_base_of<::google::protobuf::Message, MessageType>::value,
                       "the second argv only support protobuf");
-        EventRegisterImpl<MessageType, MemberFuncArgs<MemberFunc>::ArgCount>::registEvent(this, cmd, mfn, owner);
+        EventRegisterImpl<MessageType, MemberFuncArgs<MemberFunc>::ArgCount>::registMessage(this, cmd, mfn, owner);
     }
 
     template <typename MemberFunc>
@@ -67,7 +67,7 @@ public:
         using MessageType = typename std::remove_const_sharedptr_ref<Arg1Type>::type;
         static_assert(std::is_base_of<::google::protobuf::Message, MessageType>::value,
                       "the second argv only support protobuf");
-        EventRegisterImpl<MessageType, MemberFuncArgs<MemberFunc>::ArgCount>::registEvent(this, msg_id, mfn, owner);
+        EventRegisterImpl<MessageType, MemberFuncArgs<MemberFunc>::ArgCount>::registMessage(this, msg_id, mfn, owner);
     }
 
     // MessagePtr(int64_t, const std::shared_ptr<T>&)
@@ -205,7 +205,7 @@ private:
 template <typename T> struct EventRegisterImpl<T, 2>
 {
     template <typename MemberFunc>
-    static void registEvent(EventPump *ep, MemberFunc mfn, typename MemberFuncArgs<MemberFunc>::OwnerType *owner)
+    static void registMessage(EventPump *ep, MemberFunc mfn, typename MemberFuncArgs<MemberFunc>::OwnerType *owner)
     {
         ep->registerEvent2Handle<T>(std::bind(mfn, owner, std::placeholders::_1, std::placeholders::_2), owner);
     }
@@ -214,14 +214,14 @@ template <typename T> struct EventRegisterImpl<T, 2>
 template <typename T> struct EventRegisterImpl<T, 3>
 {
     template <typename MemberFunc>
-    static void registEvent(EventPump *ep, const char *cmd, MemberFunc mfn,
+    static void registMessage(EventPump *ep, const char *cmd, MemberFunc mfn,
                             typename MemberFuncArgs<MemberFunc>::OwnerType *owner)
     {
         ep->registerEventHandle<T>(cmd, std::bind(mfn, owner, std::placeholders::_1, std::placeholders::_2), owner);
     }
 
     template <typename MemberFunc>
-    static void registEvent(EventPump *ep, uint32_t msg_id, MemberFunc mfn,
+    static void registMessage(EventPump *ep, uint32_t msg_id, MemberFunc mfn,
                             typename MemberFuncArgs<MemberFunc>::OwnerType *owner)
     {
         ep->registerEventHandle<T>(msg_id, std::bind(mfn, owner, std::placeholders::_1, std::placeholders::_2), owner);

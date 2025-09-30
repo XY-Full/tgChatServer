@@ -4,7 +4,7 @@
 std::string ServiceInstance::to_string() const
 {
     std::ostringstream ss;
-    ss << id << "(" << address << ":" << port << ")" << (healthy ? "[ok]" : "[unhealthy]") << " w=" << weight
+    ss << "id: " << id << "---(" << address << ":" << port << ")---" << (healthy ? "[ok]" : "[unhealthy]") << " w=" << weight
        << " conn=" << connections;
     uint64_t lat = avg_latency_us;
     if (lat)

@@ -1,9 +1,16 @@
 #include "HealthChecker.h"
+#include "GlobalSpace.h"
+#include "bus/IBus.h"
+#include "core.pb.h"
 #include "httplib.h"
+#include "network/AppMsg.h"
+#include "ss_msg_id.pb.h"
 #include <iostream>
+#include <memory>
 
 HealthChecker::HealthChecker(ServiceRegistry &reg) : reg_(reg)
 {
+    GlobalSpace()->bus_->RegistMessage(SS_HEART_BEAT, std::bind(&HealthChecker::handle_heartbeat, this, std::placeholders::_1));
 }
 HealthChecker::~HealthChecker()
 {
@@ -31,10 +38,9 @@ void HealthChecker::loop()
             auto snap = reg_.snapshot();
             for (auto &kv : snap)
             {
-                for (auto &inst : kv.second)
+                for (auto &inst_pair : kv.second)
                 {
-                    bool ok = probe_instance(inst);
-                    inst->healthy = ok;
+                    probe_instance(inst_pair.second);
                 }
             }
             reg_.cleanup_expired();
@@ -58,4 +64,32 @@ bool HealthChecker::probe_instance(const ServiceInstancePtr &inst)
             return true;
     }
     return false;
+}
+
+void HealthChecker::handle_heartbeat(std::shared_ptr<AppMsg> msg)
+{
+    auto response_pb = std::make_shared<ss::HeartBeat>();
+    response_pb->ParseFromArray(msg->data_, msg->data_len_);
+    auto response = response_pb->mutable_response();
+    auto request = std::make_shared<ss::HeartBeat>()->mutable_request();
+    auto& service_id = response->service_info().id();
+    try
+    {
+        auto snap = reg_.snapshot();
+        for (auto &kv : snap)
+        {
+            auto &all_inst = kv.second;
+            if(all_inst.find(service_id) == all_inst.end())
+            {
+                ILOG << "node: " << service_id << " has offline";
+                break;
+            }
+            auto &inst = all_inst[service_id]->healthy = true;
+        }
+        reg_.cleanup_expired();
+    }
+    catch (const std::exception &e)
+    {
+        ELOG << "HealthChecker 异常: " << e.what();
+    }
 }

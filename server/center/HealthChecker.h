@@ -4,6 +4,8 @@
 #include <chrono>
 #include <thread>
 
+class AppMsg;
+
 class HealthChecker
 {
 public:
@@ -16,6 +18,7 @@ public:
 private:
     void loop();
     bool probe_instance(const ServiceInstancePtr &inst);
+    void handle_heartbeat(std::shared_ptr<AppMsg> msg);
     ServiceRegistry &reg_;
     std::thread thr_;
     std::atomic<bool> stop_{false};

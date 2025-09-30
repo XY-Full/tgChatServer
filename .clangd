@@ -1,2 +1,4 @@
 CompileFlags:
   Add: [-fgnuc-version=4.8.5]
+Diagnostics:
+    Suppress: pragma-pack

@@ -60,14 +60,14 @@ void HttpServer::start()
         for (auto &p : instances)
         {
             json j;
-            j["id"] = p->id;
-            j["address"] = p->address;
-            j["port"] = p->port;
-            j["weight"] = p->weight;
-            j["healthy"] = p->healthy;
-            j["connections"] = p->connections;
-            j["metadata"] = p->metadata;
-            j["avg_latency_us"] = p->avg_latency_us;
+            // j["id"] = p->id;
+            // j["address"] = p->address;
+            // j["port"] = p->port;
+            // j["weight"] = p->weight;
+            // j["healthy"] = p->healthy;
+            // j["connections"] = p->connections;
+            // j["metadata"] = p->metadata;
+            // j["avg_latency_us"] = p->avg_latency_us;
             arr.push_back(j);
         }
         res.status = 200;

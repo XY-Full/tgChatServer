@@ -155,9 +155,9 @@ void TcpRegistrar::handle_client(int client_fd)
                         {
                             for (auto &p : kv.second)
                             {
-                                if (p->id == id)
+                                if (p.second->id == id)
                                 {
-                                    reg_.register_instance(p, std::chrono::seconds(ttl));
+                                    reg_.register_instance(p.second, std::chrono::seconds(ttl));
                                     renewed = true;
                                     break;
                                 }

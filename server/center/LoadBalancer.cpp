@@ -12,8 +12,20 @@ public:
     {
         if (instances.empty())
             return nullptr;
+
+        // 如果调用方传了 key，优先按 key 找
+        if (!key.empty()) {
+            auto it = instances.find(key);
+            if (it != instances.end())
+                return it->second;
+            return nullptr; // key 不存在
+        }
+
+        // 否则走轮询逻辑
         auto idx = idx_.fetch_add(1);
-        return instances[idx % instances.size()];
+        auto it = instances.begin();
+        std::advance(it, idx % instances.size());  // 把迭代器往前走 N 步
+        return it->second;
     }
 
 private:
@@ -28,16 +40,22 @@ public:
     {
         if (instances.empty())
             return nullptr;
+
+        // 构造轮盘
         std::vector<ServiceInstancePtr> wheel;
-        for (auto &p : instances)
+        for (auto &kv : instances)
         {
-            uint32_t w = std::max<uint32_t>(1, p->weight);
+            auto &instance = kv.second;
+            uint32_t w = std::max<uint32_t>(1, instance->weight);
             for (uint32_t i = 0; i < w; i++)
-                wheel.push_back(p);
+                wheel.push_back(instance);
         }
+
         if (wheel.empty())
             return nullptr;
-        auto i = idx_.fetch_add(1);
+
+        // 轮询索引
+        auto i = idx_.fetch_add(1, std::memory_order_relaxed);
         return wheel[i % wheel.size()];
     }
 
@@ -57,10 +75,10 @@ public:
         uint64_t best_conn = std::numeric_limits<uint64_t>::max();
         for (auto &p : instances)
         {
-            uint64_t c = p->connections;
+            uint64_t c = p.second->connections;
             if (!best || c < best_conn)
             {
-                best = p;
+                best = p.second;
                 best_conn = c;
             }
         }
@@ -76,10 +94,19 @@ public:
     {
         if (instances.empty())
             return nullptr;
+
+        // key 为空则退化为轮询
         if (key.empty())
             return RoundRobinLB().select(instances);
+
+        // 计算哈希
         size_t h = std::hash<std::string>{}(key);
-        return instances[h % instances.size()];
+        size_t idx = h % instances.size();
+
+        // 迭代到对应位置
+        auto it = instances.begin();
+        std::advance(it, idx);
+        return it->second;
     }
 };
 
@@ -94,60 +121,65 @@ public:
         if (instances.empty())
             return nullptr;
 
-        // 更新节点集合（新增或移除）
-        // 使用实例 id 作为 key
-        std::unordered_map<std::string, Node> &nodes = nodes_;
         uint64_t total = 0;
-        // 标记活跃节点
         std::unordered_map<std::string, bool> alive;
-        for (auto &p : instances)
+
+        // 更新节点集合（新增或修改权重）
+        for (auto &kv : instances)
         {
-            auto it = nodes.find(p->id);
-            if (it == nodes.end())
+            auto &p = kv.second;
+            auto it = nodes_.find(p->id);
+            if (it == nodes_.end())
             {
                 Node n;
                 n.weight = std::max<uint32_t>(1, p->weight);
                 n.current = 0;
                 n.effective_weight = n.weight;
-                nodes[p->id] = n;
+                nodes_[p->id] = n;
             }
             else
             {
-                // 更新权重
                 it->second.weight = std::max<uint32_t>(1, p->weight);
                 // 保留 current 与 effective_weight
             }
-            total += nodes[p->id].effective_weight;
+            total += nodes_[p->id].effective_weight;
             alive[p->id] = true;
         }
+
         // 移除不再存在的节点
-        for (auto it = nodes.begin(); it != nodes.end();)
+        for (auto it = nodes_.begin(); it != nodes_.end();)
         {
             if (alive.find(it->first) == alive.end())
-                it = nodes.erase(it);
+                it = nodes_.erase(it);
             else
                 ++it;
         }
-        // 选择最大 current
+
+        // 选择 current 最大的节点
         std::string best_id;
         uint64_t best_current = 0;
-        for (auto &p : instances)
+        for (auto &kv : instances)
         {
-            Node &n = nodes[p->id];
+            auto &p = kv.second;
+            Node &n = nodes_[p->id];
             n.current += n.effective_weight;
-            if (n.current > best_current || best_id.empty())
+            if (best_id.empty() || n.current > best_current)
             {
                 best_current = n.current;
                 best_id = p->id;
             }
         }
+
         if (best_id.empty())
             return nullptr;
-        nodes[best_id].current -= total;
-        // 返回对应实例指针（从传入的 instances 中查找）
-        for (auto &p : instances)
-            if (p->id == best_id)
-                return p;
+
+        nodes_[best_id].current -= total;
+
+        // 返回对应实例指针
+        auto it = instances.find(best_id);
+        if (it != instances.end())
+            return it->second;
+
         return nullptr;
     }
 
@@ -174,12 +206,12 @@ public:
         uint64_t best_lat = UINT64_MAX;
         for (auto &p : instances)
         {
-            uint64_t lat = p->avg_latency_us;
+            uint64_t lat = p.second->avg_latency_us;
             if (lat == 0)
                 lat = UINT64_MAX / 2; // 未知延迟视为很高
             if (!best || lat < best_lat)
             {
-                best = p;
+                best = p.second;
                 best_lat = lat;
             }
         }

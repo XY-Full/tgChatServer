@@ -5,7 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 // 服务实例的数据结构。包含注册时的静态信息以及运行时统计信息。
 struct ServiceInstance
@@ -15,6 +15,7 @@ struct ServiceInstance
     std::string address;                         // IP 或主机名
     uint16_t port = 0;                           // 端口
     uint32_t weight = 1;                         // 负载均衡权重
+    std::string  shm_recv_buffer_name;           // 用于recv的共享内存key
     std::map<std::string, std::string> metadata; // 可选元数据
 
     bool healthy{true};
@@ -26,10 +27,11 @@ struct ServiceInstance
 
     std::string to_string() const;
 
-    // 使用整数 EWMA 更新平均延迟（微秒）。alpha 取 0.2（即 new = 0.2*sample + 0.8*old），使用定点简化为( old*8 +
-    // sample*2)/10
+    // 使用整数 EWMA 更新平均延迟（微秒）
+    // alpha 取 0.2（即 new = 0.2 * sample + 0.8 * old）
+    // 使用定点简化为( old * 8 + sample * 2) / 10
     void update_latency_us(uint64_t sample_us);
 };
 
 using ServiceInstancePtr = std::shared_ptr<ServiceInstance>;
-using ServiceInstances = std::vector<ServiceInstancePtr>;
+using ServiceInstances = std::unordered_map<std::string, ServiceInstancePtr>;

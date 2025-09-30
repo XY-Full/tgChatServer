@@ -72,7 +72,7 @@ public:
         ready_cv_.notify_all();
 
         bus_net_->init(opts_);
-        RegistEvent(SSMsgID::SS_TRACE_ROUTE, std::bind(&Impl::onTraceRouteResp, this, std::placeholders::_1));
+        RegistMessage(SSMsgID::SS_TRACE_ROUTE, std::bind(&Impl::onTraceRouteResp, this, std::placeholders::_1));
 
         ILOG << "BusClient started successfully";
         return true;
@@ -135,35 +135,35 @@ public:
         return result;
     }
 
-    bool RegistEvent(uint32_t msg_id, const MessageHandler &handler)
+    bool RegistMessage(uint32_t msg_id, const MessageHandler &handler)
     {
-        msg_dispatcher_->RegistEvent(msg_id, handler);
+        msg_dispatcher_->RegistMessage(msg_id, handler);
 
-        ILOG << "RegistEvent to msg_id: " << msg_id;
+        ILOG << "RegistMessage to msg_id: " << msg_id;
         return true;
     }
 
-    bool UnregistEvent(uint32_t msg_id)
+    bool UnregistMessage(uint32_t msg_id)
     {
-        msg_dispatcher_->UnregistEvent(msg_id);
+        msg_dispatcher_->UnregistMessage(msg_id);
 
-        ILOG << "UnregistEvent from msg_id: " << msg_id;
+        ILOG << "UnregistMessage from msg_id: " << msg_id;
         return true;
     }
 
-    bool SSRegistEvent(uint32_t msg_id, const MessageHandler &handler)
+    bool SSRegistMessage(uint32_t msg_id, const MessageHandler &handler)
     {
-        ss_msg_dispatcher_->RegistEvent(msg_id, handler);
+        ss_msg_dispatcher_->RegistMessage(msg_id, handler);
 
-        ILOG << "SSRegistEvent to msg_id: " << msg_id;
+        ILOG << "SSRegistMessage to msg_id: " << msg_id;
         return true;
     }
 
-    bool SSUnregistEvent(uint32_t msg_id)
+    bool SSUnregistMessage(uint32_t msg_id)
     {
-        ss_msg_dispatcher_->UnregistEvent(msg_id);
+        ss_msg_dispatcher_->UnregistMessage(msg_id);
 
-        ILOG << "SSUnregistEvent from msg_id: " << msg_id;
+        ILOG << "SSUnregistMessage from msg_id: " << msg_id;
         return true;
     }
 
@@ -354,14 +354,14 @@ bool BusClient::SendToNode(const std::string &service_name, const google::protob
     return impl_->SendToNode(service_name, message);
 }
 
-bool BusClient::RegistEvent(uint32_t msg_id, const MessageHandler &handler)
+bool BusClient::RegistMessage(uint32_t msg_id, const MessageHandler &handler)
 {
-    return impl_->RegistEvent(msg_id, handler);
+    return impl_->RegistMessage(msg_id, handler);
 }
 
-bool BusClient::UnregistEvent(uint32_t msg_id)
+bool BusClient::UnregistMessage(uint32_t msg_id)
 {
-    return impl_->UnregistEvent(msg_id);
+    return impl_->UnregistMessage(msg_id);
 }
 
 AppMsgPtr BusClient::Request(const std::string &service_name, const google::protobuf::Message &message)

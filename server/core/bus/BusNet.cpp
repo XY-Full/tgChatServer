@@ -149,7 +149,7 @@ void BusNet::onCenterUpdateServiceStatusResp(const AppMsg &msg)
     auto new_map = std::make_shared<ServiceMap>();
     for (auto &s : response.service_info_map())
     {
-        (*new_map)[s.name()].push_back(s);
+        (*new_map)[s.id()].push_back(s);
     }
     std::atomic_store(&ServiceMap_, new_map);
 
@@ -193,14 +193,14 @@ bool BusNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapp
     if (local_ip == remote_ip)
     {
         // 如果没有打开对端的ShmRingBuffer，那么打开一哈子
-        if (LocalServiceMap_.find(info.name()) == LocalServiceMap_.end())
+        if (LocalServiceMap_.find(info.id()) == LocalServiceMap_.end())
         {
             // 直接new一个ShmRingBuffer指向对端的ringbuffer
-            LocalServiceMap_[info.name()] = new ShmRingBuffer<AppMsgWrapper>(info.shm_recv_buffer_name());
+            LocalServiceMap_[info.id()] = new ShmRingBuffer<AppMsgWrapper>(info.shm_recv_buffer_name());
         }
 
         // 如果对方在本地，则直接推送到对端的ShmRingBuffer中
-        LocalServiceMap_[info.name()]->Push(msg);
+        LocalServiceMap_[info.id()]->Push(msg);
     }
     else
     {
@@ -265,23 +265,23 @@ void BusNet::onRecvRouteCache(AppMsgPtr msg)
         // 计算延迟
         auto delay = send_time - response.send_time();
         // 如果路由缓存中不存在这个服务，则缓存一下
-        if(RouteCache_.find(response.service_info().name()) == RouteCache_.end())
+        if(RouteCache_.find(response.service_info().id()) == RouteCache_.end())
         {
-            RouteCache_[response.service_info().name()]->delay = delay;
-            RouteCache_[response.service_info().name()]->info.CopyFrom(response.service_info());
-            ILOG << "New add route cache from " << response.service_info().name() << " success, delay: " << delay;
+            RouteCache_[response.service_info().id()]->delay = delay;
+            RouteCache_[response.service_info().id()]->info.CopyFrom(response.service_info());
+            ILOG << "New add route cache from " << response.service_info().id() << " success, delay: " << delay;
         }
         // 如果路由缓存中存在，但是新服务的延迟更低，则更新
-        else if(delay > 0 && delay < RouteCache_[response.service_info().name()]->delay)
+        else if(delay > 0 && delay < RouteCache_[response.service_info().id()]->delay)
         {
             
-            RouteCache_[response.service_info().name()]->delay = delay;
-            RouteCache_[response.service_info().name()]->info.CopyFrom(response.service_info());
-            ILOG << "Update route cache from " << response.service_info().name() << " success, delay: " << delay;
+            RouteCache_[response.service_info().id()]->delay = delay;
+            RouteCache_[response.service_info().id()]->info.CopyFrom(response.service_info());
+            ILOG << "Update route cache from " << response.service_info().id() << " success, delay: " << delay;
         }
         else
         {
-            ELOG << "Recv route cache from " << response.service_info().name() << " failed, delay: " << delay;
+            ELOG << "Recv route cache from " << response.service_info().id() << " failed, delay: " << delay;
             return;
         }
     }
