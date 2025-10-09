@@ -18,8 +18,9 @@
 #include <unistd.h>
 #include <vector>
 
-TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name)
-    : recv_handler_(recv_handler), shm_name_(shm_name)
+TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name, CloseHandler close_handler,
+                     ConnHandler conn_handler)
+    : recv_handler_(recv_handler), shm_name_(shm_name), close_handler_(close_handler), conn_handler_(conn_handler)
 {
     server_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (server_fd_ == -1)
@@ -185,6 +186,10 @@ void TcpServer::handleNewConnection(int fd)
             std::lock_guard<std::mutex> lock(conn_mutex_);
             conn_map_[conn_id] = conn;
             fd_to_conn_[client_fd] = conn_id;
+            if (conn_handler_)
+            {
+                conn_handler_(conn_id);
+            }
         }
 
         ILOG << "New connection: " << conn_id << " from " << inet_ntoa(client_addr.sin_addr);
@@ -281,6 +286,11 @@ void TcpServer::removeConnection(int64_t conn_id)
         fd_to_conn_.erase(fd);
         conn_map_.erase(it);
         ILOG << "Connection removed: " << conn_id;
+    }
+
+    if (close_handler_)
+    {
+        close_handler_(conn_id);
     }
 }
 

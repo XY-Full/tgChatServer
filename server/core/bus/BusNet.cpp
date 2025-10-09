@@ -132,6 +132,7 @@ void BusNet::UpdateServiceStatusReq()
     ss::UpdateServiceStatus msg;
     ss::UpdateServiceStatus::Request *request = msg.mutable_request();
     request->mutable_local_info()->CopyFrom(*genServiceInfo());
+    request->set_send_time(Helper::timeGetTimeUS());
     sendMsgToCenter(msg);
 }
 

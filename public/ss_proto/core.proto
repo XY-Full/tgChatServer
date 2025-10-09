@@ -29,6 +29,7 @@ message RegistToCenter
     message Request
     {
         ServiceInfo local_info = 1;
+        int64       send_time  = 2;
     }
 
     message Response
@@ -47,6 +48,7 @@ message UpdateServiceStatus
     message Request
     {
         ServiceInfo local_info = 1;
+        int64       send_time  = 2;
     }
 
     message Response

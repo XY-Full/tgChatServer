@@ -235,18 +235,52 @@ void Helper::sendTgMessage(const std::string &chat_id, const std::string &text)
     }
 }
 
-int64_t Helper::timeGetTimeS()
+uint64_t Helper::timeGetTimeS()
 {
-    using namespace std::chrono;
-    static const steady_clock::time_point start = steady_clock::now();
-    return duration<double>(steady_clock::now() - start).count();
+    return timeGetTimeMS() / 1000000ULL;
 }
 
-int64_t Helper::timeGetTimeMS()
+uint64_t Helper::timeGetTimeMS()
 {
-    using namespace std::chrono;
-    static const steady_clock::time_point start = steady_clock::now();
-    return duration_cast<milliseconds>(steady_clock::now() - start).count();
+    return timeGetTimeMS() / 1000ULL;
+}
+
+uint64_t Helper::timeGetTimeUS()
+{
+#if defined(__linux__) || defined(__APPLE__)
+    // Linux / macOS 使用高精度时钟
+    struct timespec ts;
+#ifdef CLOCK_MONOTONIC_RAW
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+    return static_cast<uint64_t>(ts.tv_sec) * 1000000ULL + ts.tv_nsec / 1000ULL;
+
+#elif defined(_WIN32)
+    // Windows 使用高精度计时器
+    static double freq_inv = 0.0;
+    static LARGE_INTEGER freq;
+    static bool initialized = false;
+
+    if (!initialized)
+    {
+        QueryPerformanceFrequency(&freq);
+        freq_inv = 1000000.0 / static_cast<double>(freq.QuadPart);
+        initialized = true;
+    }
+
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+    return static_cast<uint64_t>(counter.QuadPart * freq_inv);
+
+#else
+    // 其他平台回退到 chrono
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+                now.time_since_epoch())
+        .count();
+#endif
 }
 
 int64_t Helper::GenUID()

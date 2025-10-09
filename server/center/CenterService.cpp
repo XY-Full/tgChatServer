@@ -28,8 +28,8 @@ public:
         // 3. 初始化并启动HTTP服务器
         // HttpServer 依赖 ServiceRegistry, HealthChecker, LBFactory
         // LBFactory 在HttpServer内部创建和管理
-        httpServer_ = std::make_unique<HttpServer>(*serviceRegistry_, 8080); // 默认端口8080
-        httpServer_->start();
+        // httpServer_ = std::make_unique<HttpServer>(*serviceRegistry_, 8080); // 默认端口8080
+        // httpServer_->start();
 
         // 4. 初始化并启动TCP注册器
         // TcpRegistrar 依赖 ServiceRegistry
@@ -63,10 +63,10 @@ public:
         }
 
         // 2. 停止HTTP服务器
-        if (httpServer_) {
-            httpServer_->stop();
-            httpServer_.reset();
-        }
+        // if (httpServer_) {
+        //     httpServer_->stop();
+        //     httpServer_.reset();
+        // }
         
         // 3. 停止健康检查器
         if (healthChecker_) {
@@ -98,7 +98,7 @@ public:
 
 private:
     std::unique_ptr<ServiceRegistry> serviceRegistry_;
-    std::unique_ptr<HttpServer> httpServer_;
+    // std::unique_ptr<HttpServer> httpServer_;
     std::unique_ptr<TcpRegistrar> tcpRegistrar_;
     std::unique_ptr<HealthChecker> healthChecker_;
     // static constexpr uint32_t CLEANUP_INTERVAL_MS = 5000; // 5秒清理一次，现在由HealthChecker管理

@@ -13,13 +13,11 @@
 
 class AppMsgWrapper;
 
-using RecvHandler = std::function<void(int64_t, std::shared_ptr<PackBase>)>;
-
 class TcpServer
 {
 friend class Connection;
 public:
-    TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name);
+    TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_name, CloseHandler close_handler = nullptr, ConnHandler conn_handler = nullptr);
     ~TcpServer();
 
     void start();
@@ -43,7 +41,10 @@ private:
     ShmRingBuffer<uint8_t>* recv_buffer_;
 
     EventLoopWrapper epoller_;
+
     RecvHandler recv_handler_;
+    CloseHandler close_handler_;
+    ConnHandler conn_handler_;
 
     std::string shm_name_;
 

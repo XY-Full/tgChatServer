@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include "HealthChecker.h"
 #include "LoadBalancer.h"
@@ -20,3 +20,4 @@ private:
     std::unique_ptr<HealthChecker> health_checker_;
     uint16_t port_;
 };
+*/

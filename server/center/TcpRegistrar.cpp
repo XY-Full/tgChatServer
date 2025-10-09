@@ -1,8 +1,12 @@
 #include "TcpRegistrar.h"
 #include "../../third/nlohmann/json.hpp"
+#include "Helper.h"
+#include "Log.h"
+#include "CommonDef.h"
+#include "core.pb.h"
+#include "ss_msg_id.pb.h"
 #include <arpa/inet.h>
 #include <cstring>
-#include <errno.h>
 #include <fcntl.h>
 #include <iostream>
 #include <netinet/in.h>
@@ -12,8 +16,13 @@
 
 using json = nlohmann::json;
 
-TcpRegistrar::TcpRegistrar(ServiceRegistry &reg, uint16_t port) : reg_(reg), port_(port)
+TcpRegistrar::TcpRegistrar(ServiceRegistry &reg, uint16_t port)
+    : reg_(reg), port_(port),
+      server_(port, std::bind(&TcpRegistrar::handleClient, this, std::placeholders::_1, std::placeholders::_2),
+              "tcp_registrar", std::bind(&TcpRegistrar::handleDisconnect, this, std::placeholders::_1))
 {
+    msg_handler_[SSMsgID::SS_REGIST_TO_CENTER] = std::bind(&TcpRegistrar::onRegist, this, std::placeholders::_1, std::placeholders::_2);
+    msg_handler_[SSMsgID::SS_HEART_BEAT] = std::bind(&TcpRegistrar::onHeartbeat, this, std::placeholders::_1, std::placeholders::_2);
 }
 TcpRegistrar::~TcpRegistrar()
 {
@@ -22,205 +31,119 @@ TcpRegistrar::~TcpRegistrar()
 
 void TcpRegistrar::start()
 {
-    stop_ = false;
-    thr_ = std::thread([this] { this->accept_loop(); });
+    server_.start();
 }
 
 void TcpRegistrar::stop()
 {
-    stop_ = true;
-    if (thr_.joinable())
-        thr_.join();
+    server_.stop();
 }
 
-static int set_nonblocking(int fd)
+void TcpRegistrar::handleClient(uint64_t client_fd, std::shared_ptr<PackBase> msg)
 {
-    int flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1)
-        return -1;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    auto msg_id = msg->msg_id_;
+    auto app_msg = std::static_pointer_cast<AppMsg>(msg);
+    ILOG << "TcpRegistrar::handleClient, msg_id: " << msg_id << ", from: " << app_msg->src_name_;
+    if(msg_handler_.find(msg_id) != msg_handler_.end())
+        msg_handler_[msg_id](client_fd, app_msg);
 }
 
-void TcpRegistrar::accept_loop()
+void TcpRegistrar::handleDisconnect(uint64_t client_fd)
 {
-    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_fd < 0)
+    std::lock_guard lg(conn_mu_);
+    auto it = fd_to_id_.find(client_fd);
+    if (it != fd_to_id_.end())
     {
-        perror("socket");
-        return;
-    }
-    int opt = 1;
-    setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(port_);
-    if (bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        perror("bind");
-        close(listen_fd);
-        return;
-    }
-    if (listen(listen_fd, 128) < 0)
-    {
-        perror("listen");
-        close(listen_fd);
-        return;
-    }
-
-    std::cout << "TcpRegistrar listening on " << port_ << " ";
-
-    while (!stop_)
-    {
-        sockaddr_in cli_addr{};
-        socklen_t cli_len = sizeof(cli_addr);
-        int client_fd = accept(listen_fd, (sockaddr *)&cli_addr, &cli_len);
-        if (client_fd < 0)
+        // 需要得到 service name 才能注销；在 fd_to_inst_ 中保存了实例对象
+        auto it2 = fd_to_inst_.find(client_fd);
+        if (it2 != fd_to_inst_.end())
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                continue;
-            }
-            if (errno == EINTR)
-                continue;
-            perror("accept");
-            break;
+            auto inst = it2->second;
+            reg_.deregister_instance(inst->svc_name, inst->id);
+            std::cout << "TcpRegistrar: connection closed, deregistered " << inst->to_string() << " ";
         }
-        // 每个连接使用独立线程（生产环境推荐线程池/协程）
-        std::thread(&TcpRegistrar::handle_client, this, client_fd).detach();
+        fd_to_id_.erase(it);
+        fd_to_inst_.erase(client_fd);
     }
-
-    close(listen_fd);
 }
 
-void TcpRegistrar::handle_client(int client_fd)
+void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
 {
-    constexpr size_t BUF_SIZE = 8192;
-    std::string buffer;
-    buffer.reserve(1024);
-    char tmp[BUF_SIZE];
-    ssize_t n;
-    // 读取循环
-    while ((n = read(client_fd, tmp, sizeof(tmp))) > 0)
-    {
-        buffer.append(tmp, tmp + n);
-        size_t pos;
-        while ((pos = buffer.find(' ')) != std::string::npos)
-        {
-            std::string line = buffer.substr(0, pos);
-            buffer.erase(0, pos + 1);
-            if (line.empty())
-                continue;
-            try
-            {
-                auto j = json::parse(line);
-                // 判断消息类型，支持 register 和 heartbeat
-                if (j.contains("type") && j.at("type").get<std::string>() == "heartbeat")
-                {
-                    // 心跳续约
-                    if (!j.contains("id"))
-                    {
-                        std::string err = "ERR missing id in heartbeat ";
-                        write(client_fd, err.data(), err.size());
-                        continue;
-                    }
-                    std::string id = j.at("id").get<std::string>();
-                    int ttl = 300;
-                    if (j.contains("ttl"))
-                        ttl = j.at("ttl").get<int>();
-                    // 找到 fd 对应保存的 instance 一并续约
-                    ServiceInstancePtr inst;
-                    {
-                        std::lock_guard lg(conn_mu_);
-                        auto it = fd_to_inst_.find(client_fd);
-                        if (it != fd_to_inst_.end())
-                            inst = it->second;
-                    }
-                    if (inst && inst->id == id)
-                    {
-                        reg_.register_instance(inst, std::chrono::seconds(ttl));
-                        std::string ok = "OK ";
-                        write(client_fd, ok.data(), ok.size());
-                    }
-                    else
-                    {
-                        // 尝试按 id 在 registry 中查找实例并续约
-                        // 注：若当前连接上并未保存实例，可能客户端只是发送心跳来续约已有实例
-                        // 通过遍历 snapshot 可找到实例（代价较高，可优化）
-                        auto snap = reg_.snapshot();
-                        bool renewed = false;
-                        for (auto &kv : snap)
-                        {
-                            for (auto &p : kv.second)
-                            {
-                                if (p.second->id == id)
-                                {
-                                    reg_.register_instance(p.second, std::chrono::seconds(ttl));
-                                    renewed = true;
-                                    break;
-                                }
-                            }
-                            if (renewed)
-                                break;
-                        }
-                        if (renewed)
-                            write(client_fd, std::string("OK ").data(), 3);
-                        else
-                            write(client_fd, std::string("ERR no such id ").data(), 12);
-                    }
-                }
-                else
-                {
-                    // 视为注册消息（兼容历史实现）
-                    auto inst = std::make_shared<ServiceInstance>();
-                    inst->svc_name = j.at("service").get<std::string>();
-                    inst->address = j.at("address").get<std::string>();
-                    inst->port = j.at("port").get<uint16_t>();
-                    if (j.contains("id"))
-                        inst->id = j.at("id").get<std::string>();
-                    else
-                        inst->id = inst->address + ":" + std::to_string(inst->port);
-                    if (j.contains("weight"))
-                        inst->weight = j.at("weight").get<uint32_t>();
-                    int ttl = 300;
-                    if (j.contains("ttl"))
-                        ttl = j.at("ttl").get<int>();
-                    reg_.register_instance(inst, std::chrono::seconds(ttl));
-                    {
-                        std::lock_guard lg(conn_mu_);
-                        fd_to_id_[client_fd] = inst->id;
-                        fd_to_inst_[client_fd] = inst;
-                    }
-                    std::string ack = "OK ";
-                    write(client_fd, ack.data(), ack.size());
-                }
-            }
-            catch (const std::exception &e)
-            {
-                std::string err = std::string("ERR ") + e.what() + " ";
-                write(client_fd, err.data(), err.size());
-            }
-        }
-    }
-    // 连接关闭：尝试立即注销该 fd 对应的实例
+    auto recvMsg = std::make_shared<ss::RegistToCenter>();
+    recvMsg->ParsePartialFromArray(msg->data_, msg->data_len_);
+    ILOG << recvMsg->Utf8DebugString();
+    auto replyMsg = std::make_shared<ss::RegistToCenter>();
+    auto request = recvMsg->mutable_request();
+    auto response = replyMsg->mutable_response();
+    response->set_err(Error_success);
+
+    auto inst = std::make_shared<ServiceInstance>();
+    auto& svr_info = request->local_info();
+    inst->svc_name = svr_info.svr_name();
+    inst->address = svr_info.ip();
+    inst->port = svr_info.port();
+    inst->id = svr_info.id();
+
+    inst->update_latency_us(Helper::timeGetTimeUS() - request->send_time());
+
+    reg_.register_instance(inst, std::chrono::seconds(TTL));
     {
         std::lock_guard lg(conn_mu_);
-        auto it = fd_to_id_.find(client_fd);
-        if (it != fd_to_id_.end())
-        {
-            // 需要得到 service name 才能注销；在 fd_to_inst_ 中保存了实例对象
-            auto it2 = fd_to_inst_.find(client_fd);
-            if (it2 != fd_to_inst_.end())
-            {
-                auto inst = it2->second;
-                reg_.deregister_instance(inst->svc_name, inst->id);
-                std::cout << "TcpRegistrar: connection closed, deregistered " << inst->to_string() << " ";
-            }
-            fd_to_id_.erase(it);
-            fd_to_inst_.erase(client_fd);
-        }
+        fd_to_id_[client_fd] = inst->id;
+        fd_to_inst_[client_fd] = inst;
     }
-    close(client_fd);
+}
+
+void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
+{
+    auto recvMsg = std::make_shared<ss::RegistToCenter>();
+    recvMsg->ParsePartialFromArray(msg->data_, msg->data_len_);
+    ILOG << recvMsg->Utf8DebugString();
+    auto replyMsg = std::make_shared<ss::RegistToCenter>();
+    auto request = recvMsg->mutable_request();
+    auto response = replyMsg->mutable_response();
+    response->set_err(Error_success);
+
+    auto& svr_info = request->local_info();
+    
+    // 找到 fd 对应保存的 instance 一并续约
+    ServiceInstancePtr inst;
+    {
+        std::lock_guard lg(conn_mu_);
+        auto it = fd_to_inst_.find(client_fd);
+        if (it != fd_to_inst_.end())
+            inst = it->second;
+    }
+    if (inst && inst->id == svr_info.id())
+    {
+        reg_.register_instance(inst, std::chrono::seconds(TTL));
+        std::string ok = "OK ";
+        write(client_fd, ok.data(), ok.size());
+    }
+    else
+    {
+        // 尝试按 id 在 registry 中查找实例并续约
+        // 注：若当前连接上并未保存实例，可能客户端只是发送心跳来续约已有实例
+        // 通过遍历 snapshot 可找到实例（代价较高，可优化）
+        auto snap = reg_.snapshot();
+        bool renewed = false;
+        for (auto &kv : snap)
+        {
+            for (auto &p : kv.second)
+            {
+                if (p.second->id == svr_info.id())
+                {
+                    reg_.register_instance(p.second, std::chrono::seconds(TTL));
+                    renewed = true;
+                    break;
+                }
+            }
+            if (renewed)
+                break;
+        }
+        if (renewed)
+            write(client_fd, std::string("OK ").data(), 3);
+        else
+            write(client_fd, std::string("ERR no such id ").data(), 12);
+    }
 }

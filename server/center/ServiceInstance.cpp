@@ -14,14 +14,14 @@ std::string ServiceInstance::to_string() const
 
 void ServiceInstance::update_latency_us(uint64_t sample_us)
 {
-    uint64_t old = avg_latency_us;
-    if (old == 0)
+    constexpr double alpha = 0.2;  // 新样本的权重
+    if (avg_latency_us == 0)
     {
-        // 首次直接写入
         avg_latency_us = sample_us;
         return;
     }
-    
-    // 使用固定系数的 EWMA 更新
-    avg_latency_us = (avg_latency_us * 8 + sample_us * 2) / 10;
+
+    avg_latency_us = static_cast<uint64_t>(
+        alpha * sample_us + (1.0 - alpha) * avg_latency_us
+    );
 }

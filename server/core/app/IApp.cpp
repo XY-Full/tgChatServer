@@ -23,11 +23,11 @@
 IApp::IApp(const std::string &app_name)
     : m_app_name(app_name), m_running(false), m_should_reload(false), m_tick_interval_ms(10)
 {
-    m_config_manager = std::make_unique<ConfigManager>();
-    m_signal_handler = std::make_unique<SignalHandler>();
-    m_cmd_parser = std::make_unique<CommandLineParser>();
-    m_terminal = std::make_unique<TerminalInterface>();
-    m_bus_client = std::make_unique<IBus::BusClient>(*m_config_manager);
+    m_config_manager = std::make_unique<ConfigManager>();                   // 配置管理器
+    m_signal_handler = std::make_unique<SignalHandler>();                   // 信号处理器
+    m_cmd_parser = std::make_unique<CommandLineParser>();                   // 命令行解析器
+    m_terminal = std::make_unique<TerminalInterface>();                     // 终端管理器
+    m_bus_client = std::make_unique<IBus::BusClient>(*m_config_manager);    // IBus客户端
 
     m_last_tick_time = std::chrono::steady_clock::now();
 }
@@ -45,9 +45,9 @@ int IApp::run(int argc, char *argv[])
         return 1;
     }
 
+    // 如果通过参数进入终端模式
     if (m_cmd_parser->isTerminalMode())
     {
-        // Terminal mode
         bool enable_telnet = m_config_manager->getValue<bool>("terminal.enable_telnet", false);
         // 命令行参数优先级高于配置文件
         std::string telnet_enabled_str = m_cmd_parser->getValue("enable-telnet");

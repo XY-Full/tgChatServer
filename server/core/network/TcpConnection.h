@@ -8,8 +8,9 @@
 class TcpServer;
 class AppMsgWrapper;
 
-using RecvHandler = std::function<void(int64_t, std::shared_ptr<PackBase>)>;
-using CloseHandler = std::function<void(int64_t)>;
+using RecvHandler = std::function<void(uint64_t, std::shared_ptr<PackBase>)>;
+using CloseHandler = std::function<void(uint64_t)>;
+using ConnHandler = std::function<void(uint64_t)>;
 
 class Connection : public std::enable_shared_from_this<Connection>
 {
