@@ -2,7 +2,7 @@ syntax = "proto3";
 
 enum SSErrorCode
 {
-    Error_success           = 0;
-
-    Error_exist_server_name = 1;
+    Error_success               = 0;
+    Error_exist_server_name     = 1;
+    Error_instance_not_found    = 2;
 }

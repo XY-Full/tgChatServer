@@ -92,6 +92,9 @@ void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
         fd_to_id_[client_fd] = inst->id;
         fd_to_inst_[client_fd] = inst;
     }
+
+    auto response_pack = Helper::CreateSSPack(*response);
+    server_.send(client_fd, response_pack);
 }
 
 void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
@@ -117,8 +120,6 @@ void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
     if (inst && inst->id == svr_info.id())
     {
         reg_.register_instance(inst, std::chrono::seconds(TTL));
-        std::string ok = "OK ";
-        write(client_fd, ok.data(), ok.size());
     }
     else
     {
@@ -141,9 +142,10 @@ void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
             if (renewed)
                 break;
         }
-        if (renewed)
-            write(client_fd, std::string("OK ").data(), 3);
-        else
-            write(client_fd, std::string("ERR no such id ").data(), 12);
+        if (!renewed)
+            response->set_err(Error_instance_not_found);
     }
+
+    auto response_pack = Helper::CreateSSPack(*response);
+    server_.send(client_fd, response_pack);
 }
