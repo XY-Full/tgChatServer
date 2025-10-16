@@ -59,6 +59,12 @@ public:
      */
     ConfigManager &getContext();
 
+    /**
+     * @brief 获取程序名称
+     * @return 程序名称
+     */
+    const std::string &getName() const;
+
 protected:
     // ========== 用户需要实现的回调函数 ==========
 

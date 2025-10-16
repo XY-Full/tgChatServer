@@ -105,6 +105,11 @@ ConfigManager &IApp::getContext()
     return *m_config_manager;
 }
 
+const std::string& IApp::getName() const
+{
+    return m_app_name;
+}
+
 bool IApp::initialize(int argc, char *argv[])
 {
     // 解析命令行参数

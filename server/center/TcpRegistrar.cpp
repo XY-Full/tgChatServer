@@ -13,13 +13,14 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "CenterService.h"
 
 using json = nlohmann::json;
 
 TcpRegistrar::TcpRegistrar(ServiceRegistry &reg, uint16_t port)
     : reg_(reg), port_(port),
       server_(port, std::bind(&TcpRegistrar::handleClient, this, std::placeholders::_1, std::placeholders::_2),
-              "tcp_registrar", std::bind(&TcpRegistrar::handleDisconnect, this, std::placeholders::_1))
+              CenterApp::getInstance().getName() + "_registrar", std::bind(&TcpRegistrar::handleDisconnect, this, std::placeholders::_1))
 {
     msg_handler_[SSMsgID::SS_REGIST_TO_CENTER] = std::bind(&TcpRegistrar::onRegist, this, std::placeholders::_1, std::placeholders::_2);
     msg_handler_[SSMsgID::SS_HEART_BEAT] = std::bind(&TcpRegistrar::onHeartbeat, this, std::placeholders::_1, std::placeholders::_2);
