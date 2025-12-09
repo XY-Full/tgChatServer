@@ -1,6 +1,7 @@
+#pragma once
 #include "Helper.h"
-#include "network/TcpClient.h"
 #include "IBus.h"
+#include "network/TcpClient.h"
 #include "ss_base.pb.h"
 #include <memory>
 #include <unordered_map>
@@ -23,7 +24,7 @@ struct Options
 
     std::string client_id = "";
 
-    Options(const ConfigManager& config_manager)
+    Options(const ConfigManager &config_manager)
     {
         region_id = config_manager.getValue<uint8_t>("region_id", 0);
         zone_id = config_manager.getValue<uint8_t>("zone_id", 0);
@@ -32,10 +33,10 @@ struct Options
 
         local_ring_size = config_manager.getValue<size_t>("local_ring_size", 1 << 20);
 
-        client_id = std::to_string(region_id) + "." + std::to_string(zone_id) + "." + std::to_string(service_id) + "." + std::to_string(instance_id);
+        client_id = std::to_string(region_id) + "." + std::to_string(zone_id) + "." + std::to_string(service_id) + "." +
+                    std::to_string(instance_id);
     }
 };
-
 
 namespace ss
 {
@@ -52,48 +53,51 @@ struct ServiceRouteCache
     ss::ServiceInfo info;
 };
 
-class BusNet
+class IBusNet
 {
 public:
-    ~BusNet();
+    ~IBusNet();
 
-    void init(std::shared_ptr<Options> opts);
+    virtual void init(std::shared_ptr<Options> opts);
 
-    void broadCast(const AppMsgWrapper &msg);
+    virtual void broadCast(const AppMsgWrapper &msg);
 
-    bool sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg);
+    virtual bool sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg);
 
-    bool sendMsgToGroup(const std::string_view& groupName, const AppMsgWrapper &msg);
+    virtual bool sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg);
 
-    std::shared_ptr<ServiceMap> GetServiceMap() const;
+    std::shared_ptr<ServiceMap> getServiceMap() const;
 
     // 生成当前服务信息
-    std::shared_ptr<ss::ServiceInfo> genServiceInfo();
+    void genServiceInfo();
 
-    // 接受路由缓存包
-    void onRecvRouteCache(AppMsgPtr msg);
-    
-private:
+    // 接受路由缓存响应包
+    void onRecvRouteCacheRsp(AppMsgPtr msg);
+    // 接受路由缓存请求包
+    void onRecvRouteCacheReq(AppMsgPtr msg);
+
+protected:
     void sendMsgToCenter(const google::protobuf::Message &msg);
 
     // 生成路由缓存
-    void genRouteCache(const std::string_view& serviceName);
+    void genRouteCache(const std::string_view &serviceName);
 
     void onRecvMsg(const AppMsg &msg);
 
-    bool sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg, bool delete_msg = true);
+    virtual bool sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrapper &msg, bool delete_msg = true) = 0;
 
     // 向center注册
     void regist2Center();
-    // 注册回调函数
-    void onCenterRegistResp(const AppMsg &msg);
+
+    // center注册的回调函数
+    void onCenterRegistRsp(const AppMsg &msg);
 
     // 更新服务状态
-    void UpdateServiceStatusReq();
+    void updateServiceStatusReq();
     // 更新服务状态回调函数（返回完整服务表）
-    void onCenterUpdateServiceStatusResp(const AppMsg &msg);
+    void onCenterUpdateServiceStatusRsp(const AppMsg &msg);
 
-private:
+protected:
     // 本进程的SendBuffer，对应为本机器Busd的ReadBuffer
     ShmRingBuffer<AppMsgWrapper> *LocalBusdShmBuffer_;
 
@@ -112,4 +116,5 @@ private:
     bool has_center_ = false;
     std::unordered_map<uint32_t, CenterMessageHandler> CenterMessageHandlers_;
     std::shared_ptr<Options> opts_;
+    ss::ServiceInfo local_service_info_;
 };

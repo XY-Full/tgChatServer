@@ -5,5 +5,6 @@ enum SSMsgID
     SS_HEART_BEAT               = 0; // 心跳
     SS_REGIST_TO_CENTER         = 1; // 服务注册到center
     SS_UPDATE_SERVICE_STATUS    = 2; // 服务更新当前状态
-    SS_TRACE_ROUTE              = 3; // 路由探测
+    SS_TRACE_ROUTE_REQ          = 3; // 路由探测req
+    SS_TRACE_ROUTE_RSP          = 4; // 路由探测rsp
 }

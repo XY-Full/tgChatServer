@@ -3,9 +3,10 @@ package ss;
 
 message ServiceInfo
 {
-    string  id                      = 1;
-    string  svr_name                = 2;
-    string  ip                      = 3;
-    int32   port                    = 4;
-    string  shm_recv_buffer_name    = 5;
+    string  id_                     = 1;
+    string  svr_name_               = 2;
+    string  ip_                     = 3;
+    int32   port_                   = 4;
+    string  shm_recv_buffer_name_   = 5;
+    bool    is_daemon_              = 6;
 }

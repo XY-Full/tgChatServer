@@ -1,5 +1,5 @@
 #include "IBus.h"
-#include "BusNet.h"
+#include "IBusNet.h"
 #include "GlobalSpace.h"
 #include "Helper.h"
 #include "Log.h"
@@ -22,6 +22,8 @@
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
+#include "BusdNet.h"
+#include "BusClientNet.h"
 
 namespace IBus
 {
@@ -31,7 +33,8 @@ uint64_t BusClient::now_seq_ = 0;
 class BusClient::Impl
 {
 public:
-    explicit Impl(const ConfigManager &config_manager) : opts_(std::make_shared<Options>(config_manager)), running_(false), ready_(false)
+    explicit Impl(const ConfigManager &config_manager, bool is_daemon)
+        : opts_(std::make_shared<Options>(config_manager)), running_(false), ready_(false), is_daemon_(is_daemon)
     {
         message_handlers_map_[Type::C2S] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
         message_handlers_map_[Type::S2C] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
@@ -62,7 +65,9 @@ public:
             return false;
         }
 
-        bus_net_ = std::make_unique<BusNet>();
+        if(is_daemon_) bus_net_ = std::make_unique<BusClientNet>();
+        else bus_net_ = std::make_unique<BusdNet>();
+        
         msg_dispatcher_ = std::make_unique<MsgDispatcher>();
 
         // 启动工作线程
@@ -72,7 +77,8 @@ public:
         ready_cv_.notify_all();
 
         bus_net_->init(opts_);
-        RegistMessage(SSMsgID::SS_TRACE_ROUTE, std::bind(&Impl::onTraceRouteResp, this, std::placeholders::_1));
+        RegistMessage(SSMsgID::SS_TRACE_ROUTE_RSP, std::bind(&Impl::onTraceRouteRsp, this, std::placeholders::_1));
+        RegistMessage(SSMsgID::SS_TRACE_ROUTE_REQ, std::bind(&Impl::onTraceRouteReq, this, std::placeholders::_1));
 
         ILOG << "BusClient started successfully";
         return true;
@@ -290,9 +296,14 @@ private:
         msg_dispatcher_->onMsg(msg);
     }
 
-    void onTraceRouteResp(AppMsgPtr msg)
+    void onTraceRouteRsp(AppMsgPtr msg)
     {
-        bus_net_->onRecvRouteCache(msg);
+        bus_net_->onRecvRouteCacheRsp(msg);
+    }
+
+    void onTraceRouteReq(AppMsgPtr msg)
+    {
+        bus_net_->onRecvRouteCacheReq(msg);
     }
 
     void Cleanup()
@@ -318,17 +329,21 @@ private:
     std::unique_ptr<MsgDispatcher> ss_msg_dispatcher_;
 
     // 不同bus之间通信的网络组件
-    std::unique_ptr<BusNet> bus_net_;
+    std::unique_ptr<IBusNet> bus_net_;
 
     // 各种请求对应的处理函数表
     std::unordered_map<Type, std::function<void(AppMsgPtr msg)>> message_handlers_map_;
 
     // 协程调度器
     std::unique_ptr<CoroutineScheduler> co_scheduler_;
+
+    // 是否是busd
+    bool is_daemon_ = false;
 };
 
 // BusClient 包装实现
-BusClient::BusClient(const ConfigManager &config_manager) : impl_(std::make_unique<Impl>(config_manager))
+BusClient::BusClient(const ConfigManager &config_manager, bool is_daemon)
+    : impl_(std::make_unique<Impl>(config_manager, is_daemon))
 {
 }
 BusClient::~BusClient() = default;

@@ -26,7 +26,7 @@ using ResponseHandler = std::function<void(const AppMsg&)>;
 class BusClient
 {
 public:
-    explicit BusClient(const ConfigManager& config_manager);
+    explicit BusClient(const ConfigManager& config_manager, bool is_daemon = false);
     ~BusClient();
 
     // 禁止拷贝，允许移动

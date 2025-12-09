@@ -1,5 +1,4 @@
 #include "ServiceRegistry.h"
-#include <algorithm>
 #include <set>
 #include <sstream>
 #include <mutex>

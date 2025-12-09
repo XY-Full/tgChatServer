@@ -79,13 +79,13 @@ void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
     response->set_err(Error_success);
 
     auto inst = std::make_shared<ServiceInstance>();
-    auto& svr_info = request->local_info();
-    inst->svc_name = svr_info.svr_name();
-    inst->address = svr_info.ip();
-    inst->port = svr_info.port();
-    inst->id = svr_info.id();
+    auto& svr_info = request->local_info_();
+    inst->svc_name = svr_info.svr_name_();
+    inst->address = svr_info.ip_();
+    inst->port = svr_info.port_();
+    inst->id = svr_info.id_();
 
-    inst->update_latency_us(Helper::timeGetTimeUS() - request->send_time());
+    inst->update_latency_us(Helper::timeGetTimeUS() - request->send_time_());
 
     reg_.register_instance(inst, std::chrono::seconds(TTL));
     {
@@ -108,7 +108,7 @@ void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
     auto response = replyMsg->mutable_response();
     response->set_err(Error_success);
 
-    auto& svr_info = request->local_info();
+    auto& svr_info = request->local_info_();
     
     // 找到 fd 对应保存的 instance 一并续约
     ServiceInstancePtr inst;
@@ -118,7 +118,7 @@ void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
         if (it != fd_to_inst_.end())
             inst = it->second;
     }
-    if (inst && inst->id == svr_info.id())
+    if (inst && inst->id == svr_info.id_())
     {
         reg_.register_instance(inst, std::chrono::seconds(TTL));
     }
@@ -133,7 +133,7 @@ void TcpRegistrar::onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
         {
             for (auto &p : kv.second)
             {
-                if (p.second->id == svr_info.id())
+                if (p.second->id == svr_info.id_())
                 {
                     reg_.register_instance(p.second, std::chrono::seconds(TTL));
                     renewed = true;

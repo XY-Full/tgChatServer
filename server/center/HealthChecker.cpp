@@ -72,7 +72,7 @@ void HealthChecker::handle_heartbeat(std::shared_ptr<AppMsg> msg)
     response_pb->ParseFromArray(msg->data_, msg->data_len_);
     auto response = response_pb->mutable_response();
     auto request = std::make_shared<ss::HeartBeat>()->mutable_request();
-    auto& service_id = response->service_info().id();
+    auto& service_id = response->service_info_().id_();
     try
     {
         auto snap = reg_.snapshot();
