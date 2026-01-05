@@ -7,7 +7,7 @@
 class BusdApp : public IApp
 {
 public:
-    BusdApp() : IApp("BusdService") {}
+    BusdApp() : IApp("LogicService") {}
 
     static BusdApp &getInstance()
     {
@@ -17,8 +17,8 @@ public:
 
     virtual bool onInit() override final
     {
-        // 初始化BusClient，标记为daemon模式
-        bus_client_ = std::make_unique<IBus::BusClient>(getContext(), true);
+        // 初始化BusClient
+        bus_client_ = std::make_unique<IBus::BusClient>(getContext());
         
         if (!bus_client_->Start())
         {

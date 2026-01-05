@@ -1,13 +1,13 @@
-file(GLOB BUSD_CORE_SRC
+file(GLOB BUSD_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
 
-add_library(busd_core STATIC
-    ${BUSD_CORE_SRC}
+add_library(busd STATIC
+    ${BUSD_SRC}
 )
 
-target_include_directories(busd_core 
+target_include_directories(busd
                             PUBLIC 
                             ${CMAKE_SOURCE_DIR}/busd
                             ${CMAKE_SOURCE_DIR}/network
@@ -15,6 +15,8 @@ target_include_directories(busd_core
                             ${CMAKE_SOURCE_DIR}/../public/proto_files
                             ${CMAKE_SOURCE_DIR}/common
                             ${CMAKE_SOURCE_DIR}/core/bus
+                            ${CMAKE_SOURCE_DIR}/core/common
+                            ${CMAKE_SOURCE_DIR}/core
                             )
                             
-target_include_directories(busd_core PUBLIC common network)
+target_include_directories(busd PUBLIC common network)

@@ -106,22 +106,7 @@ add_subdirectory(../public proto)
 add_subdirectory(common)
 add_subdirectory(core)
 add_subdirectory(center)
-
-# -----------------------------
-# 可执行文件
-# -----------------------------
-# add_executable(server main.cpp)
-# 
-# target_link_libraries(server
-#     PRIVATE
-#     network
-# 	busd_core
-# 	core
-#     logic_modules
-# 	common
-# 	proto
-#     pthread
-# )
+add_subdirectory(busd)
 
 # -----------------------------
 # 平台特定依赖

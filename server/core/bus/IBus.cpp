@@ -57,7 +57,7 @@ public:
             return false;
         }
 
-        // 初始化共享内存
+        // Initialize shared memory
         if (!InitSharedMemory())
         {
             ELOG << "Failed to initialize shared memory";
@@ -65,12 +65,16 @@ public:
             return false;
         }
 
-        if(is_daemon_) bus_net_ = std::make_unique<BusClientNet>();
-        else bus_net_ = std::make_unique<BusdNet>();
+        // Initialize network layer
+        if(is_daemon_) bus_net_ = std::make_unique<BusdNet>();
+        else bus_net_ = std::make_unique<BusClientNet>();
         
+        // CRITICAL FIX #4 & #5: Initialize message dispatchers and coroutine scheduler
         msg_dispatcher_ = std::make_unique<MsgDispatcher>();
+        ss_msg_dispatcher_ = std::make_unique<MsgDispatcher>();
+        co_scheduler_ = std::make_unique<CoroutineScheduler>(4);  // 4 worker threads
 
-        // 启动工作线程
+        // Start worker thread
         io_thread_ = std::thread(&Impl::IoLoop, this);
 
         ready_ = true;
@@ -91,6 +95,11 @@ public:
 
         ready_ = false;
         ready_cv_.notify_all();
+
+        // CRITICAL FIX: Stop coroutine scheduler before joining thread
+        if (co_scheduler_) {
+            co_scheduler_->stop();
+        }
 
         if (io_thread_.joinable())
             io_thread_.join();
@@ -159,6 +168,10 @@ public:
 
     bool SSRegistMessage(uint32_t msg_id, const MessageHandler &handler)
     {
+        if (!ss_msg_dispatcher_) {
+            ELOG << "ss_msg_dispatcher not initialized";
+            return false;
+        }
         ss_msg_dispatcher_->RegistMessage(msg_id, handler);
 
         ILOG << "SSRegistMessage to msg_id: " << msg_id;
@@ -167,6 +180,10 @@ public:
 
     bool SSUnregistMessage(uint32_t msg_id)
     {
+        if (!ss_msg_dispatcher_) {
+            ELOG << "ss_msg_dispatcher not initialized";
+            return false;
+        }
         ss_msg_dispatcher_->UnregistMessage(msg_id);
 
         ILOG << "SSUnregistMessage from msg_id: " << msg_id;
@@ -182,12 +199,19 @@ public:
         }
 
         auto pack = Helper::CreateSSPack(message);
-        reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_))->co_id_ = CUR_CO_ID;
+        // CRITICAL FIX #3: Check for null pointer
+        auto pack_ptr = GlobalSpace()->shm_slab_.off2ptr(pack->offset_);
+        if (!pack_ptr) {
+            ELOG << "Failed to get shared memory pointer for offset: " << pack->offset_;
+            return nullptr;
+        }
+        reinterpret_cast<AppMsg *>(pack_ptr)->co_id_ = CUR_CO_ID;
 
         bool result = SendToNode(service_name, *pack);
         if (!result)
         {
             ELOG << "Failed to push message to local ring buffer";
+            return nullptr;
         }
 
         auto rsp_msg = CoroutineScheduler::yield();
@@ -252,13 +276,34 @@ private:
             if (local_ring_->Pop(msg))
             {
                 auto offset = msg.offset_;
-                auto pack = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(offset));
+                // CRITICAL FIX #3: Check for null pointer from off2ptr
+                auto pack_ptr = GlobalSpace()->shm_slab_.off2ptr(offset);
+                if (!pack_ptr) {
+                    ELOG << "Invalid shared memory offset: " << offset;
+                    continue;
+                }
+                auto pack = reinterpret_cast<AppMsg *>(pack_ptr);
 
                 auto packPtr = std::shared_ptr<AppMsg>(
-                    pack, [offset](AppMsg *p) { GlobalSpace()->shm_slab_.Free(offset, p->header_.pack_len_); });
+                    pack, [offset](AppMsg *p) { 
+                        if (p) {
+                            GlobalSpace()->shm_slab_.Free(offset, p->header_.pack_len_); 
+                        }
+                    });
 
-                // 将处理response的函数放在协程中处理
-                co_scheduler_->schedule([&]() { message_handlers_map_[packPtr->header_.type_](packPtr); });
+                // Process message in coroutine
+                if (co_scheduler_) {
+                    co_scheduler_->schedule([this, packPtr]() { 
+                        auto it = message_handlers_map_.find(packPtr->header_.type_);
+                        if (it != message_handlers_map_.end()) {
+                            it->second(packPtr);
+                        } else {
+                            WLOG << "No handler for message type: " << static_cast<int>(packPtr->header_.type_);
+                        }
+                    });
+                } else {
+                    ELOG << "Coroutine scheduler not initialized";
+                }
             }
         }
 
@@ -270,7 +315,11 @@ private:
         if (msg->header_.type_ != Type::S2SReq)
             return;
 
-        ss_msg_dispatcher_->onMsg(msg);
+        if (ss_msg_dispatcher_) {
+            ss_msg_dispatcher_->onMsg(msg);
+        } else {
+            ELOG << "ss_msg_dispatcher not initialized";
+        }
     }
 
     void HandleResponse(AppMsgPtr msg)
@@ -285,7 +334,11 @@ private:
             return;
         }
 
-        co_scheduler_->resume(co_id, msg);
+        if (co_scheduler_) {
+            co_scheduler_->resume(co_id, msg);
+        } else {
+            ELOG << "Coroutine scheduler not initialized";
+        }
     }
 
     void HandleCSMsg(AppMsgPtr msg)

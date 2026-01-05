@@ -60,16 +60,16 @@ public:
 
     virtual void init(std::shared_ptr<Options> opts);
 
-    virtual void broadCast(const AppMsgWrapper &msg);
+    virtual void broadCast(const AppMsgWrapper &msg) = 0;
 
     virtual bool sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg);
 
-    virtual bool sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg);
+    virtual bool sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg) = 0;
 
     std::shared_ptr<ServiceMap> getServiceMap() const;
 
-    // 生成当前服务信息
-    void genServiceInfo();
+    // 生成当前服务信息（需要子类实现以设置is_daemon标志）
+    virtual void genServiceInfo();
 
     // 接受路由缓存响应包
     void onRecvRouteCacheRsp(AppMsgPtr msg);
@@ -98,17 +98,18 @@ protected:
     void onCenterUpdateServiceStatusRsp(const AppMsg &msg);
 
 protected:
-    // 本进程的SendBuffer，对应为本机器Busd的ReadBuffer
-    ShmRingBuffer<AppMsgWrapper> *LocalBusdShmBuffer_;
+    // CRITICAL FIX #1: Change raw pointers to smart pointers for RAII
+    // Local process SendBuffer, corresponding to local machine Busd's ReadBuffer
+    std::unique_ptr<ShmRingBuffer<AppMsgWrapper>> LocalBusdShmBuffer_;
 
-    // 全服务表
+    // Full service table
     std::shared_ptr<ServiceMap> ServiceMap_;
 
-    // 路由缓存
+    // Route cache
     std::unordered_map<std::string_view, std::shared_ptr<ServiceRouteCache>> RouteCache_;
 
-    // 本机的所有服务对端共享内存通道 map<服务名, ShmRingBuffer>
-    std::unordered_map<std::string, ShmRingBuffer<AppMsgWrapper> *> LocalServiceMap_;
+    // Local machine's all service peer shared memory channels map<service_name, ShmRingBuffer>
+    std::unordered_map<std::string, std::unique_ptr<ShmRingBuffer<AppMsgWrapper>>> LocalServiceMap_;
 
     std::unique_ptr<TcpClient> TcpClient_;
 

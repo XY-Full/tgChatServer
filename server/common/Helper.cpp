@@ -202,18 +202,18 @@ void Helper::sendTgMessage(const std::string &chat_id, const std::string &text)
         std::string escaped_text = curl_easy_escape(curl, text.c_str(), text.length());
         std::string base_url = "https://api.telegram.org/bot";
         std::string token = GlobalSpace()->configMgr_->getValue<std::string>("telegram.bot_token", "");
+        
+        if (token.empty()) {
+            std::cerr << "[ERROR] telegram.bot_token not configured" << std::endl;
+            curl_easy_cleanup(curl);
+            return;
+        }
+        
         std::string url = base_url + token + "/sendMessage?chat_id=" + chat_id + "&text=" + escaped_text;
 
-        // std::cout << "URL: " << url << std::endl;
-
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); // 允许重定向
-        // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); // 启用调试信息
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // 设置超时
-
-        // std::string response_string;
-        // curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL);
-        // curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -221,28 +221,23 @@ void Helper::sendTgMessage(const std::string &chat_id, const std::string &text)
         {
             std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
         }
-        else
-        {
-            // std::cout << "Response: " << response_string << std::endl; // 打印响应
-        }
 
-        curl_easy_cleanup(curl); // 清理curl句柄
+        curl_easy_cleanup(curl);
     }
     else
     {
         std::cerr << "Failed to initialize CURL" << std::endl;
-        curl_easy_cleanup(curl); // 清理curl句柄
     }
 }
 
 uint64_t Helper::timeGetTimeS()
 {
-    return timeGetTimeMS() / 1000000ULL;
+    return timeGetTimeUS() / 1000000ULL;  // Fixed: was calling timeGetTimeMS() recursively
 }
 
 uint64_t Helper::timeGetTimeMS()
 {
-    return timeGetTimeMS() / 1000ULL;
+    return timeGetTimeUS() / 1000ULL;  // Fixed: was calling itself recursively
 }
 
 uint64_t Helper::timeGetTimeUS()
@@ -294,16 +289,21 @@ int64_t Helper::GenUID()
     int64_t base;
     do
     {
-        base = last_ms.load();
+        base = last_ms.load(std::memory_order_relaxed);
         if (now_ms > base)
         {
-            counter.store(0); // 新时间戳，重置 counter
+            // Will reset counter after CAS succeeds
         }
     }
-    while (!last_ms.compare_exchange_weak(base, now_ms));
+    while (!last_ms.compare_exchange_weak(base, now_ms, std::memory_order_acq_rel));
+
+    // Only reset counter if we successfully updated last_ms with a newer timestamp
+    if (now_ms > base) {
+        counter.store(0, std::memory_order_release);
+    }
 
     // 3位 counter，可支撑同一毫秒内生成 1000 个 UID
-    int64_t uid = now_ms * 1000 + counter.fetch_add(1);
+    int64_t uid = now_ms * 1000 + counter.fetch_add(1, std::memory_order_relaxed);
     return uid;
 }
 

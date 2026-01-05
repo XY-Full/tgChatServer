@@ -5,7 +5,6 @@
 #include <memory>
 #include "../core/network/AppMsg.h"
 
-#define BOT_TOKEN "7860009277:AAEvFHoZqJIeYVReYOoS62m5GjYWVIDfXNo"
 
 namespace google
 {

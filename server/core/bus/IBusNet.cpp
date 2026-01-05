@@ -10,16 +10,12 @@
 
 IBusNet::~IBusNet()
 {
+    // CRITICAL FIX #1: No need to manually delete - smart pointers handle cleanup
     if (TcpClient_)
     {
         TcpClient_->stop();
     }
-
-    delete LocalBusdShmBuffer_;
-    for (const auto &it : LocalServiceMap_)
-    {
-        delete it.second;
-    }
+    // LocalBusdShmBuffer_ and LocalServiceMap_ will be automatically cleaned up
 }
 
 void IBusNet::init(std::shared_ptr<Options> opts)
@@ -147,10 +143,10 @@ void IBusNet::onCenterUpdateServiceStatusRsp(const AppMsg &msg)
     for (auto &s : response.service_info_map_())
     {
         (*new_map)[s.id_()].push_back(s);
-        // 如果本地没有LocalBusdShmBuffer，则设置一下
+        // CRITICAL FIX #1: Use smart pointers instead of raw new
         if (!LocalBusdShmBuffer_ && s.is_daemon_() && s.ip_() == local_service_info_.ip_())
         {
-            LocalBusdShmBuffer_ = new ShmRingBuffer<AppMsgWrapper>(s.shm_recv_buffer_name_());
+            LocalBusdShmBuffer_ = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(s.shm_recv_buffer_name_());
         }
     }
     std::atomic_store(&ServiceMap_, new_map);
@@ -158,32 +154,44 @@ void IBusNet::onCenterUpdateServiceStatusRsp(const AppMsg &msg)
     ILOG << "Update status success";
 }
 
-void IBusNet::broadCast(const AppMsgWrapper &msg)
-{
-    // 广播包全权交给Busd进行分发
-    LocalBusdShmBuffer_->Push(msg);
-    // 发送完之后释放内存
-    Helper::DeleteSSPack(msg);
-}
-
 bool IBusNet::sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg)
 {
-    std::string local_ip = "127.0.0.1";
-    if (RouteCache_.find(serviceName) == RouteCache_.end())
+    // 先检查路由缓存
+    auto cache_it = RouteCache_.find(serviceName);
+    if (cache_it != RouteCache_.end() && cache_it->second)
     {
-        genRouteCache(serviceName);
+        // 使用缓存的路由
+        sendMsgByServiceInfo(cache_it->second->info, msg);
+        return true;
     }
 
-    sendMsgByServiceInfo(RouteCache_[serviceName]->info, msg);
-    return true;
-}
+    // 路由缓存不存在，从服务表中查找
+    auto service_map = getServiceMap();
+    if (!service_map)
+    {
+        ELOG << "IBusNet::sendMsgTo: Service map not ready";
+        Helper::DeleteSSPack(msg);
+        return false;
+    }
 
-bool IBusNet::sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg)
-{
-    // 组播包全权交给Busd进行分发
-    LocalBusdShmBuffer_->Push(msg);
-    // 发送完之后释放内存
-    Helper::DeleteSSPack(msg);
+    auto service_it = service_map->find(serviceName);
+    if (service_it == service_map->end() || service_it->second.empty())
+    {
+        ELOG << "IBusNet::sendMsgTo: Service not found: " << serviceName;
+        Helper::DeleteSSPack(msg);
+        
+        // 发起路由缓存请求（异步）
+        genRouteCache(serviceName);
+        return false;
+    }
+
+    // 找到服务，使用第一个实例（后续可以优化为选择最优实例）
+    const auto &target_service = service_it->second[0];
+    sendMsgByServiceInfo(target_service, msg);
+    
+    // 同时发起路由缓存请求，下次会更快（异步优化）
+    genRouteCache(serviceName);
+    
     return true;
 }
 
@@ -220,25 +228,32 @@ void IBusNet::onRecvRouteCacheRsp(AppMsgPtr msg)
 
     // 计算延迟
     auto delay = send_time - response.send_time_();
+    
+    std::string service_id = response.service_info_().id_();
+    
     // 如果路由缓存中不存在这个服务，则缓存一下
-    if (RouteCache_.find(response.service_info_().id_()) == RouteCache_.end())
+    auto cache_it = RouteCache_.find(service_id);
+    if (cache_it == RouteCache_.end())
     {
-        RouteCache_[response.service_info_().id_()]->delay = delay;
-        RouteCache_[response.service_info_().id_()]->info.CopyFrom(response.service_info_());
-        ILOG << "New add route cache from " << response.service_info_().id_() << " success, delay: " << delay;
+        // 创建新的缓存条目
+        auto new_cache = std::make_shared<ServiceRouteCache>();
+        new_cache->delay = delay;
+        new_cache->info.CopyFrom(response.service_info_());
+        RouteCache_[service_id] = new_cache;
+        
+        ILOG << "New add route cache from " << service_id << " success, delay: " << delay;
     }
     // 如果路由缓存中存在，但是新服务的延迟更低，则更新
-    else if (delay > 0 && delay < RouteCache_[response.service_info_().id_()]->delay)
+    else if (delay > 0 && cache_it->second && delay < cache_it->second->delay)
     {
-
-        RouteCache_[response.service_info_().id_()]->delay = delay;
-        RouteCache_[response.service_info_().id_()]->info.CopyFrom(response.service_info_());
-        ILOG << "Update route cache from " << response.service_info_().id_() << " success, delay: " << delay;
+        cache_it->second->delay = delay;
+        cache_it->second->info.CopyFrom(response.service_info_());
+        ILOG << "Update route cache from " << service_id << " success, delay: " << delay;
     }
     else
     {
-        ELOG << "Recv route cache from " << response.service_info_().id_() << " failed, delay: " << delay;
-        return;
+        DLOG << "Route cache from " << service_id << " not updated, current delay: " 
+             << (cache_it->second ? cache_it->second->delay : 0) << ", new delay: " << delay;
     }
 }
 
