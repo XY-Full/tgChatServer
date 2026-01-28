@@ -4,7 +4,7 @@
 #include "SignalHandler.h"
 #include "TerminalInterface.h"
 #include "Timer.h"
-#include "jsonParser/ConfigManager.h"
+#include "ConfigManager.h"
 #include <arpa/inet.h>
 #include <chrono>
 #include <cstring>
@@ -261,6 +261,11 @@ bool IApp::initialize(int argc, char *argv[])
         }
     });
 
+    // 设置全局变量 - 必须在 onInit() 之前，因为 onInit() 可能会使用这些全局变量
+    GlobalSpace()->bus_ = m_bus_client.get();
+    GlobalSpace()->configMgr_ = m_config_manager.get();
+    GlobalSpace()->timer_ = new Timer();
+
     // 调用用户初始化
     m_running = true;
     if (!onInit())
@@ -271,11 +276,6 @@ bool IApp::initialize(int argc, char *argv[])
 
     // 启动线程
     m_tick_thread = std::thread(&IApp::tickThread, this);
-
-    // 设置全局变量
-    GlobalSpace()->bus_ = m_bus_client.get();
-    GlobalSpace()->configMgr_ = m_config_manager.get();
-    GlobalSpace()->timer_ = new Timer();
 
     return true;
 }

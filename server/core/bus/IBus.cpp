@@ -199,7 +199,6 @@ public:
         }
 
         auto pack = Helper::CreateSSPack(message);
-        // CRITICAL FIX #3: Check for null pointer
         auto pack_ptr = GlobalSpace()->shm_slab_.off2ptr(pack->offset_);
         if (!pack_ptr) {
             ELOG << "Failed to get shared memory pointer for offset: " << pack->offset_;
@@ -316,7 +315,7 @@ private:
             return;
 
         if (ss_msg_dispatcher_) {
-            ss_msg_dispatcher_->onMsg(msg);
+            ss_msg_dispatcher_->onMsg(*msg);
         } else {
             ELOG << "ss_msg_dispatcher not initialized";
         }
@@ -346,15 +345,15 @@ private:
         if (msg->header_.type_ != Type::C2S && msg->header_.type_ != Type::S2C)
             return;
 
-        msg_dispatcher_->onMsg(msg);
+        msg_dispatcher_->onMsg(*msg);
     }
 
-    void onTraceRouteRsp(AppMsgPtr msg)
+    void onTraceRouteRsp(const AppMsg &msg)
     {
         bus_net_->onRecvRouteCacheRsp(msg);
     }
 
-    void onTraceRouteReq(AppMsgPtr msg)
+    void onTraceRouteReq(const AppMsg &msg)
     {
         bus_net_->onRecvRouteCacheReq(msg);
     }
@@ -400,8 +399,6 @@ BusClient::BusClient(const ConfigManager &config_manager, bool is_daemon)
 {
 }
 BusClient::~BusClient() = default;
-BusClient::BusClient(BusClient &&) noexcept = default;
-BusClient &BusClient::operator=(BusClient &&) noexcept = default;
 
 bool BusClient::Start()
 {
@@ -432,7 +429,7 @@ bool BusClient::UnregistMessage(uint32_t msg_id)
     return impl_->UnregistMessage(msg_id);
 }
 
-AppMsgPtr BusClient::Request(const std::string &service_name, const google::protobuf::Message &message)
+std::shared_ptr<AppMsg> BusClient::Request(const std::string &service_name, const google::protobuf::Message &message)
 {
     return impl_->Request(service_name, message);
 }

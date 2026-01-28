@@ -72,9 +72,9 @@ public:
     virtual void genServiceInfo();
 
     // 接受路由缓存响应包
-    void onRecvRouteCacheRsp(AppMsgPtr msg);
+    void onRecvRouteCacheRsp(const AppMsg &msg);
     // 接受路由缓存请求包
-    void onRecvRouteCacheReq(AppMsgPtr msg);
+    void onRecvRouteCacheReq(const AppMsg &msg);
 
 protected:
     void sendMsgToCenter(const google::protobuf::Message &msg);

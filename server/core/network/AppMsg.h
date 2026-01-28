@@ -13,6 +13,4 @@ public:
     char dst_name_[16];     // 包目的服务(名)，允许正则匹配进程组
 };
 
-using AppMsgPtr = std::shared_ptr<AppMsg>;
-
 #pragma pack(pop)

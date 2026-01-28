@@ -11,7 +11,7 @@
 #include "network/AppMsg.h"
 #include "network/MsgWrapper.h"
 #include "msg_mapping_ss.h"
-#include "jsonParser/ConfigManager.h"
+#include "app/ConfigManager.h"
 
 #if defined(_WIN32)
 #include <windows.h>

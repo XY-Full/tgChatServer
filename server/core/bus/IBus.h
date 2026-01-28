@@ -10,12 +10,14 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
 #include "MsgDispatcher.h"
-#include "jsonParser/ConfigManager.h"
+#include "app/ConfigManager.h"
 
 class PackBase;
 class AppMsg;
 class AppMsgWrapper;
 class BusNet;
+
+using AppMsgPtr = std::shared_ptr<AppMsg>;
 
 namespace IBus
 {
@@ -26,14 +28,15 @@ using ResponseHandler = std::function<void(const AppMsg&)>;
 class BusClient
 {
 public:
+    BusClient() = delete;
     explicit BusClient(const ConfigManager& config_manager, bool is_daemon = false);
     ~BusClient();
 
     // 禁止拷贝，允许移动
     BusClient(const BusClient &) = delete;
     BusClient &operator=(const BusClient &) = delete;
-    BusClient(BusClient &&) noexcept;
-    BusClient &operator=(BusClient &&) noexcept;
+    BusClient(BusClient &&) noexcept = delete;
+    BusClient &operator=(BusClient &&) noexcept = delete;
 
     // 生命周期
     bool Start();

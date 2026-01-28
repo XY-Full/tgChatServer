@@ -66,10 +66,10 @@ bool HealthChecker::probe_instance(const ServiceInstancePtr &inst)
     return false;
 }
 
-void HealthChecker::handle_heartbeat(std::shared_ptr<AppMsg> msg)
+void HealthChecker::handle_heartbeat(const AppMsg &msg)
 {
     auto response_pb = std::make_shared<ss::HeartBeat>();
-    response_pb->ParseFromArray(msg->data_, msg->data_len_);
+    response_pb->ParseFromArray(msg.data_, msg.data_len_);
     auto response = response_pb->mutable_response();
     auto request = std::make_shared<ss::HeartBeat>()->mutable_request();
     auto& service_id = response->service_info_().id_();

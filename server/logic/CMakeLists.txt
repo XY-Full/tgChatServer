@@ -3,21 +3,26 @@ file(GLOB_RECURSE LOGIC_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
 
-add_library(logic_modules STATIC
-    ${LOGIC_SRC}
-)
+add_executable(logic ${LOGIC_SRC})
 
 
-target_include_directories(logic_modules 
+target_include_directories(logic
                             PUBLIC 
                             ${CMAKE_CURRENT_SOURCE_DIR}/
-                            ${CMAKE_SOURCE_DIR}/core/app
-                            ${CMAKE_SOURCE_DIR}/core/common/json_parser
-                            ${CMAKE_SOURCE_DIR}/logic
+                            ${CMAKE_SOURCE_DIR}/core
                             ${CMAKE_SOURCE_DIR}/busd
                             ${CMAKE_SOURCE_DIR}/protobuf/include
                             ${CMAKE_SOURCE_DIR}/protobuf/proto_files
-                            ${CMAKE_SOURCE_DIR}/protobuf/proto_files
                             )
                             
-target_link_libraries(logic_modules PUBLIC common busd_core ${Protobuf_LIBRARY})
+ 
+target_link_libraries(logic
+    PRIVATE
+	core
+	common
+	proto
+)
+
+set_target_properties(logic PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/logic
+)

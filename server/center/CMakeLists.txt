@@ -12,7 +12,6 @@ target_include_directories(center
     ${CMAKE_SOURCE_DIR}/../public/proto_files
     ${CMAKE_SOURCE_DIR}/common
     ${CMAKE_SOURCE_DIR}/core
-    ${CMAKE_SOURCE_DIR}/core/common
 )
 
 target_link_libraries(center
@@ -20,8 +19,8 @@ target_link_libraries(center
 	core
 	common
 	proto
-    CURL::libcurl
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    ZLIB::ZLIB
+)
+
+set_target_properties(center PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/center
 )

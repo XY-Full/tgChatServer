@@ -211,10 +211,10 @@ void IBusNet::genRouteCache(const std::string_view &serviceName)
     sendMsgToGroup(serviceName, *pack);
 }
 
-void IBusNet::onRecvRouteCacheRsp(AppMsgPtr msg)
+void IBusNet::onRecvRouteCacheRsp(const AppMsg &msg)
 {
     ss::TraceRouteRsp response;
-    response.ParseFromArray(msg->data_, msg->data_len_);
+    response.ParseFromArray(msg.data_, msg.data_len_);
     // 获取现在的高精度时间
     auto now = std::chrono::high_resolution_clock::now();
     auto duration = now.time_since_epoch();
@@ -257,10 +257,10 @@ void IBusNet::onRecvRouteCacheRsp(AppMsgPtr msg)
     }
 }
 
-void IBusNet::onRecvRouteCacheReq(AppMsgPtr msg)
+void IBusNet::onRecvRouteCacheReq(const AppMsg &msg)
 {
     ss::TraceRouteReq pb_msg;
-    pb_msg.ParseFromArray(msg->data_, msg->data_len_);
+    pb_msg.ParseFromArray(msg.data_, msg.data_len_);
 
     ss::TraceRouteRsp rsp_msg;
     rsp_msg.set_err(SSErrorCode::Error_success);

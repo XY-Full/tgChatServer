@@ -1,3 +1,4 @@
+#include "GlobalSpace.h"
 #include "app/IApp.h"
 #include "ServiceRegistry.h"
 #include "HttpServer.h"
@@ -17,6 +18,9 @@ public:
 
     virtual bool onInit() override final
     {
+        // 启动bus客户端
+        GlobalSpace()->bus_->Start();
+
         // 1. 初始化服务注册中心
         serviceRegistry_ = std::make_unique<ServiceRegistry>();
 

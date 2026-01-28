@@ -1,7 +1,5 @@
 #pragma once
-#include "Busd.h"
-#include "Chat/chat_mgr.h"
-#include "TelegramBot/TelegramBot.h"
+#include "bus/IBus.h"
 #include <memory>
 #include <vector>
 
@@ -13,7 +11,7 @@ class ChatMgr;
 class ModuleManager
 {
 public:
-    explicit ModuleManager(Busd *bus, Timer *loop) : busd_(bus)
+    explicit ModuleManager()
     {
     }
 
@@ -39,7 +37,5 @@ private:
     std::shared_ptr<ChatMgr> chatMgr_;
 
 private:
-    Busd *busd_;
-    Timer *loop_;
     std::vector<ILogic *> modules_;
 };

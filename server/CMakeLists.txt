@@ -7,6 +7,9 @@ set(CMAKE_USE_CCACHE ON)
 # 生成 compile_commands.json 文件来为 clangd 工具提供语法支持
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# 生成调试信息
+set(CMAKE_BUILD_TYPE Debug)
+
 # -----------------------------
 # 基础配置
 # -----------------------------
@@ -107,6 +110,7 @@ add_subdirectory(common)
 add_subdirectory(core)
 add_subdirectory(center)
 add_subdirectory(busd)
+add_subdirectory(logic)
 
 # -----------------------------
 # 平台特定依赖

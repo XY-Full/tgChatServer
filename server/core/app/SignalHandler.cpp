@@ -1,4 +1,5 @@
 #include "SignalHandler.h"
+#include "Log.h"
 #include <condition_variable>
 #include <csignal>
 #include <cstring>
@@ -119,7 +120,7 @@ public:
         }
         else
         {
-            std::cerr << "信号队列已满，丢弃信号: " << signal_num << std::endl;
+            ELOG << "信号队列已满，丢弃信号: " << signal_num;
         }
     }
 
@@ -158,11 +159,11 @@ public:
             }
             catch (const std::exception &e)
             {
-                std::cerr << "信号处理器异常: " << e.what() << std::endl;
+                ELOG << "信号处理器异常: " << e.what();
             }
             catch (...)
             {
-                std::cerr << "信号处理器未知异常" << std::endl;
+                ELOG << "信号处理器未知异常";
             }
         }
 
@@ -207,19 +208,19 @@ bool SignalHandler::initialize()
 
     // 默认处理以下常见信号
     registerHandler(SIGTERM, [this](int sig) {
-        std::cout << "收到终止信号(SIGTERM)，准备优雅退出..." << std::endl;
+        ILOG << "收到终止信号(SIGTERM)，准备优雅退出...";
         setGlobalExitFlag(true);
     });
 
     registerHandler(SIGINT, [this](int sig) {
-        std::cout << "收到中断信号(SIGINT)，准备优雅退出..." << std::endl;
+        ILOG << "收到中断信号(SIGINT)，准备优雅退出...";
         setGlobalExitFlag(true);
     });
 
     registerHandler(
         SIGHUP,
         [this](int sig) {
-            std::cout << "收到挂起信号(SIGHUP)，准备重新加载配置..." << std::endl;
+            ILOG << "收到挂起信号(SIGHUP)，准备重新加载配置...";
             // 框架层会检测这个信号并调用onReload回调
         },
         true);
@@ -227,7 +228,7 @@ bool SignalHandler::initialize()
     registerHandler(
         SIGUSR1,
         [](int sig) {
-            std::cout << "收到用户信号1(SIGUSR1)" << std::endl;
+            ILOG << "收到用户信号1(SIGUSR1)";
             // 用户可以根据需要自定义处理
         },
         true);
@@ -235,7 +236,7 @@ bool SignalHandler::initialize()
     registerHandler(
         SIGUSR2,
         [](int sig) {
-            std::cout << "收到用户信号2(SIGUSR2)" << std::endl;
+            ILOG << "收到用户信号2(SIGUSR2)";
             // 用户可以根据需要自定义处理
         },
         true);
@@ -248,11 +249,11 @@ bool SignalHandler::initialize()
         {
             if (WIFEXITED(status))
             {
-                std::cout << "子进程 " << pid << " 正常退出，状态码: " << WEXITSTATUS(status) << std::endl;
+                ILOG << "子进程 " << pid << " 正常退出，状态码: " << WEXITSTATUS(status);
             }
             else if (WIFSIGNALED(status))
             {
-                std::cout << "子进程 " << pid << " 被信号 " << WTERMSIG(status) << " 终止" << std::endl;
+                ILOG << "子进程 " << pid << " 被信号 " << WTERMSIG(status) << " 终止";
             }
         }
     });
@@ -441,7 +442,7 @@ int SignalHandler::waitForSignal()
     sigfillset(&mask);
     if (sigprocmask(SIG_BLOCK, &mask, &old_mask) == -1)
     {
-        std::cerr << "sigprocmask failed: " << strerror(errno) << std::endl;
+        ELOG << "sigprocmask failed: " << strerror(errno);
         return -1;
     }
 
@@ -453,7 +454,7 @@ int SignalHandler::waitForSignal()
 
     if (received_signal == -1)
     {
-        std::cerr << "sigwaitinfo failed: " << strerror(errno) << std::endl;
+        ELOG << "sigwaitinfo failed: " << strerror(errno);
         return -1;
     }
 
@@ -479,7 +480,7 @@ int SignalHandler::waitForSignal(const std::set<int> &signals, int timeout_ms)
     sigset_t orig_mask;
     if (sigprocmask(SIG_BLOCK, &wait_mask, &orig_mask) == -1)
     {
-        std::cerr << "sigprocmask failed: " << strerror(errno) << std::endl;
+        ELOG << "sigprocmask failed: " << strerror(errno);
         return -2;
     }
 
@@ -506,7 +507,7 @@ int SignalHandler::waitForSignal(const std::set<int> &signals, int timeout_ms)
         {
             return -1; // 超时
         }
-        std::cerr << "sigtimedwait failed: " << strerror(errno) << std::endl;
+        ELOG << "sigtimedwait failed: " << strerror(errno);
         return -2; // 错误
     }
 
@@ -530,7 +531,7 @@ bool SignalHandler::installSignalHandler(int signal_num)
     // 安装信号处理器
     if (sigaction(signal_num, &sa, nullptr) != 0)
     {
-        std::cerr << "安装信号处理器失败：" << strerror(errno) << std::endl;
+        ELOG << "安装信号处理器失败：" << strerror(errno);
         return false;
     }
 
@@ -546,7 +547,7 @@ void SignalHandler::signalHandlerThreadFunc()
 {
     int signal_num;
 
-    std::cout << "信号处理线程已启动" << std::endl;
+    ILOG << "信号处理线程已启动";
 
     while (m_impl->running)
     {
@@ -559,20 +560,20 @@ void SignalHandler::signalHandlerThreadFunc()
             {
                 try
                 {
-                    std::cout << "异步处理信号: " << getSignalName(signal_num) << std::endl;
+                    ILOG << "异步处理信号: " << getSignalName(signal_num);
                     it->second(signal_num);
                 }
                 catch (const std::exception &e)
                 {
-                    std::cerr << "异步信号处理器异常: " << e.what() << std::endl;
+                    ELOG << "异步信号处理器异常: " << e.what();
                 }
                 catch (...)
                 {
-                    std::cerr << "异步信号处理器未知异常" << std::endl;
+                    ELOG << "异步信号处理器未知异常";
                 }
             }
         }
     }
 
-    std::cout << "信号处理线程已退出" << std::endl;
+    ILOG << "信号处理线程已退出";
 }
