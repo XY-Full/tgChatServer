@@ -21,7 +21,7 @@ void IBusNet::init(std::shared_ptr<Options> opts)
     opts_ = opts;
     bool center_opts = true;
 
-    if (opts_->center_ip.empty() || opts_->center_port.empty())
+    if (opts_->center_ip.empty() || opts_->center_port <= 0)
     {
         WLOG << "Center IP or port is empty, IBusNet will not connect to center";
         center_opts = false;
@@ -30,7 +30,7 @@ void IBusNet::init(std::shared_ptr<Options> opts)
     if (center_opts)
     {
         TcpClient_ = std::make_unique<TcpClient>(
-            opts_->center_ip, std::stoi(opts_->center_port), opts_->client_id,
+            opts_->center_ip, opts_->center_port, opts_->client_id,
             [this](uint64_t conn_id, std::shared_ptr<PackBase> msg) { this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg)); });
 
         if (TcpClient_->start())

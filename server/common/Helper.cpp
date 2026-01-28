@@ -307,6 +307,15 @@ int64_t Helper::GenUID()
     return uid;
 }
 
+std::string Helper::GetShortTypeName(const google::protobuf::Message& msg)
+{
+    const std::string& full = msg.GetTypeName();
+    auto pos = full.rfind('.');
+    if (pos == std::string::npos)
+        return full;
+    return full.substr(pos + 1);
+}
+
 std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Message &message, Type type, const uint64_t& co_id)
 {
     static std::atomic<uint32_t> now_seq_{0};
@@ -314,7 +323,8 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
 
     // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
     auto message_strlen = message.ByteSizeLong();
-    int32_t msg_id = kssMsgNameToId.at(message.GetTypeName());
+    DLOG << "CreateSSPack: message type=" << GetShortTypeName(message) << ", strlen=" << message_strlen;
+    int32_t msg_id = kssMsgNameToId.at(GetShortTypeName(message));
 
     auto& shm_slab_ = GlobalSpace()->shm_slab_;
 

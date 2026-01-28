@@ -6,7 +6,7 @@ void BusClientNet::genServiceInfo()
 {
     // BusClientNet 是普通服务，不是daemon
     local_service_info_.set_ip_(opts_->local_ip);
-    local_service_info_.set_port_(std::stoi(opts_->local_port));
+    local_service_info_.set_port_(opts_->local_port);
     local_service_info_.set_is_daemon_(false);  // 关键：标记为非daemon
     local_service_info_.set_id_(opts_->client_id);
     local_service_info_.set_svr_name_("service_" + std::to_string(opts_->service_id));

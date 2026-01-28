@@ -31,6 +31,7 @@ public:
     static uint64_t timeGetTimeMS();
     static uint64_t timeGetTimeUS();
     static int64_t GenUID();
+    static std::string GetShortTypeName(const google::protobuf::Message& msg);
     static std::shared_ptr<AppMsgWrapper> CreateSSPack(const google::protobuf::Message &message, Type type = Type::S2SReq, const uint64_t& co_id = 0);
     static void DeleteSSPack(const AppMsgWrapper& pack);
 };

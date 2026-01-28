@@ -17,9 +17,9 @@ struct Options
     uint8_t instance_id = 0;
     size_t local_ring_size = 1 << 20; // 1MB
     std::string local_ip = "127.0.0.1";
-    std::string local_port = "3089";
+    int32_t local_port = 3089;
     std::string center_ip = "";
-    std::string center_port = "";
+    int32_t center_port = 0;
     // =======配置参数=======
 
     std::string client_id = "";
@@ -32,6 +32,12 @@ struct Options
         instance_id = config_manager.getValue<uint8_t>("instance_id", 0);
 
         local_ring_size = config_manager.getValue<size_t>("local_ring_size", 1 << 20);
+
+        local_ip = config_manager.getValue<std::string>("local_ip", "127.0.0.1");
+        local_port = config_manager.getValue<int32_t>("local_port", 3089);
+
+        center_ip = config_manager.getValue<std::string>("center_ip", "");
+        center_port = config_manager.getValue<int32_t>("center_port", 0);
 
         client_id = std::to_string(region_id) + "." + std::to_string(zone_id) + "." + std::to_string(service_id) + "." +
                     std::to_string(instance_id);

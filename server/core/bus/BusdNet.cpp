@@ -10,7 +10,7 @@ void BusdNet::genServiceInfo()
 {
     // BusdNet 是daemon服务
     local_service_info_.set_ip_(opts_->local_ip);
-    local_service_info_.set_port_(std::stoi(opts_->local_port));
+    local_service_info_.set_port_(opts_->local_port);
     local_service_info_.set_is_daemon_(true);
     local_service_info_.set_id_("busd_" + opts_->client_id);
     local_service_info_.set_svr_name_("busd");
