@@ -7,3 +7,4 @@ server/config.json
 third
 .vscode
 proto_files
+bin

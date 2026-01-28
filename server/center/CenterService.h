@@ -60,9 +60,13 @@ public:
 
     virtual void onCleanup() override final
     {
+        ILOG << "CenterApp::onCleanup() called";
+        
         // 1. 停止TCP注册器
         if (tcpRegistrar_) {
+            ILOG << "Stopping TcpRegistrar...";
             tcpRegistrar_->stop();
+            ILOG << "TcpRegistrar stopped";
             tcpRegistrar_.reset();
         }
 
@@ -74,14 +78,20 @@ public:
         
         // 3. 停止健康检查器
         if (healthChecker_) {
+            ILOG << "Stopping HealthChecker...";
             healthChecker_->stop();
+            ILOG << "HealthChecker stopped";
             healthChecker_.reset();
         }
 
         // 4. 清理服务注册中心
         if (serviceRegistry_) {
+            ILOG << "Resetting ServiceRegistry...";
             serviceRegistry_.reset();
+            ILOG << "ServiceRegistry reset";
         }
+        
+        ILOG << "CenterApp::onCleanup() completed";
     }
 
     virtual bool onReload() override final

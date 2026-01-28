@@ -3,6 +3,8 @@
 #include "ServiceRegistry.h"
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 class AppMsg;
 
@@ -24,4 +26,6 @@ private:
     std::atomic<bool> stop_{false};
     std::chrono::seconds interval_{5};
     std::chrono::seconds timeout_{2};
+    std::mutex cv_mutex_;
+    std::condition_variable cv_;
 };

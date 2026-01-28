@@ -186,9 +186,14 @@ void TerminalInterface::telnetServerThread()
         int client_socket = accept(m_telnet_socket, (struct sockaddr *)&client_addr, &client_len);
         if (client_socket == -1)
         {
+            // 被信号中断是正常的，继续循环检查 m_running 状态
+            if (errno == EINTR)
+            {
+                continue;
+            }
             if (m_running.load())
             {
-                std::cerr << "Failed to accept telnet connection" << std::endl;
+                std::cerr << "Failed to accept telnet connection: " << strerror(errno) << std::endl;
             }
             continue;
         }
@@ -211,8 +216,19 @@ void TerminalInterface::telnetClientThread(int client_socket)
     while (m_running.load())
     {
         int bytes_received = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_received <= 0)
+        if (bytes_received < 0)
         {
+            // 被信号中断，继续循环
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            // 其他错误，退出
+            break;
+        }
+        if (bytes_received == 0)
+        {
+            // 连接关闭
             break;
         }
 

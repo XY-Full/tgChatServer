@@ -316,7 +316,7 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
     auto message_strlen = message.ByteSizeLong();
     int32_t msg_id = kssMsgNameToId.at(message.GetTypeName());
 
-    auto shm_slab_ = GlobalSpace()->shm_slab_;
+    auto& shm_slab_ = GlobalSpace()->shm_slab_;
 
     uint32_t data_len = message_strlen;
     uint32_t pack_len = sizeof(AppMsg) + data_len;

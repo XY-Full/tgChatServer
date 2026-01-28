@@ -525,8 +525,10 @@ bool SignalHandler::installSignalHandler(int signal_num)
     // 在信号处理期间，阻塞所有信号
     sigfillset(&sa.sa_mask);
 
-    // 设置标志
-    sa.sa_flags = SA_RESTART; // 自动重启被中断的系统调用
+    // 不设置 SA_RESTART 标志
+    // 这样信号可以中断阻塞的系统调用（如 accept, recv, epoll_wait 等），
+    // 使程序能够快速响应 Ctrl+C 等信号并退出
+    sa.sa_flags = 0;
 
     // 安装信号处理器
     if (sigaction(signal_num, &sa, nullptr) != 0)

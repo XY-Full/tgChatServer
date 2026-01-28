@@ -157,6 +157,10 @@ void TcpServer::handleNewConnection(int fd)
             {
                 break; // 没有新连接了
             }
+            else if (errno == EINTR)
+            {
+                continue; // 被信号中断，继续尝试
+            }
             else
             {
                 ELOG << "Accept failed, errno: " << errno;

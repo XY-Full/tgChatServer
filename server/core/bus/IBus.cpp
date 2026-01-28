@@ -304,6 +304,11 @@ private:
                     ELOG << "Coroutine scheduler not initialized";
                 }
             }
+            else
+            {
+                // CRITICAL FIX: Avoid busy-waiting when queue is empty
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
         }
 
         ILOG << "Exiting IO loop";

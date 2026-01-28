@@ -26,6 +26,7 @@ void HealthChecker::start(std::chrono::seconds interval, std::chrono::seconds ti
 void HealthChecker::stop()
 {
     stop_ = true;
+    cv_.notify_all();  // Wake up the thread immediately
     if (thr_.joinable())
         thr_.join();
 }
@@ -49,7 +50,11 @@ void HealthChecker::loop()
         {
             std::cerr << "HealthChecker 异常: " << e.what() << " ";
         }
-        std::this_thread::sleep_for(interval_);
+        
+        // Use condition variable with timeout instead of sleep_for
+        // This allows immediate wakeup when stop() is called
+        std::unique_lock<std::mutex> lock(cv_mutex_);
+        cv_.wait_for(lock, interval_, [this]() { return stop_.load(); });
     }
 }
 

@@ -10,25 +10,33 @@
 
 IBusNet::~IBusNet()
 {
-    // CRITICAL FIX #1: No need to manually delete - smart pointers handle cleanup
     if (TcpClient_)
     {
         TcpClient_->stop();
     }
-    // LocalBusdShmBuffer_ and LocalServiceMap_ will be automatically cleaned up
 }
 
 void IBusNet::init(std::shared_ptr<Options> opts)
 {
     opts_ = opts;
+    bool center_opts = true;
 
-    TcpClient_ = std::make_unique<TcpClient>(
-        opts_->center_ip, std::stoi(opts_->center_port), opts_->client_id,
-        [this](uint64_t conn_id, std::shared_ptr<PackBase> msg) { this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg)); });
-
-    if (TcpClient_->start())
+    if (opts_->center_ip.empty() || opts_->center_port.empty())
     {
-        has_center_ = true;
+        WLOG << "Center IP or port is empty, IBusNet will not connect to center";
+        center_opts = false;
+    }
+
+    if (center_opts)
+    {
+        TcpClient_ = std::make_unique<TcpClient>(
+            opts_->center_ip, std::stoi(opts_->center_port), opts_->client_id,
+            [this](uint64_t conn_id, std::shared_ptr<PackBase> msg) { this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg)); });
+
+        if (TcpClient_->start())
+        {
+            has_center_ = true;
+        }
     }
 
     CenterMessageHandlers_ = {
@@ -84,7 +92,7 @@ void IBusNet::onRecvMsg(const AppMsg &msg)
 
 void IBusNet::regist2Center()
 {
-    while (!ready_)
+    while (!ready_ && has_center_)
     {
         ss::RegistToCenter msg;
         ss::RegistToCenter::Request *request = msg.mutable_request();

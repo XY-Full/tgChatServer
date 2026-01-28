@@ -73,31 +73,51 @@ int IApp::run(int argc, char *argv[])
     else
     {
         // Normal mode
+        ILOG << "Starting main loop...";
         mainLoop();
+        ILOG << "Main loop exited";
     }
 
+    ILOG << "Calling onCleanup()";
     onCleanup();
+    ILOG << "onCleanup() completed";
     return 0;
 }
 
 void IApp::stop()
 {
+    ILOG << "IApp::stop() called, setting m_running=false";
     m_running = false;
     m_cv.notify_all();
 
+    // Stop BusClient first to shutdown IO thread
+    if (m_bus_client)
+    {
+        ILOG << "Stopping BusClient...";
+        m_bus_client->Stop();
+        ILOG << "BusClient stopped";
+    }
+
     if (m_tick_thread.joinable())
     {
+        ILOG << "Joining tick thread...";
         m_tick_thread.join();
+        ILOG << "Tick thread joined";
     }
 
     if (m_terminal_thread.joinable())
     {
+        ILOG << "Joining terminal thread...";
         m_terminal_thread.join();
+        ILOG << "Terminal thread joined";
     }
 
+    ILOG << "Stopping terminal...";
     m_terminal->stop();
+    ILOG << "Terminal stopped";
 
     delete GlobalSpace()->timer_;
+    ILOG << "IApp::stop() completed";
 }
 
 ConfigManager &IApp::getContext()
@@ -153,22 +173,28 @@ bool IApp::initialize(int argc, char *argv[])
     }
 
     // 初始化信号处理器
+    // 注意：SignalHandler::initialize() 内部会自动注册 SIGINT/SIGTERM/SIGHUP 等信号
+    // 这里不需要再重复注册，否则会覆盖默认配置
     m_signal_handler->initialize();
+    
+    // 重新注册信号处理器以添加应用层的退出逻辑
     m_signal_handler->registerHandler(SIGTERM, [this](int signal) {
         std::cout << "Received SIGTERM, shutting down..." << std::endl;
         m_running = false;
         m_cv.notify_all();
-    });
+    }, false);  // 使用同步处理确保立即执行
+    
     m_signal_handler->registerHandler(SIGINT, [this](int signal) {
         std::cout << "Received SIGINT, shutting down..." << std::endl;
         m_running = false;
         m_cv.notify_all();
-    });
+    }, false);  // 使用同步处理确保立即执行
+    
     m_signal_handler->registerHandler(SIGHUP, [this](int signal) {
         std::cout << "Received SIGHUP, reloading..." << std::endl;
         m_should_reload = true;
         m_cv.notify_all();
-    });
+    }, true);  // SIGHUP 可以异步处理
 
     // 注册内置终端命令
     registerTerminalCommand(
@@ -282,17 +308,7 @@ bool IApp::initialize(int argc, char *argv[])
 
 void IApp::mainLoop()
 {
-    std::thread signal_thread([this]() {
-        while (m_running)
-        {
-            int signal = m_signal_handler->waitForSignal();
-            if (signal > 0)
-            {
-                handleSignal(signal);
-            }
-        }
-    });
-
+    ILOG << "Entering main loop, m_running=" << m_running;
     while (m_running)
     {
         if (unlikely(m_should_reload))
@@ -313,11 +329,7 @@ void IApp::mainLoop()
         std::unique_lock<std::mutex> lock(m_mutex);
         m_cv.wait_for(lock, std::chrono::milliseconds(100), [this]() { return !m_running || m_should_reload; });
     }
-
-    if (signal_thread.joinable())
-    {
-        signal_thread.join();
-    }
+    ILOG << "Exited main loop, m_running=" << m_running;
 }
 
 void IApp::tickThread()

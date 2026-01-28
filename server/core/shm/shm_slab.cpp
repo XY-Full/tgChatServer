@@ -48,7 +48,7 @@ uint32_t ShmSlab::RoundToClassSize(uint32_t bytes)
     return (s + 7u) & ~7u;
 }
 
-ShmSlab::ShmSlab(const std::string& shm_name, uint32_t region_off, uint32_t region_size, uint32_t total)
+ShmSlab::ShmSlab(const std::string& shm_name, uint32_t total, uint32_t region_off, uint32_t region_size)
     : shm_name_(shm_name), total_(total)
 {
     auto is_create = shm_manager_.Open(shm_name_, total);
