@@ -65,7 +65,7 @@ bool BusdNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrap
             remote_ip, 
             info.port_(),
             opts_->client_id + "_to_" + remote_daemon_key,
-            [this](uint64_t conn_id, std::shared_ptr<PackBase> response_msg) {
+            [this](uint64_t conn_id, std::shared_ptr<AppMsg> response_msg) {
                 // 接收到远程busd返回的响应消息，转发回本地服务
                 this->onRecvFromRemoteDaemon(conn_id, response_msg);
             }
@@ -107,17 +107,9 @@ bool BusdNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrap
     return true;
 }
 
-void BusdNet::onRecvFromRemoteDaemon(uint64_t conn_id, std::shared_ptr<PackBase> pack)
+void BusdNet::onRecvFromRemoteDaemon(uint64_t conn_id, std::shared_ptr<AppMsg> app_msg)
 {
     // 从远程busd接收到消息，需要转发到本地对应的服务
-    auto app_msg = std::dynamic_pointer_cast<AppMsg>(pack);
-    if (!app_msg)
-    {
-        ELOG << "BusdNet: Invalid message type received from remote daemon";
-        return;
-    }
-
-    // 获取目标服务名
     std::string dst_service_name(app_msg->dst_name_, strnlen(app_msg->dst_name_, sizeof(app_msg->dst_name_)));
     
     // 查找本地服务

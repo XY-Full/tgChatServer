@@ -96,7 +96,10 @@ public:
     {
         // 快速路径：直接尝试获取锁
         if (TryLock())
+        {
+            // std::cout << "ShmSpinLock: acquired lock on first try";
             return;
+        }
 
         // 慢速路径：指数退避自旋
         uint32_t spins = 1;
@@ -106,7 +109,10 @@ public:
         {
             // 尝试获取锁
             if (TryLock())
+            {
+                // std::cout << "ShmSpinLock: acquired lock after " << attempts << " attempts and " << spins << " spins";
                 return;
+            }
 
             // 自旋等待
             for (uint32_t i = 0; i < spins; ++i)

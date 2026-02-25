@@ -38,7 +38,6 @@ private:
     std::unordered_map<int64_t, std::shared_ptr<Connection>> conn_map_;
     std::unordered_map<int, int64_t> fd_to_conn_; // 快速查找映射
     std::atomic<int64_t> next_conn_id_{0};
-    ShmRingBuffer<uint8_t>* recv_buffer_;
 
     EventLoopWrapper epoller_;
 
@@ -47,6 +46,8 @@ private:
     ConnHandler conn_handler_;
 
     std::string shm_name_;
+
+    uint64_t timer_id_;
 
     static constexpr int HEARTBEAT_TIMEOUT_SECONDS = 30;
     static constexpr int MAX_EVENTS = 128;

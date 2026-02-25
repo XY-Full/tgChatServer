@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #define MAGIC_VERSION 0x01
+#define MAX_PACKET_SIZE 1048576 // 1MB
 
 #pragma pack(push, 1)
 
@@ -29,7 +30,7 @@ struct Header
 class PackBase
 {
 public:
-    virtual ~PackBase()
+    ~PackBase()
     {
         if (data_)
         {

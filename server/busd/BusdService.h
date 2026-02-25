@@ -38,7 +38,7 @@ public:
         
         tcp_server_ = std::make_unique<TcpServer>(
             listen_port,
-            [this](uint64_t conn_id, std::shared_ptr<PackBase> msg) {
+            [this](uint64_t conn_id, std::shared_ptr<AppMsg> msg) {
                 this->onRecvFromRemoteBusd(conn_id, msg);
             },
             "busd_tcp_recv",
@@ -93,15 +93,8 @@ public:
 
 private:
     // 处理来自其他机器busd的消息
-    void onRecvFromRemoteBusd(uint64_t conn_id, std::shared_ptr<PackBase> msg)
+    void onRecvFromRemoteBusd(uint64_t conn_id, std::shared_ptr<AppMsg> app_msg)
     {
-        auto app_msg = std::dynamic_pointer_cast<AppMsg>(msg);
-        if (!app_msg)
-        {
-            ELOG << "BusdApp: Invalid message type received from remote busd, conn_id: " << conn_id;
-            return;
-        }
-
         // 转发到本地服务
         std::string dst_service(app_msg->dst_name_, strnlen(app_msg->dst_name_, sizeof(app_msg->dst_name_)));
         

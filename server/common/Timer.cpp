@@ -102,7 +102,10 @@ void Timer::workerThread()
             else
             {
                 // 在下一个任务触发前等待
-                cv_.wait_until(lock, nextIt->second.nextRun);
+                // 注意：wait_until 内部会临时释放锁，期间 nextIt 可能被 cancel() 删除
+                // 因此必须先将 nextRun 拷贝出来，wait_until 返回后重新循环查找，不能复用 nextIt
+                auto nextRun = nextIt->second.nextRun;
+                cv_.wait_until(lock, nextRun);
             }
         }
     }

@@ -55,12 +55,19 @@ class ShmSlab
 public:
     // 适用创建或附加到共享内存，并将整块共享内存作为slab
     // shm_name: slab共享内存文件的名字， total: 总大小， region_off/size: slab管理的区域（相对base的偏移和大小），默认整块内存都作为slab
-    ShmSlab(const std::string& shm_name, uint32_t total = 40960, uint32_t region_off = 0, uint32_t region_size = 40960);
+    explicit ShmSlab(const std::string& shm_name, uint32_t total = 16 * 64 * 1024 /* 1MB */, uint32_t region_off = 0, uint32_t region_size = 16 * 64 * 1024);
 
     // 适用于已有一块共享内存空间，在此基础上分配一块作为slab
     // base: 共享内存基址；total: 共享内存总大小；region_off/region_size：分配器管理区间
     // create=true 时初始化，否则附着
-    ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create);
+    explicit ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create);
+
+    ShmSlab(const ShmSlab &) = delete;
+    ShmSlab &operator=(const ShmSlab &) = delete;
+    ShmSlab(ShmSlab &&) = delete;
+    ShmSlab &operator=(ShmSlab &&) = delete;
+    ShmSlab() = delete;
+    ~ShmSlab();
 
     // 分配/释放：返回/接受 偏移量（0=失败）
     uint32_t Alloc(uint32_t bytes);

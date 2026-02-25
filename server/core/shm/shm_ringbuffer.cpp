@@ -8,7 +8,7 @@ template <> bool ShmRingBuffer<uint8_t>::Peek(uint8_t *items, size_t count)
 
     std::lock_guard<ShmSpinLock> guard(*lock_);
 
-    if (IsEmpty() || Available() < count)
+    if (Used() < count)
     {
         return false;
     }
@@ -73,7 +73,7 @@ template <> bool ShmRingBuffer<uint8_t>::Pop(uint8_t *items, size_t count)
 
     std::lock_guard<ShmSpinLock> guard(*lock_);
 
-    if (IsEmpty() || Available() < count)
+    if (Used() < count)
     {
         return false;
     }
@@ -84,7 +84,7 @@ template <> bool ShmRingBuffer<uint8_t>::Pop(uint8_t *items, size_t count)
     {
         // 一次性拷贝连续的数据
         memcpy(items, buffer_ + header_->head, count);
-        header_->head += count;
+        header_->head = (header_->head + count) % ring_size_;
     }
     else
     {

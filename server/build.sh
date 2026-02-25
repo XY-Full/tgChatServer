@@ -16,7 +16,7 @@ build_project() {
     log "开始 CMake 构建..."
     mkdir -p build
     cd build
-    cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+    cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug ..
     make -j8
     cd ..
 }

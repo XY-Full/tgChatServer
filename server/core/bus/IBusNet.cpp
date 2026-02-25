@@ -31,7 +31,7 @@ void IBusNet::init(std::shared_ptr<Options> opts)
     {
         TcpClient_ = std::make_unique<TcpClient>(
             opts_->center_ip, opts_->center_port, opts_->client_id,
-            [this](uint64_t conn_id, std::shared_ptr<PackBase> msg) { this->onRecvMsg(reinterpret_cast<AppMsg &>(*msg)); });
+            [this](uint64_t conn_id, std::shared_ptr<AppMsg> msg) { this->onRecvMsg(*msg); });
 
         if (TcpClient_->start())
         {

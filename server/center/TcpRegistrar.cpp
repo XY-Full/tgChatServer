@@ -40,13 +40,12 @@ void TcpRegistrar::stop()
     server_.stop();
 }
 
-void TcpRegistrar::handleClient(uint64_t client_fd, std::shared_ptr<PackBase> msg)
+void TcpRegistrar::handleClient(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
 {
     auto msg_id = msg->msg_id_;
-    auto app_msg = std::static_pointer_cast<AppMsg>(msg);
-    ILOG << "TcpRegistrar::handleClient, msg_id: " << msg_id << ", from: " << app_msg->src_name_;
+    ILOG << "TcpRegistrar::handleClient, msg_id: " << msg_id << ", from: " << msg->src_name_;
     if(msg_handler_.find(msg_id) != msg_handler_.end())
-        msg_handler_[msg_id](client_fd, app_msg);
+        msg_handler_[msg_id](client_fd, msg);
 }
 
 void TcpRegistrar::handleDisconnect(uint64_t client_fd)
@@ -61,7 +60,7 @@ void TcpRegistrar::handleDisconnect(uint64_t client_fd)
         {
             auto inst = it2->second;
             reg_.deregister_instance(inst->svc_name, inst->id);
-            std::cout << "TcpRegistrar: connection closed, deregistered " << inst->to_string() << " ";
+            ILOG << "TcpRegistrar: connection closed, deregistered " << inst->to_string() << " ";
         }
         fd_to_id_.erase(it);
         fd_to_inst_.erase(client_fd);
@@ -70,6 +69,8 @@ void TcpRegistrar::handleDisconnect(uint64_t client_fd)
 
 void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
 {
+    ILOG << "TcpRegistrar::onRegist, from: " << msg->src_name_;
+    
     auto recvMsg = std::make_shared<ss::RegistToCenter>();
     recvMsg->ParsePartialFromArray(msg->data_, msg->data_len_);
     ILOG << recvMsg->Utf8DebugString();
@@ -94,7 +95,7 @@ void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
         fd_to_inst_[client_fd] = inst;
     }
 
-    auto response_pack = Helper::CreateSSPack(*response);
+    auto response_pack = Helper::CreateSSPack(*replyMsg);
     server_.send(client_fd, response_pack);
 }
 

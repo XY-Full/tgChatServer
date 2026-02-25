@@ -5,7 +5,6 @@
 #include "TcpConnection.h"
 #include "Timer.h"
 
-
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -26,8 +25,8 @@ TcpClient::TcpClient(const std::string &ip, int port, std::string shm_name, Recv
     WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 
-    conn_ = std::make_shared<Connection>(sock_, -1, epoller_, recv_handler_, [this](int64_t) { stop(); }, tcp_recv_buffer_);
-    tcp_recv_buffer_ = new ShmRingBuffer<uint8_t>(shm_name_ + "_tcp_recv");
+    tcp_recv_buffer_ = std::make_unique<ShmRingBuffer<uint8_t>>(shm_name_ + "_tcp_recv");
+    (void)tcp_recv_buffer_; // Connection 独立创建自己的 buffer，此处预留为备用
 }
 
 TcpClient::~TcpClient()
@@ -36,12 +35,13 @@ TcpClient::~TcpClient()
 #ifdef _WIN32
     WSACleanup();
 #endif
-
-    delete tcp_recv_buffer_;
+    // tcp_recv_buffer_ 由 unique_ptr 管理，自动释放
 }
 
 bool TcpClient::start()
 {
+    ILOG << "Starting TcpClient to connect to " << ip_ << ":" << port_ << "...";
+
     running_ = true;
     bool result = connectToServer();
 
@@ -52,6 +52,7 @@ bool TcpClient::start()
 
 void TcpClient::stop()
 {
+    ELOG << "Stopping TcpClient...";
     running_ = false;
 
     conn_->close();
@@ -96,6 +97,13 @@ bool TcpClient::connectToServer()
         exit(1);
     }
     last_active_time_ = std::chrono::steady_clock::now();
+
+    // TcpClient 每次重连会重建 Connection，但 tcp_recv_buffer_ 只创建一次可复用
+    // 将所有权临时转移给 Connection，conn_ 析构时归还（用 aliasing shared_ptr 保持 buffer 存活）
+    // 简单做法：传裸指针给 Connection，生命周期由 TcpClient 保证（conn_ 析构前 TcpClient 不会销毁 buffer）
+    conn_ = std::make_shared<Connection>(
+        sock_, -1, epoller_, recv_handler_, [this](int64_t) { stop(); },
+        std::make_unique<ShmRingBuffer<uint8_t>>(shm_name_ + "_tcp_recv_conn"));
 
     ILOG << "Connected to server " << ip_ << ":" << port_;
     return true;

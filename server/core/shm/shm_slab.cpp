@@ -1,4 +1,5 @@
 #include "shm_slab.h"
+#include "Log.h"
 #include "shm.h"
 #include <cassert>
 #include <stdexcept>
@@ -46,6 +47,11 @@ uint32_t ShmSlab::RoundToClassSize(uint32_t bytes)
     if (s > 8192)
         s = pow2ceil(bytes); // 超过最大类，由上层按大块策略处理（此处仍返回对齐值）
     return (s + 7u) & ~7u;
+}
+
+ShmSlab::~ShmSlab()
+{
+    shm_manager_.Close(false);
 }
 
 ShmSlab::ShmSlab(const std::string& shm_name, uint32_t total, uint32_t region_off, uint32_t region_size)
@@ -134,7 +140,10 @@ uint32_t ShmSlab::NewPage(uint32_t cls)
         uint32_t cur = hdr_->bump.load(std::memory_order_relaxed);
         uint32_t next = cur + PAGE_SIZE;
         if (next > hdr_->end)
+        {
+            ELOG << "ShmSlab: out of memory when allocating new page for class " << cls;
             return 0; // 空间耗尽
+        }
         if (hdr_->bump.compare_exchange_weak(cur, next, std::memory_order_acq_rel))
         {
             // 初始化本页
@@ -197,9 +206,11 @@ uint32_t ShmSlab::Alloc(uint32_t bytes)
     // 优先从 free_list 取
     if (c.free_list == 0)
     {
+        ILOG << "ShmSlab: class " << cls << " free_list empty, allocating new page";
         // 尝试新页
         if (NewPage(cls) == 0 && c.free_list == 0)
         {
+            ELOG << "ShmSlab: class " << cls << " alloc failed, out of memory";
             lock_.Unlock();
             return 0;
         }

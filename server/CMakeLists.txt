@@ -10,6 +10,24 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 生成调试信息
 set(CMAKE_BUILD_TYPE Debug)
 
+# 开启ASan
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+if(ENABLE_ASAN AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "ASan enabled")
+
+    add_compile_options(
+        -fsanitize=address
+        -fno-omit-frame-pointer
+        -fno-common
+        -g
+    )
+
+    add_link_options(
+        -fsanitize=address
+    )
+endif()
+
 # -----------------------------
 # 基础配置
 # -----------------------------

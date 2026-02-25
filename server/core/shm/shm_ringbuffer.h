@@ -51,6 +51,9 @@ public:
     // 从缓冲区弹出消息
     bool Pop(T& item);
 
+    // 从缓冲区丢弃消息
+    bool Drop(size_t count);
+
     // 推送消息到头部
     bool PushFront(const T* item, size_t count = 1);
 
@@ -123,8 +126,10 @@ ShmRingBuffer<T>::ShmRingBuffer(const std::string &shm_name, size_t ring_size)
 
     shm_addr_ = shm_manager_.GetAddress();
 
-    bool needInit = result == SHM_CREATE ? true : false;
-    InitShm(needInit);
+    // 无论是新建还是复用已有共享内存，都强制重新初始化 header
+    // recv_buffer 是进程内临时缓冲，不需要跨重启持久化，
+    // 否则进程重启后会读到上次遗留的 head/tail，导致 Size() 异常
+    InitShm(true);
 }
 
 template <typename T> ShmRingBuffer<T>::~ShmRingBuffer()
@@ -243,6 +248,21 @@ template <typename T> bool ShmRingBuffer<T>::Push(const T &item)
     // 复制数据到缓冲区
     buffer_[header_->tail] = item;
     header_->tail = (header_->tail + 1) % ring_size_;
+
+    return true;
+}
+
+template <typename T> bool ShmRingBuffer<T>::Drop(size_t count)
+{
+    std::lock_guard<ShmSpinLock> guard(*lock_);
+
+    if (IsEmpty())
+    {
+        return false;
+    }
+
+    // 丢弃数据
+    header_->head = (header_->head + count) % ring_size_;
 
     return true;
 }

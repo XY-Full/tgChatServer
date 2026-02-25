@@ -2,16 +2,19 @@
 #include "EventLoopWrapper.h"
 #include "GlobalSpace.h"
 #include "Log.h"
-#include "MsgWrapper.h"
+#include "AppMsg.h"
 #include "TcpServer.h"
 #include <cstring>
 #include <errno.h>
 #include <memory>
 #include <unistd.h>
+#include "Helper.h"
 
 Connection::Connection(int fd, int64_t conn_id, EventLoopWrapper &epoller,
-                       RecvHandler recv_handler, CloseHandler close_handler, ShmRingBuffer<uint8_t> *recv_buffer)
-    : fd_(fd), conn_id_(conn_id), epoller_(&epoller), recv_handler_(recv_handler), close_handler_(close_handler), recv_buffer_(recv_buffer)
+                       RecvHandler recv_handler, CloseHandler close_handler,
+                       std::unique_ptr<ShmRingBuffer<uint8_t>> recv_buffer)
+    : fd_(fd), conn_id_(conn_id), epoller_(&epoller), recv_handler_(recv_handler), close_handler_(close_handler),
+      recv_buffer_(std::move(recv_buffer))
 {
     updateActiveTime();
 
@@ -32,11 +35,8 @@ void Connection::onReadable()
         ssize_t n = read(fd_, buffer, sizeof(buffer));
         if (n > 0)
         {
-            // 在接收数据前添加连接ID头
-            uint8_t header[sizeof(int64_t)];
-            memcpy(header, &conn_id_, sizeof(conn_id_));
-            recv_buffer_->Push(header, sizeof(header));
             recv_buffer_->Push(buffer, n);
+            DLOG << "Read " << n << " bytes from conn_id: " << conn_id_ << ", current recv buffer size: " << recv_buffer_->Size();
             updateActiveTime();
         }
         else if (n == 0)
@@ -111,6 +111,8 @@ void Connection::send(std::shared_ptr<AppMsgWrapper> pack)
 
     ssize_t sent = sendmsg(fd_, &msg, MSG_ZEROCOPY);
 
+    ILOG << "Attempted to send " << iov.iov_len << " bytes to conn_id: " << conn_id_ << ", sent: " << sent;
+
     if (sent == static_cast<ssize_t>(pack_ptr->header_.pack_len_))
     {
         // 完整发送
@@ -162,32 +164,50 @@ void Connection::close()
 
 void Connection::processRecvBuffer()
 {
-    // 解析接收缓冲区中的数据包
-    while (recv_buffer_->Size() >= sizeof(Header) + sizeof(int64_t))
+    while (true)
     {
-        // 先读取连接ID头
-        int64_t recv_conn_id = 0;
-        recv_buffer_->Pop(reinterpret_cast<uint8_t *>(&recv_conn_id), sizeof(recv_conn_id));
+        // 检查是否有足够数据读 Header
+        if (recv_buffer_->Size() < sizeof(Header)) break;
 
-        auto msg_base = std::make_shared<PackBase>();
-        recv_buffer_->Pop(reinterpret_cast<uint8_t *>(msg_base.get()), sizeof(Header));
+        ILOG << "Processing recv buffer for conn_id: " << conn_id_ << ", current buffer size: " << recv_buffer_->Size();
 
-        // 设置消息头中的连接ID
-        msg_base->header_.conn_id_ = recv_conn_id;
+        // Peek Header
+        uint8_t peek_buf[sizeof(Header)];
+        recv_buffer_->Peek(peek_buf, sizeof(peek_buf));
 
-        if (unlikely(msg_base->header_.pack_len_ <= 0 || recv_buffer_->Size() < msg_base->header_.pack_len_))
+        Header header;
+        memcpy(&header, peek_buf, sizeof(Header));
+
+        if (unlikely(header.version_ != MAGIC_VERSION))
         {
-            // 将剩下的数据返还给接收缓冲区
-            recv_buffer_->PushFront(reinterpret_cast<uint8_t *>(msg_base.get()), sizeof(Header));
-            recv_buffer_->PushFront(reinterpret_cast<uint8_t *>(&recv_conn_id), sizeof(recv_conn_id));
-            break; // 数据不完整，等待更多数据
+            ELOG << "Invalid packet version: " << (int)header.version_ << ", conn_id: " << conn_id_;
+            recv_buffer_->Drop(sizeof(Header));
+            break;
         }
 
-        // 读取剩余数据
-        recv_buffer_->Pop(reinterpret_cast<uint8_t *>(msg_base.get()) + sizeof(Header),
-                          msg_base->header_.pack_len_ - sizeof(Header));
+        if (unlikely(header.pack_len_ <= 0 || header.pack_len_ > MAX_PACKET_SIZE))
+        {
+            ELOG << "Invalid packet length: " << header.pack_len_;
+            recv_buffer_->Drop(sizeof(Header));
+            break;
+        }
 
-        // 修复回调调用，添加连接ID参数
-        recv_handler_(recv_conn_id, msg_base);
+        // 等待完整包
+        if (recv_buffer_->Size() < header.pack_len_) break;
+
+        // 分配 pack_len 字节的连续内存，与发包时布局完全对称：
+        // [AppMsg 结构体][body 数据]
+        // 不能用 make_shared<AppMsg>()，那只分配 sizeof(AppMsg)，body 会越界
+        uint8_t *raw = new uint8_t[header.pack_len_];
+        recv_buffer_->Pop(raw, header.pack_len_);
+
+        auto *msg_base = reinterpret_cast<AppMsg *>(raw);
+        // 修正 data_ 指针：指向紧跟在 AppMsg 结构体后面的 body 区域
+        msg_base->data_ = reinterpret_cast<char *>(raw) + sizeof(AppMsg);
+        msg_base->header_.conn_id_ = conn_id_;
+
+        // 用自定义 deleter 管理原始内存（不能用默认 delete，必须 delete[]）
+        auto msg_ptr = std::shared_ptr<AppMsg>(msg_base, [raw](AppMsg *) { delete[] raw; });
+        recv_handler_(conn_id_, msg_ptr);
     }
 }

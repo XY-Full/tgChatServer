@@ -179,19 +179,19 @@ bool IApp::initialize(int argc, char *argv[])
     
     // 重新注册信号处理器以添加应用层的退出逻辑
     m_signal_handler->registerHandler(SIGTERM, [this](int signal) {
-        std::cout << "Received SIGTERM, shutting down..." << std::endl;
+        ELOG << "Received SIGTERM, shutting down...";
         m_running = false;
         m_cv.notify_all();
     }, false);  // 使用同步处理确保立即执行
     
     m_signal_handler->registerHandler(SIGINT, [this](int signal) {
-        std::cout << "Received SIGINT, shutting down..." << std::endl;
+        ELOG << "Received SIGINT, shutting down...";
         m_running = false;
         m_cv.notify_all();
     }, false);  // 使用同步处理确保立即执行
     
     m_signal_handler->registerHandler(SIGHUP, [this](int signal) {
-        std::cout << "Received SIGHUP, reloading..." << std::endl;
+        ILOG << "Received SIGHUP, reloading...";
         m_should_reload = true;
         m_cv.notify_all();
     }, true);  // SIGHUP 可以异步处理

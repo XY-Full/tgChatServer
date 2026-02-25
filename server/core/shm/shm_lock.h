@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+#include <iostream>
 #include <pthread.h>
 #include <stdexcept>
 #include <string>
@@ -119,7 +120,7 @@ public:
     bool TryLock() noexcept
     {
         assert(mutex_ != nullptr);
-        return pthread_mutex_trylock(mutex_) == 0;
+        return (pthread_mutex_trylock(mutex_) == 0);
     }
 
     /**

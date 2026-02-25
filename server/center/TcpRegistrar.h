@@ -20,7 +20,7 @@ public:
 private:
     void accept_loop();
     
-    void handleClient(uint64_t client_fd, std::shared_ptr<PackBase> msg);
+    void handleClient(uint64_t client_fd, std::shared_ptr<AppMsg> msg);
     void handleDisconnect(uint64_t client_fd);
 
     void onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg);

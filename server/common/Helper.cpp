@@ -324,6 +324,11 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
     // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
     auto message_strlen = message.ByteSizeLong();
     DLOG << "CreateSSPack: message type=" << GetShortTypeName(message) << ", strlen=" << message_strlen;
+    if (kssMsgNameToId.find(GetShortTypeName(message)) == kssMsgNameToId.end())
+    {
+        ELOG << "Message type not registered in kssMsgNameToId: " << GetShortTypeName(message);
+        return nullptr;
+    }
     int32_t msg_id = kssMsgNameToId.at(GetShortTypeName(message));
 
     auto& shm_slab_ = GlobalSpace()->shm_slab_;

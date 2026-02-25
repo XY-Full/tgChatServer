@@ -44,7 +44,7 @@ private:
     std::shared_ptr<Connection> conn_;
 
     std::string shm_name_;
-    ShmRingBuffer<uint8_t>* tcp_recv_buffer_;
+    std::unique_ptr<ShmRingBuffer<uint8_t>> tcp_recv_buffer_;
 
     RecvHandler recv_handler_;
 };

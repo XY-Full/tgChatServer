@@ -76,8 +76,6 @@ TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_nam
         close(server_fd_);
         exit(1);
     }
-
-    recv_buffer_ = new ShmRingBuffer<uint8_t>(shm_name_ + "_tcp_recv");
 }
 
 TcpServer::~TcpServer()
@@ -87,8 +85,7 @@ TcpServer::~TcpServer()
     {
         ::close(server_fd_);
     }
-
-    delete recv_buffer_;
+    // recv_buffer 随 Connection shared_ptr 引用计数归零时自动析构，无需手动清理
 }
 
 void TcpServer::start()
@@ -98,7 +95,7 @@ void TcpServer::start()
 
     running_ = true;
     accept_thread_ = std::thread(&TcpServer::acceptLoop, this);
-    GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpServer::checkHeartbeats, this));
+    timer_id_ = GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpServer::checkHeartbeats, this));
 
     ILOG << "TcpServer started successfully";
 }
@@ -117,6 +114,9 @@ void TcpServer::stop()
     {
         accept_thread_.join();
     }
+
+    // 停止全局心跳计时器
+    GlobalSpace()->timer_->cancel(timer_id_);
 
     // 关闭所有连接
     std::lock_guard<std::mutex> lock(conn_mutex_);
@@ -169,13 +169,19 @@ void TcpServer::handleNewConnection(int fd)
         }
 
         int64_t conn_id = next_conn_id_++;
+
+        // 为这个连接创建独立的接收缓冲区，所有权转移给 Connection
+        // Connection 析构时自动释放，生命周期与 shared_ptr<Connection> 绑定
+        auto conn_buf = std::make_unique<ShmRingBuffer<uint8_t>>(
+            shm_name_ + "_conn_" + std::to_string(conn_id) + "_recv");
+
         auto conn = std::make_shared<Connection>(
             client_fd, conn_id, epoller_,
-            [this](int64_t conn_id, std::shared_ptr<PackBase> msg) {
-                // 传递连接ID给recv_handler
+            [this](int64_t conn_id, std::shared_ptr<AppMsg> msg) {
                 this->recv_handler_(conn_id, msg);
             },
-            [this](int64_t conn_id) { removeConnection(conn_id); }, recv_buffer_);
+            [this](int64_t conn_id) { removeConnection(conn_id); },
+            std::move(conn_buf));
 
         // 注册客户端连接事件处理
         if (!epoller_.add(client_fd, EventType::READ | EventType::EDGE_TRIGGER | EventType::RDHUP,
@@ -288,7 +294,7 @@ void TcpServer::removeConnection(int64_t conn_id)
         it->second->close();
         epoller_.remove(fd);
         fd_to_conn_.erase(fd);
-        conn_map_.erase(it);
+        conn_map_.erase(it);  // shared_ptr 引用计数-1，若归零则 Connection 析构，recv_buffer 随之释放
         ILOG << "Connection removed: " << conn_id;
     }
 

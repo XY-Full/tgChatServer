@@ -24,7 +24,7 @@ public:
 
 private:
     // 接收来自远程busd的消息并转发到本地服务
-    void onRecvFromRemoteDaemon(uint64_t conn_id, std::shared_ptr<PackBase> pack);
+    void onRecvFromRemoteDaemon(uint64_t conn_id, std::shared_ptr<AppMsg> pack);
 
     // 消息转发循环（从LocalBusdShmBuffer_读取并转发）
     void messageForwardLoop();
