@@ -6,8 +6,9 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
-#define TTL 300
+#define TTL 15
 
 class TcpRegistrar
 {
@@ -25,16 +26,19 @@ private:
 
     void onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg);
     void onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg);
+    void onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<AppMsg> msg);
 
     ServiceRegistry &reg_;
     uint16_t port_;
     std::atomic<bool> stop_{false};
 
-    // 记录连接 fd -> 注册的实例 id（便于断开时注销）
     std::mutex conn_mu_;
+    // fd -> 实例 id（断开时注销用）
     std::unordered_map<int, std::string> fd_to_id_;
-    // 保存 fd -> 实例指针 以便在心跳时可续约
+    // fd -> 实例指针（续约快速路径）
     std::unordered_map<int, ServiceInstancePtr> fd_to_inst_;
+    // 已收到过全量快照的 fd 集合（用于判断是否首次请求）
+    std::unordered_set<uint64_t> fd_to_got_full_update_;
 
     TcpServer server_;
 

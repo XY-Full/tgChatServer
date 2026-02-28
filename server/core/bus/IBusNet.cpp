@@ -69,10 +69,15 @@ void IBusNet::sendMsgToCenter(const google::protobuf::Message &msg)
         return;
 
     auto pack = Helper::CreateSSPack(msg);
+    if (!pack)
+    {
+        ELOG << "sendMsgToCenter: CreateSSPack failed";
+        return;
+    }
 
+    // pack 是 shared_ptr<AppMsgWrapper>，TcpClient::send 持有它直到发送完成
+    // 不能在 send 后立即 DeleteSSPack，否则 slab 内存提前释放导致发送数据损坏
     TcpClient_->send(pack);
-
-    Helper::DeleteSSPack(*pack);
 }
 
 // 接收到Center消息时，更新当前路由
@@ -178,7 +183,6 @@ bool IBusNet::sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper
     if (!service_map)
     {
         ELOG << "IBusNet::sendMsgTo: Service map not ready";
-        Helper::DeleteSSPack(msg);
         return false;
     }
 
@@ -186,7 +190,6 @@ bool IBusNet::sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper
     if (service_it == service_map->end() || service_it->second.empty())
     {
         ELOG << "IBusNet::sendMsgTo: Service not found: " << serviceName;
-        Helper::DeleteSSPack(msg);
         
         // 发起路由缓存请求（异步）
         genRouteCache(serviceName);

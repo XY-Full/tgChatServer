@@ -3,7 +3,6 @@
 #include "ServiceRegistry.h"
 #include "HttpServer.h"
 #include "TcpRegistrar.h"
-#include "HealthChecker.h"
 
 class CenterApp : public IApp
 {
@@ -24,12 +23,7 @@ public:
         // 1. 初始化服务注册中心
         serviceRegistry_ = std::make_unique<ServiceRegistry>();
 
-        // 2. 初始化并启动健康检查器
-        // HealthChecker 依赖 ServiceRegistry
-        healthChecker_ = std::make_unique<HealthChecker>(*serviceRegistry_);
-        healthChecker_->start();
-
-        // 3. 初始化并启动HTTP服务器
+        // 2. 初始化并启动HTTP服务器
         // HttpServer 依赖 ServiceRegistry, HealthChecker, LBFactory
         // LBFactory 在HttpServer内部创建和管理
         // httpServer_ = std::make_unique<HttpServer>(*serviceRegistry_, 8080); // 默认端口8080
@@ -45,17 +39,8 @@ public:
 
     virtual void onTick(uint32_t delta_ms) override final
     {
-        // 定期清理过期服务实例
-        // HealthChecker 内部会调用 cleanup_expired，这里可以移除或调整清理逻辑
-        // 为了避免重复清理，我们让HealthChecker负责清理，或者在这里保留一个独立的清理逻辑
-        // 考虑到HealthChecker已经包含了清理逻辑，这里可以简化
-        // static uint32_t cleanupTimer = 0;
-        // cleanupTimer += delta_ms;
-        // if (cleanupTimer >= CLEANUP_INTERVAL_MS) {
-        //     serviceRegistry_->cleanup_expired();
-        //     cleanupTimer = 0;
-        // }
-        // 如果HealthChecker已经处理了清理，这里可以不做额外操作，或者只做一些其他周期性任务
+        // cleanup_expired() 已迁移至 TcpRegistrar::onUpdateServiceStatus，
+        // 每次服务心跳时自动触发，无需在此额外调用
     }
 
     virtual void onCleanup() override final
@@ -75,16 +60,8 @@ public:
         //     httpServer_->stop();
         //     httpServer_.reset();
         // }
-        
-        // 3. 停止健康检查器
-        if (healthChecker_) {
-            ILOG << "Stopping HealthChecker...";
-            healthChecker_->stop();
-            ILOG << "HealthChecker stopped";
-            healthChecker_.reset();
-        }
 
-        // 4. 清理服务注册中心
+        // 3. 清理服务注册中心
         if (serviceRegistry_) {
             ILOG << "Resetting ServiceRegistry...";
             serviceRegistry_.reset();
@@ -114,6 +91,4 @@ private:
     std::unique_ptr<ServiceRegistry> serviceRegistry_;
     // std::unique_ptr<HttpServer> httpServer_;
     std::unique_ptr<TcpRegistrar> tcpRegistrar_;
-    std::unique_ptr<HealthChecker> healthChecker_;
-    // static constexpr uint32_t CLEANUP_INTERVAL_MS = 5000; // 5秒清理一次，现在由HealthChecker管理
 };

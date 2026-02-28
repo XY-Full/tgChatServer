@@ -1,9 +1,12 @@
 #include "ServiceRegistry.h"
-#include <set>
-#include <sstream>
 #include <mutex>
+#include <set>
+#include <shared_mutex>
+#include <sstream>
 
-void ServiceRegistry::register_instance(const ServiceInstancePtr &inst, std::chrono::seconds ttl)
+void ServiceRegistry::register_instance(const ServiceInstancePtr &inst,
+                                         std::chrono::seconds ttl,
+                                         bool is_new_instance)
 {
     std::unique_lock lock(mu_);
     auto &m = registry_[inst->svc_name];
@@ -11,7 +14,7 @@ void ServiceRegistry::register_instance(const ServiceInstancePtr &inst, std::chr
     auto it = m.find(inst->id);
     if (it != m.end())
     {
-        // 替换已有实例
+        // 已有实例：仅更新 last_seen 和 expiration，不触发差量
         it->second = inst;
         inst->last_seen = std::chrono::steady_clock::now();
     }
@@ -22,6 +25,13 @@ void ServiceRegistry::register_instance(const ServiceInstancePtr &inst, std::chr
     }
 
     expirations_[inst->id] = std::chrono::steady_clock::now() + ttl;
+
+    // 只有真正新注册才通知其他订阅者
+    if (is_new_instance)
+    {
+        DeltaEntry entry{DeltaEntry::Op::UPSERT, inst};
+        push_delta_to_others(inst->id, std::move(entry));
+    }
 }
 
 void ServiceRegistry::deregister_instance(const std::string &svc_name, const std::string &id)
@@ -32,11 +42,22 @@ void ServiceRegistry::deregister_instance(const std::string &svc_name, const std
         return;
 
     auto &m = it->second;
-    m.erase(id);
+    auto mit = m.find(id);
+    if (mit == m.end())
+        return;
+
+    // 保留实例快照用于差量推送
+    ServiceInstancePtr offline_inst = mit->second;
+
+    m.erase(mit);
     expirations_.erase(id);
 
     if (m.empty())
         registry_.erase(it);
+
+    // 通知其他订阅者该实例下线
+    DeltaEntry entry{DeltaEntry::Op::OFFLINE, offline_inst};
+    push_delta_to_others(id, std::move(entry));
 }
 
 ServiceInstances ServiceRegistry::get_instances(const std::string &svc_name, bool only_healthy)
@@ -81,18 +102,21 @@ void ServiceRegistry::cleanup_expired()
 
     for (auto &id : remove_ids)
     {
+        ServiceInstancePtr offline_inst;
+
         for (auto it = registry_.begin(); it != registry_.end(); )
         {
             auto &m = it->second;
-            
             for (auto mit = m.begin(); mit != m.end(); )
             {
                 if (mit->second->id == id)
+                {
+                    offline_inst = mit->second;
                     mit = m.erase(mit);
+                }
                 else
                     ++mit;
             }
-
             if (m.empty())
                 it = registry_.erase(it);
             else
@@ -100,6 +124,13 @@ void ServiceRegistry::cleanup_expired()
         }
 
         expirations_.erase(id);
+
+        // 通知其他订阅者该过期实例下线
+        if (offline_inst)
+        {
+            DeltaEntry entry{DeltaEntry::Op::OFFLINE, offline_inst};
+            push_delta_to_others(id, std::move(entry));
+        }
     }
 }
 
@@ -127,4 +158,41 @@ std::string ServiceRegistry::routing_table_string()
             ss << "  - " << p.second->to_string() << " ";
     }
     return ss.str();
+}
+
+// ---------- delta map 接口实现 ----------
+
+void ServiceRegistry::subscribe(const std::string &subscriber_id)
+{
+    std::unique_lock lock(mu_);
+    // 若已存在则不覆盖（避免重连时丢失积压的差量）
+    delta_map_.emplace(subscriber_id, std::vector<DeltaEntry>{});
+}
+
+void ServiceRegistry::unsubscribe(const std::string &subscriber_id)
+{
+    std::unique_lock lock(mu_);
+    delta_map_.erase(subscriber_id);
+}
+
+std::vector<DeltaEntry> ServiceRegistry::pop_deltas(const std::string &subscriber_id)
+{
+    std::unique_lock lock(mu_);
+    auto it = delta_map_.find(subscriber_id);
+    if (it == delta_map_.end())
+        return {};
+    std::vector<DeltaEntry> out;
+    out.swap(it->second);  // O(1) 取出并清空
+    return out;
+}
+
+void ServiceRegistry::push_delta_to_others(const std::string &changed_id, DeltaEntry entry)
+{
+    // 调用前已持有 unique_lock，直接操作 delta_map_
+    for (auto &kv : delta_map_)
+    {
+        if (kv.first == changed_id)
+            continue;  // 不推送给变更者自己
+        kv.second.push_back(entry);
+    }
 }

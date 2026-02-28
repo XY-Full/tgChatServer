@@ -10,7 +10,8 @@ class BusdNet : public IBusNet
 {
 public:
     BusdNet() = default;
-    ~BusdNet();
+    
+    virtual ~BusdNet();
 
     virtual void init(std::shared_ptr<Options> opts) override;
     

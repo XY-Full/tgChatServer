@@ -52,7 +52,7 @@ void Connection::onReadable()
 
             ELOG << "Read error, conn_id: " << conn_id_ << ", errno: " << errno;
             close_handler_(conn_id_);
-            break;
+            return;
         }
     }
 
@@ -110,6 +110,8 @@ void Connection::send(std::shared_ptr<AppMsgWrapper> pack)
     msg.msg_iovlen = 1;
 
     ssize_t sent = sendmsg(fd_, &msg, MSG_ZEROCOPY);
+
+    // Helper::printStringData(reinterpret_cast<char *>(pack_ptr));
 
     ILOG << "Attempted to send " << iov.iov_len << " bytes to conn_id: " << conn_id_ << ", sent: " << sent;
 
@@ -175,6 +177,8 @@ void Connection::processRecvBuffer()
         uint8_t peek_buf[sizeof(Header)];
         recv_buffer_->Peek(peek_buf, sizeof(peek_buf));
 
+        // ILOG << "Header hex: " << Helper::toHex(peek_buf, sizeof(peek_buf));
+
         Header header;
         memcpy(&header, peek_buf, sizeof(Header));
 
@@ -208,6 +212,7 @@ void Connection::processRecvBuffer()
 
         // 用自定义 deleter 管理原始内存（不能用默认 delete，必须 delete[]）
         auto msg_ptr = std::shared_ptr<AppMsg>(msg_base, [raw](AppMsg *) { delete[] raw; });
+
         recv_handler_(conn_id_, msg_ptr);
     }
 }

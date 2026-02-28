@@ -6,7 +6,7 @@ class AppMsgWrapper
 {
 public:
     AppMsgWrapper() = default;
-    virtual ~AppMsgWrapper() = default;
+    ~AppMsgWrapper() = default;
 
     // 数据包在共享内存中的偏移，用于快速定位到包的地址
     uint32_t offset_;

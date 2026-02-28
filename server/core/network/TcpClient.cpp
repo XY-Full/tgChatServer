@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <unistd.h>
 #endif
 
@@ -44,6 +45,10 @@ bool TcpClient::start()
 
     running_ = true;
     bool result = connectToServer();
+    if (!result)
+        return false;
+
+    event_thread_ = std::thread(&TcpClient::eventLoop, this);
 
     GlobalSpace()->timer_->runEvery(1.0f, std::bind(&TcpClient::checkHeartbeat, this));
 
@@ -55,12 +60,21 @@ void TcpClient::stop()
     ELOG << "Stopping TcpClient...";
     running_ = false;
 
-    conn_->close();
+    // 若 stop() 是从 event_thread_ 自身调用（如 RDHUP 回调），
+    // 不能 join 自己，否则死锁；让循环自然退出即可。
+    if (event_thread_.joinable() &&
+        event_thread_.get_id() != std::this_thread::get_id())
+    {
+        event_thread_.join();
+    }
+
+    if (conn_)
+        conn_->close();
 }
 
 bool TcpClient::connectToServer()
 {
-    sock_ = socket(AF_INET, SOCK_STREAM, 0);
+    sock_ = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (sock_ < 0)
     {
         ELOG << "Failed to create socket.";
@@ -82,10 +96,40 @@ bool TcpClient::connectToServer()
 
     if (connect(sock_, (sockaddr *)&addr, sizeof(addr)) != 0)
     {
-        ELOG << "Failed to connect to server " << ip_ << ":" << port_;
-        close(sock_);
-        sock_ = -1;
-        return false;
+        if (errno == EINPROGRESS)
+        {
+            // 非阻塞 connect 正在进行，等待 WRITE 事件确认连接完成
+            fd_set wfds;
+            FD_ZERO(&wfds);
+            FD_SET(sock_, &wfds);
+            struct timeval tv{5, 0}; // 5 秒超时
+            int ret = select(sock_ + 1, nullptr, &wfds, nullptr, &tv);
+            if (ret <= 0)
+            {
+                ELOG << "Connect to " << ip_ << ":" << port_ << (ret == 0 ? " timed out" : " select error");
+                close(sock_);
+                sock_ = -1;
+                return false;
+            }
+            // 确认连接是否真正成功
+            int err = 0;
+            socklen_t len = sizeof(err);
+            getsockopt(sock_, SOL_SOCKET, SO_ERROR, &err, &len);
+            if (err != 0)
+            {
+                ELOG << "Connect failed: " << strerror(err);
+                close(sock_);
+                sock_ = -1;
+                return false;
+            }
+        }
+        else
+        {
+            ELOG << "Failed to connect to server " << ip_ << ":" << port_;
+            close(sock_);
+            sock_ = -1;
+            return false;
+        }
     }
 
     // 注册服务器socket到epoll
@@ -96,7 +140,6 @@ bool TcpClient::connectToServer()
         close(sock_);
         exit(1);
     }
-    last_active_time_ = std::chrono::steady_clock::now();
 
     // TcpClient 每次重连会重建 Connection，但 tcp_recv_buffer_ 只创建一次可复用
     // 将所有权临时转移给 Connection，conn_ 析构时归还（用 aliasing shared_ptr 保持 buffer 存活）
@@ -105,8 +148,22 @@ bool TcpClient::connectToServer()
         sock_, -1, epoller_, recv_handler_, [this](int64_t) { stop(); },
         std::make_unique<ShmRingBuffer<uint8_t>>(shm_name_ + "_tcp_recv_conn"));
 
+    conn_->updateActiveTime(); // 初始化心跳时间
+
     ILOG << "Connected to server " << ip_ << ":" << port_;
     return true;
+}
+
+void TcpClient::eventLoop()
+{
+    while (running_)
+    {
+        int nfds = epoller_.wait(1000);
+        if (nfds > 0)
+        {
+            epoller_.processEvents();
+        }
+    }
 }
 
 void TcpClient::eventHandler(int fd, EventType events)
@@ -144,7 +201,7 @@ void TcpClient::send(std::shared_ptr<AppMsgWrapper> data)
 void TcpClient::checkHeartbeat()
 {
     auto now = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_active_time_).count() > HEARTBEAT_TIMEOUT_SECONDS)
+    if (std::chrono::duration_cast<std::chrono::seconds>(now - conn_->lastActiveTime()).count() > HEARTBEAT_TIMEOUT_SECONDS)
     {
         ELOG << "Heartbeat timeout. Reconnecting...";
         stop();

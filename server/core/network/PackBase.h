@@ -30,14 +30,11 @@ struct Header
 class PackBase
 {
 public:
-    ~PackBase()
-    {
-        if (data_)
-        {
-            delete data_;
-            data_ = nullptr;
-        }
-    }
+    // data_ 不独立持有堆内存：
+    //   - 发送路径：指向 slab 内 AppMsg 结构体之后的偏移地址，由 slab 统一管理
+    //   - 接收路径：指向 new uint8_t[pack_len] 分配的数组内部，由 shared_ptr 的 custom deleter 管理
+    // 两种情况都不应在此 delete，否则会造成 heap corruption
+    ~PackBase() = default;
 
     // 包头
     Header header_;

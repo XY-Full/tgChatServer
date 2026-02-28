@@ -9,4 +9,5 @@ message ServiceInfo
     int32   port_                   = 4;
     string  shm_recv_buffer_name_   = 5;
     bool    is_daemon_              = 6;
+    bool    is_offline_             = 7;  // 差量更新中标识该实例已下线
 }

@@ -49,12 +49,14 @@ message UpdateServiceStatus
     {
         ServiceInfo local_info_ = 1;
         int64       send_time_  = 2;
+        // last_update_time_ 已废弃，改用 delta_map 机制
     }
 
     message Response
     {
         SSErrorCode          err              = 1;
-        repeated ServiceInfo service_info_map_ = 2;
+        repeated ServiceInfo service_info_map_ = 2;  // 全量或差量服务列表
+        bool                 is_full_update_  = 3;   // true: 全量（首次），false: 差量
     }
     
     Request     request     = 1;

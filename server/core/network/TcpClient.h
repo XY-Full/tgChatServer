@@ -4,6 +4,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "EventLoopWrapper.h"
 #include "MsgWrapper.h"
@@ -27,6 +28,7 @@ public:
 private:
     bool connectToServer();
     void checkHeartbeat();
+    void eventLoop();
 
     void eventHandler(int fd, EventType events);
     void onReadable();
@@ -42,6 +44,7 @@ private:
 
     EventLoopWrapper epoller_;
     std::shared_ptr<Connection> conn_;
+    std::thread event_thread_;
 
     std::string shm_name_;
     std::unique_ptr<ShmRingBuffer<uint8_t>> tcp_recv_buffer_;

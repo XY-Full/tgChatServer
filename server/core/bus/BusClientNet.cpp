@@ -36,8 +36,6 @@ bool BusClientNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMs
         // If target is local, push directly to peer's ShmRingBuffer
         if (!LocalServiceMap_[info.id_()]->Push(msg)) {
             ELOG << "Failed to push message to local service: " << info.id_();
-            if (delete_msg)
-                Helper::DeleteSSPack(msg);
             return false;
         }
     }
@@ -47,55 +45,39 @@ bool BusClientNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMs
         if (!LocalBusdShmBuffer_)
         {
             ELOG << "BusClientNet: LocalBusdShmBuffer not initialized";
-            if (delete_msg)
-                Helper::DeleteSSPack(msg);
             return false;
         }
         if (!LocalBusdShmBuffer_->Push(msg)) {
             ELOG << "Failed to push message to LocalBusdShmBuffer";
-            if (delete_msg)
-                Helper::DeleteSSPack(msg);
             return false;
         }
     }
     
-    // Release memory after sending
-    if (delete_msg)
-        Helper::DeleteSSPack(msg);
+    // SHM Push 完成后不需要释放：调用方的 shared_ptr 析构时 deleter 会归还 slab
     return true;
 }
 
 void BusClientNet::broadCast(const AppMsgWrapper &msg)
 {
-    // BusClientNet的广播：直接转发给本地Busd，由Busd负责分发
     if (!LocalBusdShmBuffer_)
     {
         ELOG << "BusClientNet: LocalBusdShmBuffer not initialized for broadcast";
-        Helper::DeleteSSPack(msg);
         return;
     }
     
     LocalBusdShmBuffer_->Push(msg);
-    // 发送完之后释放内存
-    Helper::DeleteSSPack(msg);
-    
     DLOG << "BusClientNet: Broadcast message forwarded to local Busd";
 }
 
 bool BusClientNet::sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg)
 {
-    // BusClientNet的组播：直接转发给本地Busd，由Busd负责分发
     if (!LocalBusdShmBuffer_)
     {
         ELOG << "BusClientNet: LocalBusdShmBuffer not initialized for group message";
-        Helper::DeleteSSPack(msg);
         return false;
     }
     
     LocalBusdShmBuffer_->Push(msg);
-    // 发送完之后释放内存
-    Helper::DeleteSSPack(msg);
-    
     DLOG << "BusClientNet: Group message to '" << groupName << "' forwarded to local Busd";
     return true;
 }

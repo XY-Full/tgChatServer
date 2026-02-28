@@ -307,6 +307,18 @@ int64_t Helper::GenUID()
     return uid;
 }
 
+std::string Helper::toHex(const void* data, size_t len)
+{
+    const auto* bytes = static_cast<const uint8_t*>(data);
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (size_t i = 0; i < len; ++i) {
+        if (i > 0) oss << ' ';
+        oss << std::setw(2) << static_cast<int>(bytes[i]);
+    }
+    return oss.str();
+}
+
 std::string Helper::GetShortTypeName(const google::protobuf::Message& msg)
 {
     const std::string& full = msg.GetTypeName();
@@ -319,7 +331,6 @@ std::string Helper::GetShortTypeName(const google::protobuf::Message& msg)
 std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Message &message, Type type, const uint64_t& co_id)
 {
     static std::atomic<uint32_t> now_seq_{0};
-    auto pack = std::make_shared<AppMsgWrapper>();
 
     // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
     auto message_strlen = message.ByteSizeLong();
@@ -337,9 +348,9 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
     uint32_t pack_len = sizeof(AppMsg) + data_len;
 
     // 从slab中分配内存块
-    auto pack_shm_offset = shm_slab_.Alloc(pack_len); // 申请AppMsg结构体+body数据大小+类型名长度的内存块
+    auto pack_shm_offset = shm_slab_.Alloc(pack_len);
     auto pack_shm_addr = shm_slab_.off2ptr(pack_shm_offset);
-    
+
     auto msg = reinterpret_cast<AppMsg *>(pack_shm_addr);
     // 填充AppMsg Header
     msg->header_.version_ = MAGIC_VERSION;
@@ -356,13 +367,21 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
     msg->data_len_ = data_len;                                              // body数据长度
     msg->msg_id_ = msg_id;                                                  // 消息ID
 
-    // pb数据序列化到data_中，需要预留前缀长度，填充类型名字
+    // pb数据序列化到data_中
     if (!message.SerializeToArray(msg->data_, message_strlen))
     {
         ELOG << "Error to serialize message";
+        shm_slab_.Free(pack_shm_offset, pack_len);
         return nullptr;
     }
 
+    // custom deleter：shared_ptr 析构时自动归还 slab 内存
+    auto pack = std::shared_ptr<AppMsgWrapper>(
+        new AppMsgWrapper(),
+        [pack_shm_offset, pack_len](AppMsgWrapper* p) {
+            GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_len);
+            delete p;
+        });
     pack->offset_ = pack_shm_offset;
 
     return pack;

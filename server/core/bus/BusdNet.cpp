@@ -45,11 +45,12 @@ bool BusdNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrap
             ELOG << "BusdNet: Failed to push message to local service: " << info.id_();
         }
 
-        // 清理共享内存
+        if (!result)
+            ELOG << "BusdNet: Failed to push message to local service: " << info.id_();
+
+        // SHM 路径：调用方 delete_msg=true 时释放 slab
         if (delete_msg)
-        {
             Helper::DeleteSSPack(msg);
-        }
 
         return result;
     }
@@ -75,9 +76,7 @@ bool BusdNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrap
         {
             ELOG << "BusdNet: Failed to connect to remote busd: " << remote_daemon_key;
             if (delete_msg)
-            {
                 Helper::DeleteSSPack(msg);
-            }
             return false;
         }
 
@@ -95,15 +94,8 @@ bool BusdNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrap
 
     tcp_client->send(send_msg);
 
-    // 注意：TCP发送是异步的，这里不需要立即删除msg
-    // 但为了保持接口一致性，如果delete_msg为true，在发送后清理
-    if (delete_msg)
-    {
-        // 这里稍微延迟删除，确保TCP发送线程完成读取
-        // 实际应该使用引用计数或回调机制，这里简化处理
-        Helper::DeleteSSPack(msg);
-    }
-
+    // TCP 发送异步完成，Connection::send 内部已 memcpy 到 partial_send_buffer_，
+    // slab 内存在 send_msg（shared_ptr）析构时由 deleter 归还，不需要额外 DeleteSSPack
     return true;
 }
 

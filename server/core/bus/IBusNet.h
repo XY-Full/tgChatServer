@@ -62,7 +62,7 @@ struct ServiceRouteCache
 class IBusNet
 {
 public:
-    ~IBusNet();
+    virtual ~IBusNet();
 
     virtual void init(std::shared_ptr<Options> opts);
 
