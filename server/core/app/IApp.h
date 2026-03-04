@@ -192,6 +192,7 @@ private:
 
     std::string m_app_name;            ///< 应用程序名称
     std::atomic<bool> m_running;       ///< 运行状态标志
+    std::atomic<bool> m_stopped{false};///< stop() 幂等保护，防止 run() 末尾和 ~IApp() 重复执行
     std::atomic<bool> m_should_reload; ///< 重载标志
 
     uint32_t m_tick_interval_ms;                            ///< 定时器间隔（毫秒）

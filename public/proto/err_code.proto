@@ -6,6 +6,7 @@ enum ErrorCode
     Error_success = 1;
 
     Error_argument                      = 3;   // 参数错误
+    Error_auth_failed                   = 4;   // 鉴权失败
 
     // 聊天错误代码
     Error_muted                         = 130; // 用户被禁言

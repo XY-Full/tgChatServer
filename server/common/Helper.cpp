@@ -12,6 +12,8 @@
 #include "network/MsgWrapper.h"
 #include "msg_mapping_ss.h"
 #include "app/ConfigManager.h"
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -392,4 +394,73 @@ void Helper::DeleteSSPack(const AppMsgWrapper& pack)
     auto pack_shm_offset = pack.offset_;
     auto pack_size = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack_shm_offset))->header_.pack_len_;
     GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_size);
+}
+
+
+// ─────────────────────────────────────────────
+// Base64 helpers
+// ─────────────────────────────────────────────
+
+static const char* kB64Chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+std::string Helper::base64Decode(const std::string& input)
+{
+    // base64 → base64：将 '-' 换为 '+'，'_' 换为 '/'，补齐 '='
+    std::string b64 = input;
+    std::replace(b64.begin(), b64.end(), '-', '+');
+    std::replace(b64.begin(), b64.end(), '_', '/');
+    while (b64.size() % 4 != 0) b64 += '=';
+
+    // 标准 base64 解码（手写，避免引入额外依赖）
+    static const int kDecodeTable[256] = {
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,63,
+        52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,
+        15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,-1,
+        -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
+        41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1,
+    };
+
+    std::string out;
+    // base64 每4个字符对应3字节，预分配空间
+    out.reserve(b64.size() * 3 / 4);
+
+    // 每次读取4个字符
+    for (size_t i = 0; i + 3 < b64.size(); i += 4)
+    {
+        int a = kDecodeTable[(uint8_t)b64[i]];
+        int b = kDecodeTable[(uint8_t)b64[i+1]];
+        int c = kDecodeTable[(uint8_t)b64[i+2]];
+        int d = kDecodeTable[(uint8_t)b64[i+3]];
+
+        // 此处只判断前两个字符是否合法，后两个允许是空，即 "="
+        if (a < 0 || b < 0) break;
+
+        // 每个字符6位，a << 2，能够拿到低八位的前六位，b >> 4 能拿到 b 的高两位，合起来就是第一个字节
+        out += static_cast<char>((a << 2) | (b >> 4));
+
+        // 如果第三个字符不是 '='，说明有第二个字节
+        // b & 0xF 能拿到 b 的低四位，c >> 2 能拿到 c 的高四位，合起来就是第二个字节
+        if (b64[i+2] != '=') out += static_cast<char>(((b & 0xF) << 4) | (c >> 2));
+        
+        // 如果第四个字符不是 '='，说明有第三个字节
+        // c & 0x3 能拿到 c 的低两位，d >> 0 就是 d 的全部六位，合起来就是第三个字节
+        if (b64[i+3] != '=') out += static_cast<char>(((c & 0x3) << 6) | d);
+    }
+    return out;
+}
+
+std::string Helper::hmacSha256(const std::string& key, const std::string& data)
+{
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int  dlen = 0;
+    HMAC(EVP_sha256(),
+         key.data(),  static_cast<int>(key.size()),
+         reinterpret_cast<const unsigned char*>(data.data()),
+         data.size(),
+         digest, &dlen);
+    return std::string(reinterpret_cast<char*>(digest), dlen);
 }

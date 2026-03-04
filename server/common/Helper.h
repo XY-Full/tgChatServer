@@ -40,4 +40,8 @@ public:
     // 调用此函数会造成 double-free，请勿使用
     [[deprecated("slab memory is now managed by the shared_ptr deleter from CreateSSPack; do not call")]]
     static void DeleteSSPack(const AppMsgWrapper& pack);
+    // Base64url decode（不含 padding）
+    static std::string base64Decode(const std::string& input);
+    // HMAC-SHA256
+    static std::string hmacSha256(const std::string& key, const std::string& data);
 };

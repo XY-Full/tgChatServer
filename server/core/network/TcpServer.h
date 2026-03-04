@@ -23,6 +23,7 @@ public:
     void start();
     void stop();
     int32_t send(int32_t conn_id, std::shared_ptr<AppMsgWrapper> pack);
+    void closeConn(int64_t conn_id);  // 主动踢掉某连接
 
 private:
     void acceptLoop();

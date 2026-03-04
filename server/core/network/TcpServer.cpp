@@ -30,12 +30,12 @@ TcpServer::TcpServer(int32_t port, RecvHandler recv_handler, std::string shm_nam
     }
 
     int opt = 1;
-    // if (setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-    // {
-    //     ELOG << "Failed to set SO_REUSEADDR: " << strerror(errno);
-    //     close(server_fd_);
-    //     exit(1);
-    // }
+    if (setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    {
+        ELOG << "Failed to set SO_REUSEADDR: " << strerror(errno);
+        close(server_fd_);
+        exit(1);
+    }
 
     // 设置TCP_NODELAY减少小数据包的延迟
     if (setsockopt(server_fd_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
@@ -314,4 +314,9 @@ int32_t TcpServer::send(int32_t conn_id, std::shared_ptr<AppMsgWrapper> pack)
         return 0;
     }
     return -1;
+}
+
+void TcpServer::closeConn(int64_t conn_id)
+{
+    removeConnection(conn_id);
 }

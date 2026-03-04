@@ -3,8 +3,24 @@ nohup.out
 compile_commands.json
 build
 .cache
-server/config.json
+config.json
 third
 .vscode
 proto_files
+
+# 屏蔽二进制文件
 bin
+server/client/client
+!server/client/
+
+# 屏蔽core文件
+**/core.*
+!**/core/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志和崩溃文件
+*.log
+*.dmp

@@ -17,6 +17,7 @@ public:
 
     virtual bool onInit() override final
     {
+        GlobalSpace()->bus_->Start();
         return true;
     }
 

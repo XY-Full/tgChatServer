@@ -27,7 +27,8 @@ IApp::IApp(const std::string &app_name)
     m_signal_handler = std::make_unique<SignalHandler>();                   // 信号处理器
     m_cmd_parser = std::make_unique<CommandLineParser>();                   // 命令行解析器
     m_terminal = std::make_unique<TerminalInterface>();                     // 终端管理器
-    m_bus_client = std::make_unique<IBus::BusClient>(*m_config_manager);    // IBus客户端
+    // 注意：m_bus_client 不在此处创建，因为配置文件尚未加载。
+    // 它在 initialize() 完成 loadConfig() 之后创建，确保能读到正确的配置。
 
     m_last_tick_time = std::chrono::steady_clock::now();
 }
@@ -81,11 +82,21 @@ int IApp::run(int argc, char *argv[])
     ILOG << "Calling onCleanup()";
     onCleanup();
     ILOG << "onCleanup() completed";
+
+    // 显式停止所有线程（Timer、BusClient 等），必须在 main() 返回前完成。
+    // 若不在此处调用，stop() 会推迟到 IApp::~IApp()，而彼时 GlobalSpace 里的
+    // shm_slab_ 已被静态对象析构（munmap），Timer 线程仍在访问其中的 mutex_ 会 SEGV。
+    stop();
+
     return 0;
 }
 
 void IApp::stop()
 {
+    // 幂等保护：确保多次调用（run() 末尾 + ~IApp()）不会重复执行
+    if (m_stopped.exchange(true))
+        return;
+
     ILOG << "IApp::stop() called, setting m_running=false";
     m_running = false;
     m_cv.notify_all();
@@ -286,6 +297,9 @@ bool IApp::initialize(int argc, char *argv[])
             m_cv.notify_all();
         }
     });
+
+    // 配置已加载完毕，现在创建 BusClient（构造函数里配置还是空的，所以推迟到此处）
+    m_bus_client = std::make_unique<IBus::BusClient>(*m_config_manager);
 
     // 设置全局变量 - 必须在 onInit() 之前，因为 onInit() 可能会使用这些全局变量
     GlobalSpace()->bus_ = m_bus_client.get();

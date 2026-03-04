@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Server LANGUAGES CXX)
+project(Server LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 启动 ccache
@@ -129,6 +129,7 @@ add_subdirectory(core)
 add_subdirectory(center)
 add_subdirectory(busd)
 add_subdirectory(logic)
+add_subdirectory(connd)
 
 # -----------------------------
 # 平台特定依赖
