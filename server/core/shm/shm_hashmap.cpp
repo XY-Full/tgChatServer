@@ -150,7 +150,11 @@ void ShmHashMap::RetireNode(uint32_t node_off)
     // 为简化：用 slab 分配一块 RetireNode 记录（小对象），也可复用单独 freelist
     uint32_t rec_off = slab_.Alloc(Align8(sizeof(struct RetireNode)));
     if (!rec_off)
-        return; // 极端下泄漏由进程退出释放
+    {
+        // 分配退休记录失败，立即同步释放节点，避免内存泄漏
+        slab_.Free(node_off, bytes);
+        return;
+    }
     auto *rec = reinterpret_cast<struct RetireNode *>(off2ptr(rec_off));
     rec->node_off = node_off;
     rec->bytes = bytes;

@@ -176,24 +176,42 @@ void KcpListener::dispatchKcpData(KcpSession& session)
 
         // 解析 AppMsg
         if (static_cast<size_t>(n) < sizeof(Header)) continue;
-        auto app_msg = std::make_shared<AppMsg>();
-        memcpy(&app_msg->header_, buf, sizeof(Header));
-        app_msg->header_.conn_id_ = session.conn_id;
 
+        // 使用连续内存分配，将 AppMsg 和 data 放在同一块内存中，
+        // 由 shared_ptr custom deleter 统一管理，避免 data_ 内存泄漏
+        uint16_t msg_id   = 0;
+        uint16_t data_len = 0;
         size_t off = sizeof(Header);
         if (static_cast<size_t>(n) >= off + 4)
         {
-            memcpy(&app_msg->msg_id_,   buf + off,     sizeof(uint16_t));
-            memcpy(&app_msg->data_len_, buf + off + 2, sizeof(uint16_t));
+            memcpy(&msg_id,   buf + off,     sizeof(uint16_t));
+            memcpy(&data_len, buf + off + 2, sizeof(uint16_t));
             off += 4;
-            uint16_t dlen = app_msg->data_len_;
-            if (dlen > 0 && static_cast<size_t>(n) >= off + dlen)
-            {
-                auto* dbuf = new char[dlen];
-                memcpy(dbuf, buf + off, dlen);
-                app_msg->data_ = dbuf;
-            }
         }
+
+        size_t total_size = sizeof(AppMsg) + data_len;
+        auto* raw = new uint8_t[total_size];
+        auto* msg_base = reinterpret_cast<AppMsg*>(raw);
+        new (msg_base) AppMsg{};  // placement new 初始化
+        memcpy(&msg_base->header_, buf, sizeof(Header));
+        msg_base->header_.conn_id_ = session.conn_id;
+        msg_base->msg_id_   = msg_id;
+        msg_base->data_len_ = data_len;
+        if (data_len > 0 && static_cast<size_t>(n) >= off + data_len)
+        {
+            msg_base->data_ = reinterpret_cast<char*>(raw + sizeof(AppMsg));
+            memcpy(msg_base->data_, buf + off, data_len);
+        }
+        else
+        {
+            msg_base->data_ = nullptr;
+        }
+
+        // custom deleter 确保释放整块 raw 数组（包含 data 区域）
+        auto app_msg = std::shared_ptr<AppMsg>(msg_base, [raw](AppMsg* p) {
+            p->~AppMsg();
+            delete[] raw;
+        });
 
         if (recv_handler_) recv_handler_(session.conn_id, app_msg);
     }
@@ -258,33 +276,42 @@ int32_t KcpListener::send(uint64_t conn_id, std::shared_ptr<AppMsgWrapper> pack)
 
 void KcpListener::close_conn(uint64_t conn_id)
 {
-    std::lock_guard lk(mu_);
-    auto it = id_to_conv_.find(conn_id);
-    if (it == id_to_conv_.end()) return;
-    uint32_t conv = it->second;
-    // 先释放锁外调用（removeSession 会再加锁，这里手动做避免递归）
-    auto sit = conv_to_sess_.find(conv);
-    if (sit == conv_to_sess_.end()) return;
-    uint64_t cid = sit->second->conn_id;
-    std::string key = addrKey(sit->second->addr);
-    ikcp_release(sit->second->kcp);
-    conv_to_sess_.erase(sit);
-    addr_to_conv_.erase(key);
-    id_to_conv_.erase(conn_id);
-    if (close_handler_) close_handler_(cid);
+    uint64_t cid = 0;
+    {
+        std::lock_guard lk(mu_);
+        auto it = id_to_conv_.find(conn_id);
+        if (it == id_to_conv_.end()) return;
+        uint32_t conv = it->second;
+        auto sit = conv_to_sess_.find(conv);
+        if (sit == conv_to_sess_.end()) return;
+        cid = sit->second->conn_id;
+        std::string key = addrKey(sit->second->addr);
+        ikcp_release(sit->second->kcp);
+        sit->second->kcp = nullptr;
+        conv_to_sess_.erase(sit);
+        addr_to_conv_.erase(key);
+        id_to_conv_.erase(conn_id);
+    }
+    // 将回调移到锁外执行，避免回调内再调用 close_conn 导致递归死锁
+    if (cid && close_handler_) close_handler_(cid);
 }
 
 void KcpListener::removeSession(uint32_t conv)
 {
-    std::lock_guard lk(mu_);
-    auto it = conv_to_sess_.find(conv);
-    if (it == conv_to_sess_.end()) return;
-    uint64_t cid = it->second->conn_id;
-    std::string key = addrKey(it->second->addr);
-    ikcp_release(it->second->kcp);
-    conv_to_sess_.erase(it);
-    addr_to_conv_.erase(key);
-    id_to_conv_.erase(cid);
-    if (close_handler_) close_handler_(cid);
+    uint64_t cid = 0;
+    {
+        std::lock_guard lk(mu_);
+        auto it = conv_to_sess_.find(conv);
+        if (it == conv_to_sess_.end()) return;
+        cid = it->second->conn_id;
+        std::string key = addrKey(it->second->addr);
+        ikcp_release(it->second->kcp);
+        it->second->kcp = nullptr;
+        conv_to_sess_.erase(it);
+        addr_to_conv_.erase(key);
+        id_to_conv_.erase(cid);
+    }
+    // 将回调移到锁外执行，避免回调内再调用 close_conn/removeSession 导致递归死锁
+    if (cid && close_handler_) close_handler_(cid);
     ILOG << "KcpListener: session removed conv=" << conv;
 }

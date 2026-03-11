@@ -311,6 +311,13 @@ bool WsListener::parseFrames(WsConn& conn)
             offset = 10;
         }
 
+        // 防止恶意客户端发送超大 payload 绕过数据长度检查
+        if (payload_len > MAX_PACKET_SIZE)
+        {
+            removeConn(conn.fd);
+            return false;
+        }
+
         if (buf.size() < hdr_size + payload_len) break;
 
         uint8_t mask[4] = {};
@@ -347,26 +354,41 @@ bool WsListener::parseFrames(WsConn& conn)
         // payload 按 AppMsg 二进制协议解析（PackBase 格式）
         if (payload.size() < sizeof(Header)) continue;
 
-        auto app_msg = std::make_shared<AppMsg>();
-        memcpy(&app_msg->header_, payload.data(), sizeof(Header));
-        app_msg->header_.conn_id_ = conn.conn_id;
-
-        size_t data_offset = sizeof(Header);
+        // 使用连续内存分配，将 AppMsg 和 data 放在同一块内存中，
+        // 由 shared_ptr custom deleter 统一管理，避免 data_ 内存泄漏
+        uint16_t msg_id   = 0;
+        uint16_t data_len = 0;
+        size_t   data_offset = sizeof(Header);
         if (payload.size() >= data_offset + sizeof(uint16_t) * 2)
         {
-            memcpy(&app_msg->msg_id_,   payload.data() + data_offset, sizeof(uint16_t));
-            memcpy(&app_msg->data_len_, payload.data() + data_offset + 2, sizeof(uint16_t));
+            memcpy(&msg_id,   payload.data() + data_offset, sizeof(uint16_t));
+            memcpy(&data_len, payload.data() + data_offset + 2, sizeof(uint16_t));
             data_offset += 4;
         }
 
-        // data_ 指向 payload 内部（与 TCP 路径不同，这里是栈上 vector，需要 new）
-        uint16_t dlen = app_msg->data_len_;
-        if (dlen > 0 && payload.size() >= data_offset + dlen)
+        size_t total_size = sizeof(AppMsg) + data_len;
+        auto* raw = new uint8_t[total_size];
+        auto* msg_base = reinterpret_cast<AppMsg*>(raw);
+        new (msg_base) AppMsg{};  // placement new 小心初始化
+        memcpy(&msg_base->header_, payload.data(), sizeof(Header));
+        msg_base->header_.conn_id_ = conn.conn_id;
+        msg_base->msg_id_   = msg_id;
+        msg_base->data_len_ = data_len;
+        if (data_len > 0 && payload.size() >= data_offset + data_len)
         {
-            auto* data_buf = new char[dlen];
-            memcpy(data_buf, payload.data() + data_offset, dlen);
-            app_msg->data_ = data_buf;
+            msg_base->data_ = reinterpret_cast<char*>(raw + sizeof(AppMsg));
+            memcpy(msg_base->data_, payload.data() + data_offset, data_len);
         }
+        else
+        {
+            msg_base->data_ = nullptr;
+        }
+
+        // custom deleter 确保释放整块 raw 数组（包含 data 区域）
+        auto app_msg = std::shared_ptr<AppMsg>(msg_base, [raw](AppMsg* p) {
+            p->~AppMsg();
+            delete[] raw;
+        });
 
         if (recv_handler_) recv_handler_(conn.conn_id, app_msg);
     }

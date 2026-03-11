@@ -240,6 +240,8 @@ template <typename T> bool ShmRingBuffer<T>::Push(const T *items, size_t count)
 
 template <typename T> bool ShmRingBuffer<T>::Push(const T &item)
 {
+    std::lock_guard<ShmSpinLock> guard(*lock_);
+
     if (IsFull())
     {
         return false;
@@ -256,9 +258,21 @@ template <typename T> bool ShmRingBuffer<T>::Drop(size_t count)
 {
     std::lock_guard<ShmSpinLock> guard(*lock_);
 
-    if (IsEmpty())
+    if (count == 0)
     {
         return false;
+    }
+
+    size_t available = Used();
+    if (available == 0)
+    {
+        return false;
+    }
+
+    // 截断到实际可用数量，防止 head 越过 tail
+    if (count > available)
+    {
+        count = available;
     }
 
     // 丢弃数据

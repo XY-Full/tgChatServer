@@ -94,7 +94,7 @@ ShmSlab::ShmSlab(const std::string& shm_name, uint32_t total, uint32_t region_of
     }
 }
 
-ShmSlab::ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create) : base_(base)
+ShmSlab::ShmSlab(void *base, uint32_t total, uint32_t region_off, uint32_t region_size, bool create) : base_(base), total_(total)
 {
     hdr_ = reinterpret_cast<SlabHeader *>(reinterpret_cast<uint8_t *>(base_) + region_off);
     if (create)
