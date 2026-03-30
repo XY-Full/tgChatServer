@@ -32,7 +32,14 @@ public:
     void onReadable();
     void onWritable();
 
+    AppMsg* get_pack_ptr(std::shared_ptr<AppMsgWrapper> pack);
+    AppMsg* get_pack_ptr(AppMsg& pack);
+    
+    template<typename T>
+    void send_impl(T&& pack);
+
     void send(std::shared_ptr<AppMsgWrapper> pack);
+    void send(AppMsg& pack);
 
     void updateActiveTime(); // 更新心跳
     std::chrono::time_point<std::chrono::steady_clock> lastActiveTime() const

@@ -1,0 +1,77 @@
+syntax = "proto3";
+package cs;
+
+enum Platform
+{
+    SelfPlatform = 0;
+}
+
+// CS_HEART_BEAT = 0;
+message Heart
+{
+    message Request
+    {        
+    }
+
+    message Response
+    {
+        int32 err       = 1;
+        int64 timestamp = 2;
+    }
+
+    Request     request     = 1;
+    Response    response    = 2;
+}
+
+// CS_PLAYER_APPLY_TOKEN = 1
+message PlayerApplyToken
+{
+    message Request
+    {
+        string account      = 1;
+        Platform platform   = 2;
+    }
+
+    message Response
+    {
+        int32  err      = 1;
+        string token    = 2;
+    }
+
+    Request     request    = 1;
+    Response    response   = 2;
+}
+
+// CS_PLAYER_AUTH = 2
+message PlayerAuth
+{
+    message Request
+    {
+        string token    = 1;
+    }
+
+    message Response
+    {
+        int32  err      = 1;
+    }
+
+    Request     request    = 1;
+    Response    response   = 2;
+}
+
+// CS_PLAYER_LOGIN_GAME = 3;
+message PlayerLoginGame
+{
+    message Request
+    {
+
+    }
+
+    message Response
+    {
+        
+    }
+
+    Request     request     = 1;
+    Response    response    = 2;
+}

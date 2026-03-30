@@ -94,10 +94,22 @@ void Connection::onWritable()
     }
 }
 
-void Connection::send(std::shared_ptr<AppMsgWrapper> pack)
-{
-    auto pack_ptr = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
-    pack_ptr->header_.conn_id_ = conn_id_;
+// 重载的辅助函数 - 处理不同类型的pack
+AppMsg* Connection::get_pack_ptr(std::shared_ptr<AppMsgWrapper> pack) {
+    auto* ptr = reinterpret_cast<AppMsg *>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
+    ptr->header_.conn_id_ = conn_id_;
+    return ptr;
+}
+
+AppMsg* Connection::get_pack_ptr(AppMsg& pack) {
+    pack.header_.conn_id_ = conn_id_;
+    return &pack;
+}
+
+template<typename T>
+void Connection::send_impl(T&& pack) {
+    // 统一处理两种类型的pack
+    auto* pack_ptr = get_pack_ptr(std::forward<T>(pack));
 
     // 尝试直接发送
     struct msghdr msg = {0};
@@ -110,8 +122,6 @@ void Connection::send(std::shared_ptr<AppMsgWrapper> pack)
     msg.msg_iovlen = 1;
 
     ssize_t sent = sendmsg(fd_, &msg, MSG_ZEROCOPY);
-
-    // Helper::printStringData(reinterpret_cast<char *>(pack_ptr));
 
     ILOG << "Attempted to send " << iov.iov_len << " bytes to conn_id: " << conn_id_ << ", sent: " << sent;
 
@@ -150,6 +160,14 @@ void Connection::send(std::shared_ptr<AppMsgWrapper> pack)
     }
 }
 
+// 提供两个对外接口
+void Connection::send(std::shared_ptr<AppMsgWrapper> pack) {
+    send_impl(std::move(pack));
+}
+
+void Connection::send(AppMsg& pack) {
+    send_impl(pack);
+}
 void Connection::updateActiveTime()
 {
     last_active_time_ = std::chrono::steady_clock::now();

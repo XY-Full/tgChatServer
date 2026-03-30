@@ -1,4 +1,4 @@
-# 自动收集当前目录所有 .cpp 文件
+# 自动收集当前目录所有 .cpp 文件（排除 test 子目录）
 file(GLOB COMMON_CPP_FILES "${CMAKE_CURRENT_LIST_DIR}/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/*.h")
 file(GLOB PROTO_CC_FILES "${CMAKE_CURRENT_LIST_DIR}/../../third/*.cc")
 
@@ -28,3 +28,7 @@ target_link_libraries(common PUBLIC
     OpenSSL::Crypto
     ZLIB::ZLIB
 )
+
+if(BUILD_TESTS)
+    add_subdirectory(test)
+endif()

@@ -316,6 +316,18 @@ int32_t TcpServer::send(int32_t conn_id, std::shared_ptr<AppMsgWrapper> pack)
     return -1;
 }
 
+int32_t TcpServer::send(int32_t conn_id, AppMsg& pack)
+{
+    std::lock_guard<std::mutex> lock(conn_mutex_);
+    auto it = conn_map_.find(conn_id);
+    if (it != conn_map_.end())
+    {
+        it->second->send(pack);
+        return 0;
+    }
+    return -1;
+}
+
 void TcpServer::closeConn(int64_t conn_id)
 {
     removeConnection(conn_id);

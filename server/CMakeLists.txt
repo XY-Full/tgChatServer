@@ -121,6 +121,21 @@ if(LIBCOPP_FOUND)
 endif()
 
 # -----------------------------
+# Google Test（放在 third/gtest，源码离线管理）
+# -----------------------------
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS)
+    # 关闭 gtest 内部示例和自身测试，减少编译体积
+    set(BUILD_GMOCK ON CACHE BOOL "" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(gtest_build_tests OFF CACHE BOOL "" FORCE)
+    set(gtest_build_samples OFF CACHE BOOL "" FORCE)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/../third/gtest gtest_build)
+    include(GoogleTest)
+    enable_testing()
+endif()
+
+# -----------------------------
 # 添加子模块
 # -----------------------------
 add_subdirectory(../public proto)

@@ -155,18 +155,22 @@ public:
                 ++it;
         }
 
-        // 选择 current 最大的节点
-        std::string best_id;
-        uint64_t best_current = 0;
+        // 两步选择（Nginx 平滑加权轮询）：
+        // 第一步：所有节点 current += effective_weight
         for (auto &kv : instances)
         {
-            auto &p = kv.second;
-            Node &n = nodes_[p->id];
-            n.current += n.effective_weight;
-            if (best_id.empty() || n.current > best_current)
+            nodes_[kv.second->id].current += nodes_[kv.second->id].effective_weight;
+        }
+
+        // 第二步：找 current 最大的节点（与遍历顺序无关）
+        std::string best_id;
+        int64_t best_current = std::numeric_limits<int64_t>::min();
+        for (auto &kv : nodes_)
+        {
+            if (kv.second.current > best_current)
             {
-                best_current = n.current;
-                best_id = p->id;
+                best_current = kv.second.current;
+                best_id = kv.first;
             }
         }
 
@@ -187,7 +191,7 @@ private:
     struct Node
     {
         uint32_t weight;
-        uint64_t current;
+        int64_t current;          // 有符号：被选中后 current -= total，可为负
         uint32_t effective_weight;
     };
     std::mutex mu_;

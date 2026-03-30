@@ -23,6 +23,11 @@ class JwtAuthProvider : public IAuthProvider
 public:
     explicit JwtAuthProvider(const ConfigManager& config);
 
+    /**
+     * @brief 测试专用构造函数：直接传入 secret，不依赖 ConfigManager
+     */
+    explicit JwtAuthProvider(const std::string& secret_str);
+
     AuthResult  verify(const std::string& token,
                        const std::string& platform = "") override;
     std::string name() const override { return "jwt"; }

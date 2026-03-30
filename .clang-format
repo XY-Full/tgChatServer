@@ -1,4 +1,4 @@
-BasedOnStyle: Microsoft  # 你可以换成其他基础风格，如 LLVM、WebKit 等
+BasedOnStyle: Microsoft
 BraceWrapping:
   AfterFunction: true      # 函数后的大括号另起一行
   AfterControlStatement: true  # 控制语句的大括号另起一行

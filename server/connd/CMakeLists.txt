@@ -1,11 +1,12 @@
 # connd: Connection Daemon
 # Handles TCP / WebSocket / KCP client connections with JWT auth
 
-# ── C++ sources (everything under connd/) ──────────────────────────────────
+# ── C++ sources (everything under connd/, excluding test/) ─────────────────
 file(GLOB_RECURSE CONND_CXX_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
+list(FILTER CONND_CXX_SRC EXCLUDE REGEX ".*/test/.*")
 
 # ── KCP C source (plain C, compiled with the C compiler) ───────────────────
 set(KCP_SRC ${CMAKE_SOURCE_DIR}/../third/kcp/ikcp.c)
@@ -34,3 +35,7 @@ target_link_libraries(connd
 set_target_properties(connd PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/connd
 )
+
+if(BUILD_TESTS)
+    add_subdirectory(test)
+endif()

@@ -22,6 +22,13 @@ JwtAuthProvider::JwtAuthProvider(const ConfigManager& config)
         WLOG << "JwtAuthProvider: jwt.secret is empty, all tokens will fail verification";
 }
 
+JwtAuthProvider::JwtAuthProvider(const std::string& secret_str)
+    : secret_(secret_str)
+{
+    if (secret_.empty())
+        WLOG << "JwtAuthProvider: secret is empty, all tokens will fail verification";
+}
+
 AuthResult JwtAuthProvider::verify(const std::string& token, const std::string& /*platform*/)
 {
     AuthResult result;

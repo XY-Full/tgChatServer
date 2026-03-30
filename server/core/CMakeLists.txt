@@ -1,5 +1,6 @@
-# 自动收集当前目录所有 .cpp 文件
+# 自动收集当前目录所有 .cpp 文件（排除 test 子目录）
 file(GLOB_RECURSE CORE_CPP_FILES "${CMAKE_CURRENT_LIST_DIR}/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/*.h")
+list(FILTER CORE_CPP_FILES EXCLUDE REGEX ".*/test/.*")
 
 # 生成静态库
 add_library(core STATIC
@@ -19,3 +20,7 @@ target_include_directories(core
 )
 
 target_link_libraries(core PUBLIC libcopp::copp libcopp::cotask)
+
+if(BUILD_TESTS)
+    add_subdirectory(shm/test)
+endif()

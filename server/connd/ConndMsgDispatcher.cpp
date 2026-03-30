@@ -7,12 +7,6 @@
 #include "err_code.pb.h"
 #include <cstring>
 
-// CS_LOGIN msg_id（login.proto 对应的 msg_id，与 msg_mapping.h 中 kcsMsgNameToId 一致）
-// login.pb.h 中 Login 消息，其 msg_id 在 msg_mapping.h 中未注册（仅有 PlayerSendMessage 等）
-// connd 自定义常量，不走 slab 路由
-static constexpr uint16_t CS_LOGIN_MSGID     = 100;
-static constexpr uint16_t SC_LOGIN_RSP_MSGID = 200;
-
 ConndMsgDispatcher::ConndMsgDispatcher(SessionManager&       session_mgr,
                                        IAuthProvider&        auth_provider,
                                        std::vector<IListener*> listeners)
@@ -39,7 +33,7 @@ void ConndMsgDispatcher::onClientMessage(uint64_t conn_id, std::shared_ptr<AppMs
         return;
     }
 
-    if (mid == CS_LOGIN_MSGID)
+    if (mid == CS_PLAYER_AUTH)
     {
         handleLogin(conn_id, *msg);
         return;
@@ -62,7 +56,7 @@ void ConndMsgDispatcher::onClientMessage(uint64_t conn_id, std::shared_ptr<AppMs
 
 void ConndMsgDispatcher::handleLogin(uint64_t conn_id, const AppMsg& msg)
 {
-    Login login_msg;
+    cs::PlayerAuth login_msg;
     login_msg.ParseFromArray(msg.data_, msg.data_len_);
     const auto& req = login_msg.request();
 
@@ -79,7 +73,7 @@ void ConndMsgDispatcher::handleLogin(uint64_t conn_id, const AppMsg& msg)
     AuthResult auth_res = auth_provider_.verify(token, platform);
 
     // 构造响应
-    Login reply;
+    cs::PlayerAuth reply;
     auto* rsp = reply.mutable_response();
 
     if (!auth_res.ok)
@@ -87,8 +81,6 @@ void ConndMsgDispatcher::handleLogin(uint64_t conn_id, const AppMsg& msg)
         WLOG << "ConndMsgDispatcher: auth failed conn_id=" << conn_id
              << " reason=" << auth_res.err_msg;
         rsp->set_err(ErrorCode::Error_auth_failed);
-        // Login_Response 没有 err_msg 字段，将原因存入 token 字段供调试
-        rsp->set_token(auth_res.err_msg);
 
         auto pack = Helper::CreateSSPack(reply);
         if (pack)
