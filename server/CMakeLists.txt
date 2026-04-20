@@ -145,6 +145,7 @@ add_subdirectory(center)
 add_subdirectory(busd)
 add_subdirectory(logic)
 add_subdirectory(connd)
+add_subdirectory(account)
 
 # -----------------------------
 # 平台特定依赖

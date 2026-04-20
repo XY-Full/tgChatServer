@@ -36,7 +36,4 @@ private:
     // 转发线程
     std::thread forwarder_thread_;
     std::atomic<bool> running_{false};
-
-    // 负载均衡计数器（简单轮询）
-    std::atomic<size_t> load_balance_counter_{0};
 };

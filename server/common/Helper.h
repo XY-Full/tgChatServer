@@ -45,4 +45,19 @@ public:
     static std::string base64Decode(const std::string& input);
     // HMAC-SHA256
     static std::string hmacSha256(const std::string& key, const std::string& data);
+
+    /**
+     * @brief 将已有 AppMsg 原样拷贝到 slab，封装为 AppMsgWrapper 以供 bus 路由。
+     *
+     * 与 CreateSSPack 不同，此函数不做 proto 序列化，直接 memcpy AppMsg 固定体
+     * + data_len_ 字节的 payload，修正新块内 data_ 指针后返回。
+     *
+     * 用于 connd 将 CS 消息透传给 logic/account，以及将 S2C 回包推给客户端。
+     *
+     * @param src_msg     源 AppMsg（data_ 必须有效）
+     * @param dst_service 目标服务名（填写到 AppMsgWrapper::dst_），推给客户端时传 ""
+     * @return            shared_ptr<AppMsgWrapper>，析构时自动归还 slab 内存；失败返回 nullptr
+     */
+    static std::shared_ptr<AppMsgWrapper> ForwardRawAppMsg(
+        const AppMsg& src_msg, const std::string& dst_service);
 };

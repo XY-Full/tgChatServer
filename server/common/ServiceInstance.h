@@ -22,8 +22,14 @@ struct ServiceInstance
     uint64_t connections{0};
     std::chrono::steady_clock::time_point last_seen = std::chrono::steady_clock::now();
 
-    // 平均延迟（微秒），用于延迟感知 LB。用原子整型表示微秒整数。
+    // 平均延迟（微秒），用于延迟感知 LB
     uint64_t avg_latency_us{0};
+
+    // ── 运行时负载指标（由服务心跳上报，供负载感知路由使用） ──
+    uint32_t cpu_percent{0};  // CPU 使用率（0~100）
+    // load_score：综合负载分（0~100），由各服务自定义计算
+    // 值越大代表负载越高，路由层可据此做冷热分离或最小负载选择
+    uint32_t load_score{0};
 
     std::string to_string() const;
 

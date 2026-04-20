@@ -81,8 +81,6 @@ public:
         ready_cv_.notify_all();
 
         bus_net_->init(opts_);
-        RegistMessage(SSMsgID::SS_TRACE_ROUTE_RSP, std::bind(&Impl::onTraceRouteRsp, this, std::placeholders::_1));
-        RegistMessage(SSMsgID::SS_TRACE_ROUTE_REQ, std::bind(&Impl::onTraceRouteReq, this, std::placeholders::_1));
 
         ILOG << "BusClient started successfully";
         return true;
@@ -245,6 +243,46 @@ public:
         return result;
     }
 
+    bool ForwardRawAppMsg(const std::string& service_name, const AppMsg& msg,
+                          LBStrategy strategy = LBStrategy::RoundRobin)
+    {
+        if (!ready_)
+        {
+            ELOG << "ForwardRawAppMsg: client not ready";
+            return false;
+        }
+        auto pack = Helper::ForwardRawAppMsg(msg, service_name);
+        if (!pack)
+        {
+            ELOG << "ForwardRawAppMsg: Helper::ForwardRawAppMsg failed";
+            return false;
+        }
+        bool result = bus_net_->sendMsgTo(service_name, *pack, strategy);
+        if (!result)
+            ELOG << "ForwardRawAppMsg: sendMsgTo(" << service_name << ") failed";
+        return result;
+    }
+
+    bool ForwardRawAppMsgToId(const std::string& instance_id, const AppMsg& msg)
+    {
+        if (!ready_)
+        {
+            ELOG << "ForwardRawAppMsgToId: client not ready";
+            return false;
+        }
+        // instance_id 全为数字+点，sendMsgTo 内部自动走精准路由分支
+        auto pack = Helper::ForwardRawAppMsg(msg, instance_id);
+        if (!pack)
+        {
+            ELOG << "ForwardRawAppMsgToId: Helper::ForwardRawAppMsg failed";
+            return false;
+        }
+        bool result = bus_net_->sendMsgTo(instance_id, *pack);
+        if (!result)
+            ELOG << "ForwardRawAppMsgToId: sendMsgTo(" << instance_id << ") failed";
+        return result;
+    }
+
     void GetStats() const
     {
         // Stats s;
@@ -353,16 +391,6 @@ private:
         msg_dispatcher_->onMsg(*msg);
     }
 
-    void onTraceRouteRsp(const AppMsg &msg)
-    {
-        bus_net_->onRecvRouteCacheRsp(msg);
-    }
-
-    void onTraceRouteReq(const AppMsg &msg)
-    {
-        bus_net_->onRecvRouteCacheReq(msg);
-    }
-
     void Cleanup()
     {
         local_ring_.reset();
@@ -442,6 +470,17 @@ std::shared_ptr<AppMsg> BusClient::Request(const std::string &service_name, cons
 bool BusClient::Reply(const AppMsg &req_msg, const google::protobuf::Message &msg)
 {
     return impl_->Reply(req_msg, msg);
+}
+
+bool BusClient::ForwardRawAppMsg(const std::string& service_name, const AppMsg& msg,
+                                  LBStrategy strategy)
+{
+    return impl_->ForwardRawAppMsg(service_name, msg, strategy);
+}
+
+bool BusClient::ForwardRawAppMsgToId(const std::string& instance_id, const AppMsg& msg)
+{
+    return impl_->ForwardRawAppMsgToId(instance_id, msg);
 }
 
 void BusClient::GetStats() const

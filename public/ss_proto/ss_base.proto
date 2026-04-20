@@ -10,4 +10,11 @@ message ServiceInfo
     string  shm_recv_buffer_name_   = 5;
     bool    is_daemon_              = 6;
     bool    is_offline_             = 7;  // 差量更新中标识该实例已下线
+
+    // ── 运行时负载指标（服务心跳时上报，用于负载感知路由） ──
+    uint64  connections_            = 8;  // 当前活跃连接数
+    uint32  cpu_percent_            = 9;  // CPU 使用率（0~100）
+    // load_score：综合负载分（0~100），由各服务自定义计算
+    // 值越大代表负载越高；路由层可据此做冷热分离或最低负载选择
+    uint32  load_score_             = 10;
 }

@@ -89,6 +89,10 @@ void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
     inst->address = svr_info.ip_();
     inst->port = svr_info.port_();
     inst->id = svr_info.id_();
+    inst->connections = svr_info.connections_();
+    inst->cpu_percent = svr_info.cpu_percent_();
+    inst->load_score  = svr_info.load_score_();
+    inst->shm_recv_buffer_name = svr_info.shm_recv_buffer_name_();
 
     inst->update_latency_us(Helper::timeGetTimeUS() - request->send_time_());
 
@@ -134,6 +138,10 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
     {
         ILOG << "onUpdateServiceStatus: renewing instance from cache for fd=" << client_fd
              << " id=" << svr_info.id_();
+        // 更新运行时负载指标
+        inst->connections = svr_info.connections_();
+        inst->cpu_percent = svr_info.cpu_percent_();
+        inst->load_score  = svr_info.load_score_();
         // 续约：is_new_instance=false，不触发差量推送
         reg_.register_instance(inst, std::chrono::seconds(TTL), /*is_new_instance=*/false);
         renewed = true;
@@ -175,6 +183,9 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
         new_inst->id       = svr_info.id_();
         new_inst->shm_recv_buffer_name = svr_info.shm_recv_buffer_name_();
         new_inst->last_seen = std::chrono::steady_clock::now();
+        new_inst->connections = svr_info.connections_();
+        new_inst->cpu_percent = svr_info.cpu_percent_();
+        new_inst->load_score  = svr_info.load_score_();
 
         // subscribe 幂等（已存在则不覆盖）
         reg_.subscribe(new_inst->id);
@@ -203,10 +214,20 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
     // ---- 取差量 ----
     auto deltas = reg_.pop_deltas(inst->id);
 
+    // 辅助：把 ServiceInstance 填入 ServiceInfo proto
+    auto fill_info = [](ss::ServiceInfo* info, const ServiceInstancePtr& p, bool offline) {
+        info->set_svr_name_(p->svc_name);
+        info->set_ip_(p->address);
+        info->set_port_(p->port);
+        info->set_id_(p->id);
+        info->set_is_offline_(offline);
+        info->set_connections_(p->connections);
+        info->set_cpu_percent_(p->cpu_percent);
+        info->set_load_score_(p->load_score);
+    };
+
     if (deltas.empty())
     {
-        // 无变化：首次请求时 deltas 也可能为空（刚注册，snapshot 为最新）
-        // 此时若没有收到过全量，需要做一次全量（通过 is_full_update_=true 标记）
         bool is_first_request;
         {
             std::lock_guard lg(conn_mu_);
@@ -218,40 +239,22 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
             response->set_is_full_update_(true);
             auto snap = reg_.snapshot();
             for (auto &kv : snap)
-            {
                 for (auto &p : kv.second)
-                {
-                    auto new_info = response->mutable_service_info_map_()->Add();
-                    new_info->set_svr_name_(p.second->svc_name);
-                    new_info->set_ip_(p.second->address);
-                    new_info->set_port_(p.second->port);
-                    new_info->set_id_(p.second->id);
-                    new_info->set_is_offline_(false);
-                }
-            }
+                    fill_info(response->mutable_service_info_map_()->Add(), p.second, false);
             {
                 std::lock_guard lg(conn_mu_);
                 fd_to_got_full_update_.insert(client_fd);
             }
             ILOG << "onUpdateServiceStatus: full snapshot sent to fd=" << client_fd;
         }
-        // 否则无变化，返回空列表（客户端无需处理）
     }
     else
     {
-        // 差量更新：按 delta 列表下发
         response->set_is_full_update_(false);
         for (auto &entry : deltas)
-        {
-            auto new_info = response->mutable_service_info_map_()->Add();
-            new_info->set_svr_name_(entry.inst->svc_name);
-            new_info->set_ip_(entry.inst->address);
-            new_info->set_port_(entry.inst->port);
-            new_info->set_id_(entry.inst->id);
-            new_info->set_is_offline_(entry.op == DeltaEntry::Op::OFFLINE);
-        }
-        ILOG << "onUpdateServiceStatus: " << deltas.size()
-             << " delta(s) sent to fd=" << client_fd;
+            fill_info(response->mutable_service_info_map_()->Add(), entry.inst,
+                      entry.op == DeltaEntry::Op::OFFLINE);
+        ILOG << "onUpdateServiceStatus: " << deltas.size() << " delta(s) sent to fd=" << client_fd;
     }
 
     auto response_pack = Helper::CreateSSPack(*replyMsg);

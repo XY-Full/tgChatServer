@@ -8,6 +8,8 @@
 #include "network/TcpListener.h"
 #include "network/WsListener.h"
 #include "network/KcpListener.h"
+#include "GlobalSpace.h"
+#include "msg_id.pb.h"
 #include <memory>
 
 /**
@@ -114,20 +116,20 @@ public:
         // ── 6. 启动 BusClient ─────────────────────────────────────
         GlobalSpace()->bus_->Start();
 
-        // ── 7. 注册下行消息回调（logic → connd → client）─────────
-        // 这里注册一个通配 handler：
-        // logic 回包时会通过 bus 路由到 connd，connd 收到后通过 dispatcher 推给客户端。
-        // msg_id 范围 [300, 9999) 作为 SC（Server→Client）消息段（可按需调整）。
-        // 实际项目中可枚举所有 SC msg_id，或在 msg_mapping.h 中集中定义。
-        //
-        // 注意：bus_->RegistMessage 接收 uint32_t msg_id。
-        // 下行消息由 logic 通过 bus->Reply(req, rsp) 触发，
-        // connd 在 IBus 层不 Reply，而是直接向客户端推包。
-        //
-        // 当前架构中，logic 通过 bus->Reply 将 SC 消息送回 connd，
-        // connd 的 IBus 会将其放入 connd 的消息队列并触发此 handler。
-        //
-        // 为简化，我们直接在 onDownstreamCallback 里调用 dispatcher_->onDownstreamMessage。
+        // ── 7. 注册下行消息回调（logic / account → connd → client）──
+        // account 服务签发 token 后通过 bus Reply 回来（msg_id = CS_PLAYER_APPLY_TOKEN）
+        GlobalSpace()->bus_->RegistMessage(
+            static_cast<uint32_t>(MsgID::CS_PLAYER_APPLY_TOKEN),
+            [this](const AppMsg& msg) {
+                if (dispatcher_) dispatcher_->onDownstreamMessage(msg);
+            });
+
+        // logic 下行推送给客户端（SC_NOTIFY 等）
+        GlobalSpace()->bus_->RegistMessage(
+            static_cast<uint32_t>(MsgID::SC_NOTIFY),
+            [this](const AppMsg& msg) {
+                if (dispatcher_) dispatcher_->onDownstreamMessage(msg);
+            });
 
         // ── 8. 启动三种 Listener ──────────────────────────────────
         if (!tcp_listener_->start())

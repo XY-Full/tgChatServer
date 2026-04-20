@@ -102,53 +102,28 @@ bool BusdNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMsgWrap
 void BusdNet::onRecvFromRemoteDaemon(uint64_t conn_id, std::shared_ptr<AppMsg> app_msg)
 {
     // 从远程busd接收到消息，需要转发到本地对应的服务
-    std::string dst_service_name(app_msg->dst_name_, strnlen(app_msg->dst_name_, sizeof(app_msg->dst_name_)));
-    
-    // 查找本地服务
-    auto service_map = getServiceMap();
-    if (!service_map)
-    {
-        ELOG << "BusdNet: Service map not ready";
-        return;
-    }
+    std::string dst(app_msg->dst_name_, strnlen(app_msg->dst_name_, sizeof(app_msg->dst_name_)));
 
-    auto it = service_map->find(dst_service_name);
-    if (it == service_map->end() || it->second.empty())
-    {
-        ELOG << "BusdNet: Target service not found locally: " << dst_service_name;
-        return;
-    }
-
-    // 选择第一个可用的服务实例（简单负载均衡，后续可优化）
-    const auto &target_service = it->second[0];
-
-    // 将TCP接收到的AppMsg转换为AppMsgWrapper，放入共享内存
-    // 先复制到共享内存
+    // 将TCP接收到的AppMsg放入共享内存
     auto pack_len = app_msg->header_.pack_len_;
     auto shm_offset = GlobalSpace()->shm_slab_.Alloc(pack_len);
     auto shm_addr = GlobalSpace()->shm_slab_.off2ptr(shm_offset);
     memcpy(shm_addr, app_msg.get(), pack_len);
-    
-    // 创建AppMsgWrapper
+
     AppMsgWrapper wrapper;
     wrapper.offset_ = shm_offset;
     memcpy(wrapper.dst_, app_msg->dst_name_, sizeof(wrapper.dst_));
-    
-    // 转发到本地服务
-    if (LocalServiceMap_.find(target_service.id_()) == LocalServiceMap_.end())
-    {
-        LocalServiceMap_[target_service.id_()] = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(target_service.shm_recv_buffer_name_());
-    }
 
-    bool result = LocalServiceMap_[target_service.id_()]->Push(wrapper);
+    // 复用双索引路由（含字母 → svr_name 轮询，全数字/点 → id 精准）
+    bool result = sendMsgTo(dst, wrapper);
     if (!result)
     {
-        ELOG << "BusdNet: Failed to push message to local service: " << dst_service_name;
+        ELOG << "BusdNet: Failed to forward remote message to: " << dst;
         GlobalSpace()->shm_slab_.Free(shm_offset, pack_len);
         return;
     }
     
-    DLOG << "BusdNet: Forwarded message from remote daemon to local service: " << dst_service_name;
+    DLOG << "BusdNet: Forwarded message from remote daemon to local service: " << dst;
 }
 
 void BusdNet::init(std::shared_ptr<Options> opts)
@@ -198,36 +173,15 @@ void BusdNet::messageForwardLoop()
         AppMsgWrapper msg;
         if (LocalBusdShmBuffer_->Pop(msg))
         {
-            // 解析目标服务名
-            std::string dst_service_name(msg.dst_, strnlen(msg.dst_, sizeof(msg.dst_)));
-            
-            // 查找目标服务信息
-            auto service_map = getServiceMap();
-            if (!service_map)
-            {
-                WLOG << "BusdNet: Service map not ready, message dropped";
-                Helper::DeleteSSPack(msg);
-                continue;
-            }
+            // 解析目标（可以是 svr_name 或 instance id）
+            std::string dst(msg.dst_, strnlen(msg.dst_, sizeof(msg.dst_)));
 
-            auto it = service_map->find(dst_service_name);
-            if (it == service_map->end() || it->second.empty())
-            {
-                ELOG << "BusdNet: Target service not found: " << dst_service_name;
-                Helper::DeleteSSPack(msg);
-                continue;
-            }
-
-            // 选择一个服务实例（简单轮询负载均衡）
-            const auto &service_instances = it->second;
-            size_t selected_idx = load_balance_counter_++ % service_instances.size();
-            const auto &target_service = service_instances[selected_idx];
-
-            // 转发消息
-            bool result = sendMsgByServiceInfo(target_service, msg, true);
+            // 复用双索引路由：含字母 → svr_name 轮询，全数字/点 → id 精准
+            bool result = sendMsgTo(dst, msg);
             if (!result)
             {
-                ELOG << "BusdNet: Failed to forward message to: " << dst_service_name;
+                ELOG << "BusdNet: Failed to forward message to: " << dst;
+                Helper::DeleteSSPack(msg);
             }
         }
         else
@@ -304,73 +258,79 @@ void BusdNet::broadCast(const AppMsgWrapper &msg)
 
 bool BusdNet::sendMsgToGroup(const std::string_view &groupName, const AppMsgWrapper &msg)
 {
-    // BusdNet的组播：发送给指定组的所有服务实例
-    auto service_map = getServiceMap();
-    if (!service_map)
+    // 组播：发送给指定 svr_name 下的所有实例
+    auto name_inst = std::atomic_load(&NameInstances_);
+    if (!name_inst)
     {
-        ELOG << "BusdNet: Service map not ready for group message";
+        ELOG << "BusdNet: NameInstances not ready for group message";
         Helper::DeleteSSPack(msg);
         return false;
     }
 
-    // 查找目标服务组
-    auto it = service_map->find(groupName);
-    if (it == service_map->end() || it->second.empty())
+    auto it = name_inst->find(std::string(groupName));
+    if (it == name_inst->end() || it->second.empty())
     {
         ELOG << "BusdNet: Target service group not found: " << groupName;
         Helper::DeleteSSPack(msg);
         return false;
     }
 
-    const auto &service_instances = it->second;
-    
-    ILOG << "BusdNet: Sending group message to '" << groupName 
-         << "' with " << service_instances.size() << " instances";
-    
-    size_t total_sent = 0;
-    size_t failed_count = 0;
-    
-    // 给该组的所有实例发送消息
-    for (size_t i = 0; i < service_instances.size(); i++)
+    // 收集该组所有实例的 ServiceInfo（从精准表里取）
+    auto svc_map = getServiceMap();
+    if (!svc_map)
     {
-        const auto &service_info = service_instances[i];
-        
-        // 为每个目标复制一份消息（最后一个实例可以使用原消息）
+        ELOG << "BusdNet: ServiceMap not ready for group message";
+        Helper::DeleteSSPack(msg);
+        return false;
+    }
+
+    std::vector<const ss::ServiceInfo*> targets;
+    for (auto &kv : it->second)
+    {
+        auto map_it = svc_map->find(kv.first);
+        if (map_it != svc_map->end() && !map_it->second.empty())
+            targets.push_back(&map_it->second[0]);
+    }
+
+    if (targets.empty())
+    {
+        Helper::DeleteSSPack(msg);
+        return false;
+    }
+
+    ILOG << "BusdNet: Sending group message to '" << groupName
+         << "' with " << targets.size() << " instances";
+
+    size_t total_sent = 0, failed_count = 0;
+
+    for (size_t i = 0; i < targets.size(); i++)
+    {
         AppMsgWrapper msg_to_send;
-        if (i < service_instances.size() - 1)
+        if (i < targets.size() - 1)
         {
-            // 不是最后一个，需要复制
-            auto msg_copy_offset = GlobalSpace()->shm_slab_.Alloc(
-                reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(msg.offset_))->header_.pack_len_
-            );
-            auto msg_copy_addr = GlobalSpace()->shm_slab_.off2ptr(msg_copy_offset);
             auto original_msg = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(msg.offset_));
-            memcpy(msg_copy_addr, original_msg, original_msg->header_.pack_len_);
-            
-            msg_to_send.offset_ = msg_copy_offset;
+            auto copy_offset  = GlobalSpace()->shm_slab_.Alloc(original_msg->header_.pack_len_);
+            memcpy(GlobalSpace()->shm_slab_.off2ptr(copy_offset), original_msg, original_msg->header_.pack_len_);
+            msg_to_send.offset_ = copy_offset;
             memcpy(msg_to_send.dst_, msg.dst_, sizeof(msg_to_send.dst_));
         }
         else
         {
-            // 最后一个，直接使用原消息
             msg_to_send = msg;
         }
-        
-        bool result = sendMsgByServiceInfo(service_info, msg_to_send, true);
-        if (result)
-        {
+
+        if (sendMsgByServiceInfo(*targets[i], msg_to_send, true))
             total_sent++;
-        }
         else
         {
             failed_count++;
-            WLOG << "BusdNet: Failed to send group message to: " << service_info.id_();
+            WLOG << "BusdNet: Failed to send group message to: " << targets[i]->id_();
         }
     }
-    
-    ILOG << "BusdNet: Group message to '" << groupName << "' completed, sent: " 
+
+    ILOG << "BusdNet: Group message to '" << groupName << "' completed, sent: "
          << total_sent << ", failed: " << failed_count;
-    
+
     return failed_count == 0;
 }
 

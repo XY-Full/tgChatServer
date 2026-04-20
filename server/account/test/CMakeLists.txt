@@ -1,19 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
 
-# ── connd 模块单元测试 ─────────────────────────────────────────────
-# 只编译测试需要的源文件（跳过 ConndService）
+# ── account 模块单元测试 ───────────────────────────────────────────
+# 只测试 signJwt 核心逻辑（不依赖 IApp/GlobalSpace/bus）
 
-add_executable(test_connd
-    test_session_manager.cpp
-    test_jwt_auth.cpp
-    test_connd_dispatcher.cpp
-    ${CMAKE_SOURCE_DIR}/connd/SessionManager.cpp
+add_executable(test_account
+    test_account_service.cpp
     ${CMAKE_SOURCE_DIR}/connd/auth/JwtAuthProvider.cpp
-    ${CMAKE_SOURCE_DIR}/connd/ConndMsgDispatcher.cpp
-    ${CMAKE_SOURCE_DIR}/connd/handler/ConndHeartHandler.cpp
 )
 
-target_include_directories(test_connd PRIVATE
+target_include_directories(test_account PRIVATE
+    ${CMAKE_SOURCE_DIR}/account
     ${CMAKE_SOURCE_DIR}/connd
     ${CMAKE_SOURCE_DIR}/connd/auth
     ${CMAKE_SOURCE_DIR}/common
@@ -26,12 +22,10 @@ target_include_directories(test_connd PRIVATE
     ${OPENSSL_INCLUDE_DIR}
 )
 
-target_link_libraries(test_connd PRIVATE
-    -Wl,--start-group
+target_link_libraries(test_account PRIVATE
     common
     core
     proto
-    -Wl,--end-group
     GTest::gtest_main
     pthread
     rt
@@ -41,7 +35,7 @@ target_link_libraries(test_connd PRIVATE
     ZLIB::ZLIB
 )
 
-gtest_discover_tests(test_connd
+gtest_discover_tests(test_account
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES TIMEOUT 60
 )

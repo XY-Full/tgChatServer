@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 
 # ── common 模块单元测试 ────────────────────────────────────────────
 add_executable(test_common
-    test_variant.cpp
     test_helper.cpp
+    test_helper_forward.cpp
 )
 
 target_include_directories(test_common PRIVATE

@@ -6,10 +6,10 @@ cmake_minimum_required(VERSION 3.15)
 add_executable(test_center
     test_load_balancer.cpp
     test_service_registry.cpp
-    # center 模块中仅需链接这几个文件（不含 main 的 CenterService）
-    ${CMAKE_SOURCE_DIR}/center/LoadBalancer.cpp
+    # LoadBalancer/ServiceInstance 已迁移至 common/
+    ${CMAKE_SOURCE_DIR}/common/LoadBalancer.cpp
+    ${CMAKE_SOURCE_DIR}/common/ServiceInstance.cpp
     ${CMAKE_SOURCE_DIR}/center/ServiceRegistry.cpp
-    ${CMAKE_SOURCE_DIR}/center/ServiceInstance.cpp
 )
 
 target_include_directories(test_center PRIVATE

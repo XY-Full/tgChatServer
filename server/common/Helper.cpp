@@ -520,3 +520,42 @@ std::string Helper::hmacSha256(const std::string& key, const std::string& data)
          digest, &dlen);
     return std::string(reinterpret_cast<char*>(digest), dlen);
 }
+
+std::shared_ptr<AppMsgWrapper> Helper::ForwardRawAppMsg(
+    const AppMsg& src_msg, const std::string& dst_service)
+{
+    auto& slab = GlobalSpace()->shm_slab_;
+
+    // 分配：AppMsg 固定体 + payload 字节
+    uint32_t pack_len = static_cast<uint32_t>(sizeof(AppMsg)) + src_msg.data_len_;
+    uint32_t offset   = slab.Alloc(pack_len);
+    if (!offset)
+    {
+        ELOG << "ForwardRawAppMsg: slab alloc failed (pack_len=" << pack_len << ")";
+        return nullptr;
+    }
+
+    // 拷贝 AppMsg 固定体
+    auto* dst_msg = reinterpret_cast<AppMsg*>(slab.off2ptr(offset));
+    memcpy(dst_msg, &src_msg, sizeof(AppMsg));
+
+    // 拷贝 payload（紧跟 AppMsg 之后）
+    char* dst_data = reinterpret_cast<char*>(dst_msg) + sizeof(AppMsg);
+    if (src_msg.data_len_ > 0 && src_msg.data_)
+        memcpy(dst_data, src_msg.data_, src_msg.data_len_);
+
+    // 修正 data_ 指针：指向新 slab 块内的数据区
+    dst_msg->data_ = dst_data;
+
+    // 构造 AppMsgWrapper，析构时自动归还 slab
+    auto wrapper = std::shared_ptr<AppMsgWrapper>(
+        new AppMsgWrapper(),
+        [offset, pack_len](AppMsgWrapper* p) {
+            GlobalSpace()->shm_slab_.Free(offset, pack_len);
+            delete p;
+        });
+    wrapper->offset_ = offset;
+    strncpy(wrapper->dst_, dst_service.c_str(), sizeof(wrapper->dst_) - 1);
+    wrapper->dst_[sizeof(wrapper->dst_) - 1] = '\0';
+    return wrapper;
+}

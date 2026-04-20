@@ -223,25 +223,130 @@ public:
     }
 };
 
+// 按 load_score 加权随机路由（高负载权重大 = 冷热分离：优先打满热节点）
+// load_score 为 0 时赋最小权重 1，避免饥饿
+class WeightedLoadLB : public ILoadBalancer
+{
+public:
+    ServiceInstancePtr select(const ServiceInstances &instances, const std::string &key = "") override
+    {
+        if (instances.empty())
+            return nullptr;
+
+        // 构造权重轮盘：权重 = load_score，为 0 则用 1
+        std::vector<std::pair<ServiceInstancePtr, uint32_t>> wheel;
+        uint64_t total = 0;
+        for (auto &kv : instances)
+        {
+            uint32_t w = kv.second->load_score > 0 ? kv.second->load_score : 1u;
+            wheel.push_back({kv.second, w});
+            total += w;
+        }
+
+        if (total == 0)
+            return instances.begin()->second;
+
+        // 线程安全的随机数（每次调用独立引擎，避免锁）
+        thread_local std::mt19937_64 rng{std::random_device{}()};
+        std::uniform_int_distribution<uint64_t> dist(0, total - 1);
+        uint64_t roll = dist(rng);
+
+        uint64_t acc = 0;
+        for (auto &p : wheel)
+        {
+            acc += p.second;
+            if (roll < acc)
+                return p.first;
+        }
+        return wheel.back().first;
+    }
+};
+
+// 最低负载路由（load_score 最小者优先，即负载最轻的节点）
+class LeastLoadLB : public ILoadBalancer
+{
+public:
+    ServiceInstancePtr select(const ServiceInstances &instances, const std::string &key = "") override
+    {
+        if (instances.empty())
+            return nullptr;
+        ServiceInstancePtr best = nullptr;
+        uint32_t best_score = std::numeric_limits<uint32_t>::max();
+        for (auto &p : instances)
+        {
+            if (!best || p.second->load_score < best_score)
+            {
+                best = p.second;
+                best_score = p.second->load_score;
+            }
+        }
+        return best;
+    }
+};
+
+// 最高负载路由（load_score 最大者优先，精准打满最热节点）
+class MostLoadLB : public ILoadBalancer
+{
+public:
+    ServiceInstancePtr select(const ServiceInstances &instances, const std::string &key = "") override
+    {
+        if (instances.empty())
+            return nullptr;
+        ServiceInstancePtr best = nullptr;
+        uint32_t best_score = 0;
+        for (auto &p : instances)
+        {
+            if (!best || p.second->load_score > best_score)
+            {
+                best = p.second;
+                best_score = p.second->load_score;
+            }
+        }
+        return best;
+    }
+};
+
 // LBFactory
 LBFactory::LBFactory()
 {
-    register_factory("round_robin", []() { return std::make_shared<RoundRobinLB>(); });
-    register_factory("weighted_rr", []() { return std::make_shared<WeightedRRLB>(); });
-    register_factory("least_conn", []() { return std::make_shared<LeastConnLB>(); });
-    register_factory("cons_hash", []() { return std::make_shared<ConsistentHashLB>(); });
-    register_factory("smooth_weighted", []() { return std::make_shared<SmoothWeightedRRLB>(); });
-    register_factory("latency_aware", []() { return std::make_shared<LatencyAwareLB>(); });
+    register_factory("round_robin",    []() { return std::make_shared<RoundRobinLB>(); });
+    register_factory("weighted_rr",    []() { return std::make_shared<WeightedRRLB>(); });
+    register_factory("least_conn",     []() { return std::make_shared<LeastConnLB>(); });
+    register_factory("cons_hash",      []() { return std::make_shared<ConsistentHashLB>(); });
+    register_factory("smooth_weighted",[]() { return std::make_shared<SmoothWeightedRRLB>(); });
+    register_factory("latency_aware",  []() { return std::make_shared<LatencyAwareLB>(); });
+    // 负载感知策略
+    register_factory("weighted_load",  []() { return std::make_shared<WeightedLoadLB>(); });  // 高负载权重大（冷热分离）
+    register_factory("least_load",     []() { return std::make_shared<LeastLoadLB>(); });     // 最低负载优先
+    register_factory("most_load",      []() { return std::make_shared<MostLoadLB>(); });      // 最高负载优先（精准打满）
 }
 
 void LBFactory::register_factory(const std::string &name, Creator c)
 {
     factory_[name] = c;
 }
+
 std::shared_ptr<ILoadBalancer> LBFactory::create(const std::string &name)
 {
     auto it = factory_.find(name);
     if (it == factory_.end())
         return factory_["round_robin"]();
     return it->second();
+}
+
+std::shared_ptr<ILoadBalancer> LBFactory::create(LBStrategy strategy)
+{
+    switch (strategy)
+    {
+    case LBStrategy::RoundRobin:      return factory_["round_robin"]();
+    case LBStrategy::WeightedRR:      return factory_["weighted_rr"]();
+    case LBStrategy::LeastConn:       return factory_["least_conn"]();
+    case LBStrategy::ConsHash:        return factory_["cons_hash"]();
+    case LBStrategy::SmoothWeighted:  return factory_["smooth_weighted"]();
+    case LBStrategy::LatencyAware:    return factory_["latency_aware"]();
+    case LBStrategy::WeightedLoad:    return factory_["weighted_load"]();
+    case LBStrategy::LeastLoad:       return factory_["least_load"]();
+    case LBStrategy::MostLoad:        return factory_["most_load"]();
+    default:                          return factory_["round_robin"]();
+    }
 }

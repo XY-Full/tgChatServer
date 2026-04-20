@@ -5,6 +5,7 @@
 #include "core.pb.h"
 #include "network/MsgWrapper.h"
 #include "ss_msg_id.pb.h"
+#include <cctype>
 #include <memory>
 #include <unistd.h>
 
@@ -152,134 +153,118 @@ void IBusNet::onCenterUpdateServiceStatusRsp(const AppMsg &msg)
         return;
     }
 
-    auto new_map = std::make_shared<ServiceMap>();
+    // 同时重建两张路由表
+    auto new_map       = std::make_shared<ServiceMap>();          // key = instance id
+    auto new_instances = std::make_shared<ServiceNameInstances>(); // key = svr_name
+
     for (auto &s : response.service_info_map_())
     {
+        // 下线实例不加入路由表
+        if (s.is_offline_())
+            continue;
+
+        // 精准路由表（每个 id 唯一）
         (*new_map)[s.id_()].push_back(s);
-        // CRITICAL FIX #1: Use smart pointers instead of raw new
+
+        // 按名路由表：将 ServiceInfo 映射为 ServiceInstancePtr
+        auto &inst_map = (*new_instances)[s.svr_name_()];
+        auto  inst_it  = inst_map.find(s.id_());
+        if (inst_it == inst_map.end())
+        {
+            // 新建实例
+            auto inst = std::make_shared<ServiceInstance>();
+            inst->id          = s.id_();
+            inst->svc_name    = s.svr_name_();
+            inst->address     = s.ip_();
+            inst->port        = static_cast<uint16_t>(s.port_());
+            inst->shm_recv_buffer_name = s.shm_recv_buffer_name_();
+            inst->connections = s.connections_();
+            inst->cpu_percent = s.cpu_percent_();
+            inst->load_score  = s.load_score_();
+            inst_map[s.id_()] = inst;
+        }
+        else
+        {
+            // 更新已有实例的运行时指标
+            inst_it->second->connections = s.connections_();
+            inst_it->second->cpu_percent = s.cpu_percent_();
+            inst_it->second->load_score  = s.load_score_();
+        }
+
+        // 发现本机 busd 时建立 SHM 链路
         if (!LocalBusdShmBuffer_ && s.is_daemon_() && s.ip_() == local_service_info_.ip_())
         {
             LocalBusdShmBuffer_ = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(s.shm_recv_buffer_name_());
         }
     }
-    std::atomic_store(&ServiceMap_, new_map);
 
-    ILOG << "Update status success";
+    std::atomic_store(&ServiceMap_,    new_map);
+    std::atomic_store(&NameInstances_, new_instances);
+
+    ILOG << "Update status success, id_map=" << new_map->size()
+         << " name_map=" << new_instances->size();
 }
 
-bool IBusNet::sendMsgTo(const std::string_view &serviceName, const AppMsgWrapper &msg)
+bool IBusNet::sendMsgTo(const std::string_view &target, const AppMsgWrapper &msg, LBStrategy strategy)
 {
-    // 先检查路由缓存
-    auto cache_it = RouteCache_.find(serviceName);
-    if (cache_it != RouteCache_.end() && cache_it->second)
-    {
-        // 使用缓存的路由
-        sendMsgByServiceInfo(cache_it->second->info, msg);
-        return true;
+    // 判断寻址类型：含字母 → svr_name（LB 策略），全数字/点 → id（精准）
+    bool is_name = false;
+    for (unsigned char c : target) {
+        if (std::isalpha(c)) { is_name = true; break; }
     }
 
-    // 路由缓存不存在，从服务表中查找
-    auto service_map = getServiceMap();
-    if (!service_map)
+    if (is_name)
     {
-        ELOG << "IBusNet::sendMsgTo: Service map not ready";
-        return false;
-    }
+        // ── 按 svr_name 路由，由 LB 策略选实例 ──
+        auto instances_map = std::atomic_load(&NameInstances_);
+        if (!instances_map)
+        {
+            ELOG << "IBusNet::sendMsgTo: NameInstances not ready, target=" << target;
+            return false;
+        }
+        auto it = instances_map->find(std::string(target));
+        if (it == instances_map->end() || it->second.empty())
+        {
+            ELOG << "IBusNet::sendMsgTo: service name not found: " << target;
+            return false;
+        }
 
-    auto service_it = service_map->find(serviceName);
-    if (service_it == service_map->end() || service_it->second.empty())
-    {
-        ELOG << "IBusNet::sendMsgTo: Service not found: " << serviceName;
-        
-        // 发起路由缓存请求（异步）
-        genRouteCache(serviceName);
-        return false;
-    }
+        // 用 LB 选择实例（每次调用按传入策略创建 LB）
+        auto lb = lb_factory_.create(strategy);
+        auto selected = lb ? lb->select(it->second) : nullptr;
+        if (!selected)
+        {
+            ELOG << "IBusNet::sendMsgTo: LB returned nullptr for " << target;
+            return false;
+        }
 
-    // 找到服务，使用第一个实例（后续可以优化为选择最优实例）
-    const auto &target_service = service_it->second[0];
-    sendMsgByServiceInfo(target_service, msg);
-    
-    // 同时发起路由缓存请求，下次会更快（异步优化）
-    genRouteCache(serviceName);
-    
-    return true;
-}
-
-void IBusNet::genRouteCache(const std::string_view &serviceName)
-{
-    ss::TraceRouteReq pb_msg;
-
-    auto now = std::chrono::high_resolution_clock::now();
-    auto duration = now.time_since_epoch();
-    auto send_time = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-
-    pb_msg.mutable_service_info_()->CopyFrom(local_service_info_);
-    pb_msg.set_send_time_(send_time);
-
-    auto pack = Helper::CreateSSPack(pb_msg);
-
-    sendMsgToGroup(serviceName, *pack);
-}
-
-void IBusNet::onRecvRouteCacheRsp(const AppMsg &msg)
-{
-    ss::TraceRouteRsp response;
-    response.ParseFromArray(msg.data_, msg.data_len_);
-    // 获取现在的高精度时间
-    auto now = std::chrono::high_resolution_clock::now();
-    auto duration = now.time_since_epoch();
-    auto send_time = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-
-    if (response.err() != SSErrorCode::Error_success)
-    {
-        ELOG << "Recv route cache failed, error code: " << SSErrorCode_Name(response.err());
-        return;
-    }
-
-    // 计算延迟
-    auto delay = send_time - response.send_time_();
-    
-    std::string service_id = response.service_info_().id_();
-    
-    // 如果路由缓存中不存在这个服务，则缓存一下
-    auto cache_it = RouteCache_.find(service_id);
-    if (cache_it == RouteCache_.end())
-    {
-        // 创建新的缓存条目
-        auto new_cache = std::make_shared<ServiceRouteCache>();
-        new_cache->delay = delay;
-        new_cache->info.CopyFrom(response.service_info_());
-        RouteCache_[service_id] = new_cache;
-        
-        ILOG << "New add route cache from " << service_id << " success, delay: " << delay;
-    }
-    // 如果路由缓存中存在，但是新服务的延迟更低，则更新
-    else if (delay > 0 && cache_it->second && delay < cache_it->second->delay)
-    {
-        cache_it->second->delay = delay;
-        cache_it->second->info.CopyFrom(response.service_info_());
-        ILOG << "Update route cache from " << service_id << " success, delay: " << delay;
+        // 根据选中实例的静态信息找到对应的 ServiceInfo
+        auto svc_map = getServiceMap();
+        if (!svc_map) return false;
+        auto svc_it = svc_map->find(selected->id);
+        if (svc_it == svc_map->end() || svc_it->second.empty())
+        {
+            ELOG << "IBusNet::sendMsgTo: selected id not in ServiceMap: " << selected->id;
+            return false;
+        }
+        return sendMsgByServiceInfo(svc_it->second[0], msg);
     }
     else
     {
-        DLOG << "Route cache from " << service_id << " not updated, current delay: " 
-             << (cache_it->second ? cache_it->second->delay : 0) << ", new delay: " << delay;
+        // ── 按 instance id 精准路由 ──
+        auto svc_map = getServiceMap();
+        if (!svc_map)
+        {
+            ELOG << "IBusNet::sendMsgTo: ServiceMap not ready, target=" << target;
+            return false;
+        }
+        auto it = svc_map->find(std::string(target));
+        if (it == svc_map->end() || it->second.empty())
+        {
+            ELOG << "IBusNet::sendMsgTo: instance id not found: " << target;
+            return false;
+        }
+        return sendMsgByServiceInfo(it->second[0], msg);
     }
 }
 
-void IBusNet::onRecvRouteCacheReq(const AppMsg &msg)
-{
-    ss::TraceRouteReq pb_msg;
-    pb_msg.ParseFromArray(msg.data_, msg.data_len_);
-
-    ss::TraceRouteRsp rsp_msg;
-    rsp_msg.set_err(SSErrorCode::Error_success);
-    // 回传对方的send_time
-    rsp_msg.set_send_time_(pb_msg.send_time_());
-    rsp_msg.mutable_service_info_()->CopyFrom(local_service_info_);
-
-    auto pack = Helper::CreateSSPack(rsp_msg);
-
-    sendMsgByServiceInfo(pb_msg.service_info_(), *pack);
-}
