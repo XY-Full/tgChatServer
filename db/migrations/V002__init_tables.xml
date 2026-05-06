@@ -1,0 +1,28 @@
+<migration version="2" description="创建基础业务表：用户和聊天消息">
+
+  <!-- 用户表 -->
+  <create_table name="users" engine="InnoDB" charset="utf8mb4" comment="用户基础信息表">
+    <column name="id"         type="BIGINT"         not_null="1" auto_increment="1" primary_key="1"/>
+    <column name="uid"        type="BIGINT UNSIGNED" not_null="1" default="0"/>
+    <column name="username"   type="VARCHAR(64)"     not_null="1" default="''"/>
+    <column name="status"     type="TINYINT"         not_null="1" default="0"/>
+    <column name="created_at" type="DATETIME"        not_null="1" default="CURRENT_TIMESTAMP"/>
+    <column name="updated_at" type="DATETIME"        not_null="1" default="CURRENT_TIMESTAMP" on_update="CURRENT_TIMESTAMP"/>
+    <index name="uidx_uid"      columns="uid"      unique="1"/>
+    <index name="uidx_username" columns="username" unique="1"/>
+  </create_table>
+
+  <!-- 聊天消息表 -->
+  <create_table name="chat_messages" engine="InnoDB" charset="utf8mb4" comment="聊天消息记录表">
+    <column name="id"         type="BIGINT"         not_null="1" auto_increment="1" primary_key="1"/>
+    <column name="msg_id"     type="BIGINT UNSIGNED" not_null="1" default="0"/>
+    <column name="from_uid"   type="BIGINT UNSIGNED" not_null="1" default="0"/>
+    <column name="to_uid"     type="BIGINT UNSIGNED" not_null="1" default="0"/>
+    <column name="content"    type="TEXT"            not_null="1"/>
+    <column name="msg_type"   type="TINYINT"         not_null="1" default="0"/>
+    <column name="created_at" type="DATETIME"        not_null="1" default="CURRENT_TIMESTAMP"/>
+    <index name="idx_from_uid_created" columns="from_uid,created_at"/>
+    <index name="idx_to_uid_created"   columns="to_uid,created_at"/>
+  </create_table>
+
+</migration>

@@ -5,4 +5,10 @@ enum SSErrorCode
     Error_success               = 0;
     Error_exist_server_name     = 1;
     Error_instance_not_found    = 2;
+
+    Error_db_connection_failed  = 10; // 数据库连接失败
+    Error_db_query_failed       = 11; // SELECT 查询失败
+    Error_db_exec_failed        = 12; // INSERT/UPDATE/DELETE 执行失败
+    Error_db_tx_not_found       = 13; // 事务 ID 不存在或已过期
+    Error_db_tx_timeout         = 14; // 事务执行超时
 }

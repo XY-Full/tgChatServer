@@ -1,0 +1,127 @@
+syntax = "proto3";
+package ss;
+
+import "ss_err_code.proto";
+
+// ── 通用字段值：覆盖 MySQL 常见列类型 ──
+message DBValue
+{
+    oneof value
+    {
+        int64  int_val    = 1; // 整型 (TINYINT/SMALLINT/INT/BIGINT)
+        double double_val = 2; // 浮点 (FLOAT/DOUBLE/DECIMAL)
+        string str_val    = 3; // 字符串 (VARCHAR/TEXT/CHAR/DATE/DATETIME)
+        bytes  blob_val   = 4; // 二进制 (BLOB/BINARY/VARBINARY)
+        bool   null_val   = 5; // NULL 值标记，true 表示 NULL
+    }
+}
+
+// ── 查询结果行 ──
+message DBRow
+{
+    repeated DBValue values = 1;
+}
+
+// ── 列元数据 ──
+message DBColumn
+{
+    string name = 1; // 列名
+    string type = 2; // 类型字符串，如 "INT", "VARCHAR", "DATETIME"
+}
+
+// SS_DB_QUERY_REQ = 5;
+message DBQueryReq
+{
+    message Request
+    {
+        string           sql    = 1; // SELECT 语句（暂不支持预处理占位符）
+        uint64           tx_id  = 2; // 非 0 表示在指定事务内执行
+    }
+
+    message Response
+    {
+        SSErrorCode      err     = 1;
+        string           err_msg = 2;
+        repeated DBColumn columns = 3;
+        repeated DBRow    rows    = 4;
+    }
+
+    Request  request  = 1;
+    Response response = 2;
+}
+
+// SS_DB_EXEC_REQ = 7;
+message DBExecReq
+{
+    message Request
+    {
+        string sql   = 1; // INSERT / UPDATE / DELETE 语句
+        uint64 tx_id = 2; // 非 0 表示在指定事务内执行
+    }
+
+    message Response
+    {
+        SSErrorCode err            = 1;
+        string      err_msg        = 2;
+        uint64      affected_rows  = 3;
+        uint64      last_insert_id = 4;
+    }
+
+    Request  request  = 1;
+    Response response = 2;
+}
+
+// SS_DB_TX_BEGIN_REQ = 9;
+message DBTxBeginReq
+{
+    message Request
+    {
+        uint64 timeout_ms = 1; // 事务超时（毫秒），0 使用服务端默认值
+    }
+
+    message Response
+    {
+        SSErrorCode err     = 1;
+        string      err_msg = 2;
+        uint64      tx_id   = 3; // 服务端分配的事务 ID
+    }
+
+    Request  request  = 1;
+    Response response = 2;
+}
+
+// SS_DB_TX_COMMIT_REQ = 11;
+message DBTxCommitReq
+{
+    message Request
+    {
+        uint64 tx_id = 1;
+    }
+
+    message Response
+    {
+        SSErrorCode err     = 1;
+        string      err_msg = 2;
+    }
+
+    Request  request  = 1;
+    Response response = 2;
+}
+
+// SS_DB_TX_ROLLBACK_REQ = 13;
+message DBTxRollbackReq
+{
+    message Request
+    {
+        uint64 tx_id = 1;
+    }
+
+    message Response
+    {
+        SSErrorCode err     = 1;
+        string      err_msg = 2;
+    }
+
+    Request  request  = 1;
+    Response response = 2;
+}

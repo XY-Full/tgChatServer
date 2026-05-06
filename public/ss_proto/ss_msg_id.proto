@@ -7,4 +7,15 @@ enum SSMsgID
     SS_UPDATE_SERVICE_STATUS    = 2; // 服务更新当前状态
     SS_TRACE_ROUTE_REQ          = 3; // 路由探测req
     SS_TRACE_ROUTE_RSP          = 4; // 路由探测rsp
+
+    SS_DB_QUERY_REQ             = 5;  // SELECT 查询请求
+    SS_DB_QUERY_RSP             = 6;  // SELECT 查询响应
+    SS_DB_EXEC_REQ              = 7;  // INSERT/UPDATE/DELETE 执行请求
+    SS_DB_EXEC_RSP              = 8;  // INSERT/UPDATE/DELETE 执行响应
+    SS_DB_TX_BEGIN_REQ          = 9;  // 事务开始请求
+    SS_DB_TX_BEGIN_RSP          = 10; // 事务开始响应
+    SS_DB_TX_COMMIT_REQ         = 11; // 事务提交请求
+    SS_DB_TX_COMMIT_RSP         = 12; // 事务提交响应
+    SS_DB_TX_ROLLBACK_REQ       = 13; // 事务回滚请求
+    SS_DB_TX_ROLLBACK_RSP       = 14; // 事务回滚响应
 }

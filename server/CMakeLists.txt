@@ -146,6 +146,8 @@ add_subdirectory(busd)
 add_subdirectory(logic)
 add_subdirectory(connd)
 add_subdirectory(account)
+add_subdirectory(dbproxy)
+add_subdirectory(tools/dbmigrate)
 
 # -----------------------------
 # 平台特定依赖

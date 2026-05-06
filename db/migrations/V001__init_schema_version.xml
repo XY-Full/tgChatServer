@@ -1,0 +1,14 @@
+<migration version="1" description="初始化 DB Schema 版本管理表">
+
+  <!-- 此文件是所有迁移的基础。实际上 MigrationEngine 会自动创建版本表，
+       但将其作为迁移文件可以保证版本 1 被记录在迁移历史中。-->
+  <create_table name="db_schema_version" engine="InnoDB" charset="utf8mb4" comment="DB schema migration history">
+    <column name="version"      type="INT"          not_null="1" primary_key="1"/>
+    <column name="description"  type="VARCHAR(256)"  not_null="1" default="''"/>
+    <column name="filename"     type="VARCHAR(256)"  not_null="1" default="''"/>
+    <column name="checksum"     type="VARCHAR(64)"   not_null="1" default="''"/>
+    <column name="applied_at"   type="DATETIME"      not_null="1" default="CURRENT_TIMESTAMP"/>
+    <column name="execution_ms" type="INT"           not_null="1" default="0"/>
+  </create_table>
+
+</migration>
