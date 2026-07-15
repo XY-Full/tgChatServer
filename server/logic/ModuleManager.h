@@ -1,12 +1,9 @@
 #pragma once
-#include "bus/IBus.h"
 #include <memory>
-#include <vector>
 
-class ILogic;
 class HeartHandler;
-class TelegramBot;
-class ChatMgr;
+class ChatHandler;
+class LoginHandler;
 
 class ModuleManager
 {
@@ -15,27 +12,24 @@ public:
     {
     }
 
-    // 注册模块（每个模块自注册消息 -> 处理函数）
+    // 注册模块（每个模块构造时自注册消息 -> 处理函数）
     void registerAllModule();
 
     std::shared_ptr<HeartHandler> getHeartHandler()
     {
         return heartMgr_;
     }
-    std::shared_ptr<TelegramBot> getConfigUpdate()
+    std::shared_ptr<ChatHandler> getChatHandler()
     {
-        return telegramBotMgr_;
+        return chatHandler_;
     }
-    std::shared_ptr<ChatMgr> getChatMgr()
+    std::shared_ptr<LoginHandler> getLoginHandler()
     {
-        return chatMgr_;
+        return loginHandler_;
     }
 
 private:
     std::shared_ptr<HeartHandler> heartMgr_;
-    std::shared_ptr<TelegramBot> telegramBotMgr_;
-    std::shared_ptr<ChatMgr> chatMgr_;
-
-private:
-    std::vector<ILogic *> modules_;
+    std::shared_ptr<ChatHandler> chatHandler_;
+    std::shared_ptr<LoginHandler> loginHandler_;
 };

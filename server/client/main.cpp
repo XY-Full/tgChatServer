@@ -25,13 +25,12 @@
  *     char     dst_name_[16] = ""
  *   [protobuf bytes紧随其后]
  *
- * msg_id 约定：
- *   CS_HEART_BEAT = 0
- *   CS_LOGIN      = 100  (connd 自定义)
- *   SC_LOGIN_RSP  = 200  (connd 自定义)
+ * msg_id 约定（见 public/proto/msg_id.proto）：
+ *   CS_HEART_BEAT         = 0
+ *   CS_PLAYER_APPLY_TOKEN = 1   (account 服务签发 JWT)
+ *   CS_PLAYER_AUTH        = 2   (connd 本地验签)
  */
 
-#include "gate.pb.h"
 #include "login.pb.h"
 #include "err_code.pb.h"
 #include <arpa/inet.h>
@@ -87,16 +86,11 @@ static constexpr size_t  kFrameOverhead = sizeof(AppMsgFrame); // 70
 static constexpr uint8_t kMagicVersion  = 0x01;
 static constexpr uint8_t kTypeC2S       = 0x01;
 
-static constexpr uint16_t kMsgHeartBeat = 0;
-static constexpr uint16_t kMsgLogin     = 100;
-static constexpr uint16_t kMsgLoginRsp  = 200;
-static constexpr uint16_t kMsgHeartRsp  = 0;   // SC_HEART_BEAT 同 msg_id
+static constexpr uint16_t kMsgHeartBeat   = 0;  // MsgID::CS_HEART_BEAT
+static constexpr uint16_t kMsgApplyToken  = 1;  // MsgID::CS_PLAYER_APPLY_TOKEN
+static constexpr uint16_t kMsgAuth        = 2;  // MsgID::CS_PLAYER_AUTH
 
-// 预生成测试 JWT（secret="change-me-in-production", sub="test_user_1", exp=9999999999）
-static const char* kTestJwtToken =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-    ".eyJzdWIiOiJ0ZXN0X3VzZXJfMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo5OTk5OTk5OTk5fQ"
-    ".CPaVveRjQSfBtESvZWOxG4SaqP0e_AqE6za6FVJrh_c";
+static const char* kTestAccount = "test_user_1";
 
 // ─────────────────────────────────────────────────────────────────────
 // 辅助：十六进制打印
@@ -244,50 +238,95 @@ public:
 
     // ── 高级操作 ─────────────────────────────────────────────────────
 
-    bool login(const std::string& token = kTestJwtToken)
+    // 步骤一：向 account 服务申请 JWT（经 connd 透传）
+    bool applyToken(const std::string& account, std::string& token_out)
     {
-        std::cout << "[login] sending Login.Request (token=" << token.substr(0, 20) << "...)\n";
+        std::cout << "[applyToken] requesting token for account=" << account << "\n";
 
-        Login req;
-        req.mutable_request()->set_account(token);
-        req.mutable_request()->set_platform("jwt");
+        cs::PlayerApplyToken req;
+        req.mutable_request()->set_account(account);
+        req.mutable_request()->set_platform(cs::SelfPlatform);
 
-        if (!sendPack(kMsgLogin, req)) return false;
+        if (!sendPack(kMsgApplyToken, req)) return false;
 
         auto res = recvPack();
         if (!res.ok)
         {
-            std::cerr << "[login] no response\n";
+            std::cerr << "[applyToken] no response\n";
+            return false;
+        }
+        if (res.msg_id != kMsgApplyToken)
+        {
+            std::cerr << "[applyToken] unexpected msg_id=" << res.msg_id << "\n";
             return false;
         }
 
-        if (res.msg_id != kMsgLoginRsp && res.msg_id != kMsgLogin)
+        cs::PlayerApplyToken rsp;
+        if (!rsp.ParseFromString(res.data))
         {
-            std::cerr << "[login] unexpected msg_id=" << res.msg_id << "\n";
+            std::cerr << "[applyToken] bad response payload\n";
+            return false;
+        }
+        if (rsp.response().err() != ErrorCode::Error_success)
+        {
+            std::cerr << "[applyToken] FAILED - err=" << rsp.response().err() << "\n";
             return false;
         }
 
-        Login rsp;
-        rsp.ParseFromString(res.data);
-        int32_t err = rsp.response().err();
-        std::cout << "[login] response: err=" << err
-                  << " uid=" << rsp.response().uid()
-                  << " token/msg=" << rsp.response().token() << "\n";
+        token_out = rsp.response().token();
+        std::cout << "[applyToken] SUCCESS - token=" << token_out.substr(0, 20) << "...\n";
+        return true;
+    }
 
-        if (err == 1) // Error_success = 1
+    // 步骤二：用 JWT 鉴权（connd 本地验签）
+    bool auth(const std::string& token)
+    {
+        std::cout << "[auth] sending PlayerAuth (token=" << token.substr(0, 20) << "...)\n";
+
+        cs::PlayerAuth req;
+        req.mutable_request()->set_token(token);
+
+        if (!sendPack(kMsgAuth, req)) return false;
+
+        auto res = recvPack();
+        if (!res.ok)
         {
-            std::cout << "[login] SUCCESS - authenticated as user_id=" << rsp.response().token() << "\n";
+            std::cerr << "[auth] no response\n";
+            return false;
+        }
+        if (res.msg_id != kMsgAuth)
+        {
+            std::cerr << "[auth] unexpected msg_id=" << res.msg_id << "\n";
+            return false;
+        }
+
+        cs::PlayerAuth rsp;
+        if (!rsp.ParseFromString(res.data))
+        {
+            std::cerr << "[auth] bad response payload\n";
+            return false;
+        }
+        if (rsp.response().err() == ErrorCode::Error_success)
+        {
+            std::cout << "[auth] SUCCESS - authenticated\n";
             return true;
         }
-        std::cerr << "[login] FAILED - server error: " << rsp.response().token() << "\n";
+        std::cerr << "[auth] FAILED - err=" << rsp.response().err() << "\n";
         return false;
+    }
+
+    // applyToken + auth 完整登录流程
+    bool login(const std::string& account = kTestAccount)
+    {
+        std::string token;
+        return applyToken(account, token) && auth(token);
     }
 
     bool heart()
     {
         std::cout << "[heart] sending Heart.Request\n";
 
-        Heart req;
+        cs::Heart req;
         req.mutable_request(); // 空请求
 
         if (!sendPack(kMsgHeartBeat, req)) return false;
@@ -299,7 +338,7 @@ public:
             return false;
         }
 
-        Heart rsp;
+        cs::Heart rsp;
         rsp.ParseFromString(res.data);
         std::cout << "[heart] response: err=" << rsp.response().err()
                   << " timestamp=" << rsp.response().timestamp() << "\n";
@@ -342,7 +381,7 @@ public:
     void repl()
     {
         std::cout << "=== interactive mode ===\n";
-        std::cout << "commands: connect, disconnect, login [token], heart, quit\n";
+        std::cout << "commands: connect, disconnect, login [account], auth <token>, heart, quit\n";
 
         std::string line;
         while (std::cout << "> " && std::getline(std::cin, line))
@@ -372,10 +411,18 @@ public:
             else if (cmd == "login")
             {
                 if (!connected()) { std::cout << "[repl] not connected\n"; continue; }
+                std::string account;
+                ss >> account;
+                if (account.empty()) account = kTestAccount;
+                login(account);
+            }
+            else if (cmd == "auth")
+            {
+                if (!connected()) { std::cout << "[repl] not connected\n"; continue; }
                 std::string tok;
                 ss >> tok;
-                if (tok.empty()) tok = kTestJwtToken;
-                login(tok);
+                if (tok.empty()) { std::cout << "[repl] usage: auth <token>\n"; continue; }
+                auth(tok);
             }
             else if (cmd == "heart")
             {
@@ -385,7 +432,7 @@ public:
             else
             {
                 std::cout << "[repl] unknown command: " << cmd << "\n";
-                std::cout << "commands: connect, disconnect, login [token], heart, quit\n";
+                std::cout << "commands: connect, disconnect, login [account], auth <token>, heart, quit\n";
             }
         }
 

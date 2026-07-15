@@ -450,7 +450,6 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateCSPackage(const google::protobuf::M
     pack->offset_ = pack_shm_offset;
 
     return pack;
-    return nullptr;
 }
 
 // ─────────────────────────────────────────────

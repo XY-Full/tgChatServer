@@ -2,7 +2,7 @@
 #include "HeartHandler.h"
 #include "GlobalSpace.h"
 #include "ILogic.h"
-#include "gate.pb.h"
+#include "login.pb.h"
 
 HeartHandler::HeartHandler()
 {
@@ -16,7 +16,7 @@ void HeartHandler::registerHandlers()
 
 void HeartHandler::onHeart(const AppMsg &msg)
 {
-    PROCESS_NETPACK_BEGIN(Heart);
+    PROCESS_NETPACK_BEGIN(cs::Heart);
 
     response->set_err(ErrorCode::Error_success);
     response->set_timestamp(time(nullptr));

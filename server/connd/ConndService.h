@@ -35,6 +35,14 @@ public:
     virtual bool onInit() override final
     {
         // ── 1. 鉴权提供者 ──────────────────────────────────────────
+        // jwt 模式下密钥缺失必须拒绝启动：空密钥的 HMAC 任何人都能伪造
+        if (getContext().getValue<std::string>("auth.provider", "jwt") == "jwt" &&
+            getContext().getValue<std::string>("auth.jwt.secret", "").empty())
+        {
+            ELOG << "ConndApp: auth.jwt.secret is not configured, refusing to start";
+            return false;
+        }
+
         auth_provider_ = AuthProviderFactory::create(getContext());
         if (!auth_provider_)
         {
@@ -114,7 +122,11 @@ public:
         );
 
         // ── 6. 启动 BusClient ─────────────────────────────────────
-        GlobalSpace()->bus_->Start();
+        if (!GlobalSpace()->bus_->Start())
+        {
+            ELOG << "ConndApp: bus start failed";
+            return false;
+        }
 
         // ── 7. 注册下行消息回调（logic / account → connd → client）──
         // account 服务签发 token 后通过 bus Reply 回来（msg_id = CS_PLAYER_APPLY_TOKEN）

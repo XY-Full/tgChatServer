@@ -120,6 +120,15 @@ bool MigrationEngine::execSQL(const std::string& sql, std::string& err)
     return true;
 }
 
+std::string MigrationEngine::escapeSQL(const std::string& s)
+{
+    // 最坏情况每个字符都被转义为两个字符
+    std::vector<char> buf(s.size() * 2 + 1);
+    unsigned long n = mysql_real_escape_string(&mysql_, buf.data(), s.c_str(),
+                                               static_cast<unsigned long>(s.size()));
+    return std::string(buf.data(), n);
+}
+
 // ── 确保版本表存在 ────────────────────────────────────────────────────────
 
 bool MigrationEngine::ensureVersionTable()
@@ -259,13 +268,14 @@ bool MigrationEngine::applyMigration(const MigrationFile& mf)
         std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
     std::string cksum = computeChecksum(mf.filepath);
 
+    // description/filename 来自迁移 XML，必须转义后再拼接
     std::ostringstream insert_ss;
     insert_ss << "INSERT INTO db_schema_version "
               << "(version, description, filename, checksum, execution_ms) VALUES ("
               << mf.version << ", '"
-              << mf.description << "', '"
-              << mf.filename << "', '"
-              << cksum << "', "
+              << escapeSQL(mf.description) << "', '"
+              << escapeSQL(mf.filename) << "', '"
+              << escapeSQL(cksum) << "', "
               << ms << ")";
 
     if (!execSQL(insert_ss.str(), err))

@@ -22,10 +22,7 @@ public:
 
     virtual bool onInit() override final
     {
-        // 1. 启动 Bus（向 Center 注册并建立 SS 通信）
-        GlobalSpace()->bus_->Start();
-
-        // 2. 读取数据库配置
+        // 1. 读取数据库配置
         auto& cfg = getContext();
         MySQLConfig db_cfg;
         db_cfg.host             = cfg.getValue<std::string>("db_host",     "127.0.0.1");
@@ -39,14 +36,28 @@ public:
         int max_pool_size = cfg.getValue<int>("db_max_pool_size", 32);
         uint64_t tx_timeout_ms = static_cast<uint64_t>(cfg.getValue<int>("db_tx_timeout_ms", 30000));
 
-        // 3. 初始化连接池和事务管理器
+        // 2. 初始化连接池和事务管理器；数据库不可达时拒绝启动
         pool_     = std::make_unique<MySQLConnectionPool>(db_cfg, pool_size, max_pool_size);
+        if (pool_->idleCount() == 0)
+        {
+            ELOG << "DBProxyApp: failed to establish any db connection ("
+                 << db_cfg.host << ":" << db_cfg.port << "/" << db_cfg.database
+                 << "), refusing to start";
+            return false;
+        }
         tx_mgr_   = std::make_unique<TransactionManager>(*pool_, tx_timeout_ms);
 
-        // 4. 注册所有 SS DB 消息处理器
+        // 3. 注册所有 SS DB 消息处理器（先注册再启动 bus，避免消息早到被丢弃）
         handler_  = std::make_unique<DBProxyHandler>(*pool_, *tx_mgr_);
 
-        ILOG << "DBProxyApp: initialized. pool=" << pool_size
+        // 4. 启动 Bus（向 Center 注册并建立 SS 通信）
+        if (!GlobalSpace()->bus_->Start())
+        {
+            ELOG << "DBProxyApp: bus start failed";
+            return false;
+        }
+
+        ILOG << "DBProxyApp: initialized. pool=" << pool_->idleCount() << "/" << pool_size
              << " max=" << max_pool_size << " db=" << db_cfg.database;
         return true;
     }

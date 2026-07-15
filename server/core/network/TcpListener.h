@@ -57,10 +57,7 @@ public:
 
     void close_conn(uint64_t conn_id) override
     {
-        // TcpServer 没有直接暴露 close，向对端发送 FIN 通过 removeConnection 触发。
-        // 此处通过发送空包触发 close 逻辑，或通过 server_ 友元访问（暂用 NOOP）。
-        // TODO: 若需要主动踢人，在 TcpServer 添加 closeConn(conn_id) 接口
-        (void)conn_id;
+        server_->closeConn(static_cast<int64_t>(conn_id));
     }
 
     std::string proto_name() const override { return "tcp"; }

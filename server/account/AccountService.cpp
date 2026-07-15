@@ -47,7 +47,20 @@ static std::string base64UrlEncode(const std::string& input)
 
 bool AccountApp::onInit()
 {
-    GlobalSpace()->bus_->Start();
+    // 密钥缺失时拒绝启动：空密钥签出的 token 任何人都能伪造
+    jwt_secret_ = GlobalSpace()->configMgr_->getValue<std::string>("auth.jwt.secret", "");
+    if (jwt_secret_.empty())
+    {
+        ELOG << "AccountApp: auth.jwt.secret is not configured, refusing to start";
+        return false;
+    }
+    jwt_ttl_ = GlobalSpace()->configMgr_->getValue<int64_t>("auth.jwt.ttl_seconds", 86400);
+
+    if (!GlobalSpace()->bus_->Start())
+    {
+        ELOG << "AccountApp: bus start failed";
+        return false;
+    }
 
     // 注册 CS_PLAYER_APPLY_TOKEN handler
     GlobalSpace()->bus_->RegistMessage(
@@ -80,9 +93,9 @@ void AccountApp::onApplyToken(const AppMsg& msg)
     cs::PlayerApplyToken rsp;
     auto* rsp_body = rsp.mutable_response();
 
-    if (account.empty())
+    if (account.empty() || account.size() > kMaxAccountLen)
     {
-        WLOG << "AccountApp: empty account, rejecting";
+        WLOG << "AccountApp: invalid account (len=" << account.size() << "), rejecting";
         rsp_body->set_err(ErrorCode::Error_auth_failed);
     }
     else
@@ -98,14 +111,6 @@ void AccountApp::onApplyToken(const AppMsg& msg)
 
 std::string AccountApp::signJwt(const std::string& account)
 {
-    const std::string secret =
-        GlobalSpace()->configMgr_->getValue<std::string>("auth.jwt.secret", "");
-    int64_t ttl =
-        GlobalSpace()->configMgr_->getValue<int64_t>("auth.jwt.ttl_seconds", 86400);
-
-    if (secret.empty())
-        WLOG << "AccountApp: jwt.secret is empty, token will fail verification";
-
     int64_t now = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -114,11 +119,11 @@ std::string AccountApp::signJwt(const std::string& account)
     // Payload：sub = account，exp = now + ttl
     const std::string payload_json =
         R"({"sub":")" + account +
-        R"(","exp":)" + std::to_string(now + ttl) + "}";
+        R"(","exp":)" + std::to_string(now + jwt_ttl_) + "}";
 
     std::string h   = base64UrlEncode(header_json);
     std::string p   = base64UrlEncode(payload_json);
-    std::string sig = base64UrlEncode(Helper::hmacSha256(secret, h + "." + p));
+    std::string sig = base64UrlEncode(Helper::hmacSha256(jwt_secret_, h + "." + p));
 
     return h + "." + p + "." + sig;
 }

@@ -10,10 +10,11 @@
  *
  * 验证步骤：
  *   1. 拆分三段，base64url 解码 header 和 payload
- *   2. 用 HMAC-SHA256(secret, header.payload) 计算签名
- *   3. 与 signature 比较（恒定时间比较，防止时序攻击）
- *   4. 检查 payload 中的 exp 字段是否过期
- *   5. 从 payload 中提取 sub（user_id）
+ *   2. 校验 header.alg 必须为 HS256（防算法混淆），secret 为空直接拒绝
+ *   3. 用 HMAC-SHA256(secret, header.payload) 计算签名
+ *   4. 与 signature 比较（恒定时间比较，防止时序攻击）
+ *   5. 检查 payload 中的 exp（过期）与 nbf（生效时间）
+ *   6. 从 payload 中提取 sub（user_id）
  *
  * 配置项（config.json）：
  *   auth.jwt.secret   : 签名密钥

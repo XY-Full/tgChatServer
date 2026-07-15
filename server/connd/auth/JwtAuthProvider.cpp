@@ -43,6 +43,29 @@ AuthResult JwtAuthProvider::verify(const std::string& token, const std::string& 
     std::string payload_b64   = token.substr(dot1 + 1, dot2 - dot1 - 1);
     std::string signature_b64 = token.substr(dot2 + 1);
 
+    // ── 校验 header：仅支持 HS256，防止算法混淆攻击 ──
+    try
+    {
+        auto header = json::parse(Helper::base64Decode(header_b64));
+        if (!header.contains("alg") || header["alg"] != "HS256")
+        {
+            result.err_msg = "unsupported alg";
+            return result;
+        }
+    }
+    catch (const std::exception&)
+    {
+        result.err_msg = "header parse error";
+        return result;
+    }
+
+    // ── 空密钥下 HMAC 仍可被任何人计算，必须显式拒绝 ──
+    if (secret_.empty())
+    {
+        result.err_msg = "jwt secret not configured";
+        return result;
+    }
+
     // ── 验签 ──
     std::string signing_input = header_b64 + "." + payload_b64;
     std::string computed_sig  = Helper::hmacSha256(secret_, signing_input);
@@ -63,15 +86,27 @@ AuthResult JwtAuthProvider::verify(const std::string& token, const std::string& 
     {
         auto payload = json::parse(payload_json);
 
+        int64_t now = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+
         // 检查过期时间
         if (payload.contains("exp"))
         {
             int64_t exp = payload["exp"].get<int64_t>();
-            int64_t now = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count();
             if (now > exp)
             {
                 result.err_msg = "token expired";
+                return result;
+            }
+        }
+
+        // 检查生效时间（nbf），防止预签发的未来 token 提前使用
+        if (payload.contains("nbf"))
+        {
+            int64_t nbf = payload["nbf"].get<int64_t>();
+            if (now < nbf)
+            {
+                result.err_msg = "token not yet valid";
                 return result;
             }
         }

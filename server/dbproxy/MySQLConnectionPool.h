@@ -51,5 +51,6 @@ private:
     mutable std::mutex             mutex_;
     std::condition_variable        cv_;
     int                            active_count_ = 0;
+    int                            creating_     = 0; // 解锁创建中的连接数，扩容判断时计入
     bool                           shutdown_     = false;
 };

@@ -59,4 +59,9 @@ private:
      * @return JWT token 字符串
      */
     std::string signJwt(const std::string& account);
+
+    static constexpr size_t kMaxAccountLen = 64; // 账号名长度上限，防止超长 token
+
+    std::string jwt_secret_; // onInit 中加载，保证非空
+    int64_t     jwt_ttl_ = 86400;
 };

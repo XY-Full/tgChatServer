@@ -5,9 +5,16 @@
 #include "msg_id.pb.h"
 
 #define PROCESS_NETPACK_BEGIN(MSG_TYPE)                                                                                \
-    int64_t uid = 1;                                                                                           \
     auto recvMsg = std::make_shared<MSG_TYPE>();                                                                       \
-    recvMsg->ParseFromString(msg.data_);                                                                               \
+    if (!recvMsg->ParseFromArray(msg.data_, msg.data_len_))                                                            \
+    {                                                                                                                  \
+        ELOG << "parse " << #MSG_TYPE << " failed, msg_id=" << msg.msg_id_                                             \
+             << " conn_id=" << msg.header_.conn_id_ << " data_len=" << msg.data_len_;                                  \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    /* TODO(account): 账号体系完善后，由 connd 透传鉴权后的玩家ID，此处暂以 conn_id 占位 */                                  \
+    int64_t uid = static_cast<int64_t>(msg.header_.conn_id_);                                                          \
+    (void)uid;                                                                                                         \
     ILOG << recvMsg->Utf8DebugString();                                                                                \
     auto request = recvMsg->mutable_request();                                                                         \
     auto replyMsg = std::make_shared<MSG_TYPE>();                                                                      \

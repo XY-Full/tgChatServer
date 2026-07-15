@@ -74,14 +74,23 @@ std::shared_ptr<MySQLConnection> MySQLConnectionPool::acquire(int timeout_ms)
         }
 
         // 池中无空闲连接，尝试扩容（不超过 max_pool_size）
-        int total = static_cast<int>(all_.size());
+        // creating_ 把"解锁创建中"的连接也计入总数，避免并发扩容超出上限
+        int total = static_cast<int>(all_.size()) + creating_;
         if (total < max_pool_size_)
         {
+            ++creating_;
             lk.unlock();
             auto* conn = createOne();
             lk.lock();
+            --creating_;
             if (conn)
             {
+                if (shutdown_)
+                {
+                    conn->close();
+                    delete conn;
+                    return nullptr;
+                }
                 all_.push_back(conn);
                 idle_.push(conn);
                 continue; // 重新尝试 acquire

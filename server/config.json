@@ -1,7 +1,16 @@
 {
-    "server": 
+    "server":
     {
         "port": 8889
+    },
+    "auth":
+    {
+        "provider": "jwt",
+        "jwt":
+        {
+            "secret": "",
+            "ttl_seconds": 86400
+        }
     },
     "telegram":
     {

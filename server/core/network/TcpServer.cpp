@@ -209,12 +209,16 @@ void TcpServer::handleNewConnection(int fd)
 void TcpServer::handleClientEvent(int fd, EventType events)
 {
     int64_t conn_id = -1;
+    std::shared_ptr<Connection> conn;
     {
         std::lock_guard<std::mutex> lock(conn_mutex_);
         auto it = fd_to_conn_.find(fd);
         if (it != fd_to_conn_.end())
         {
             conn_id = it->second;
+            auto conn_it = conn_map_.find(conn_id);
+            if (conn_it != conn_map_.end())
+                conn = conn_it->second; // 持有 shared_ptr，保证回调期间连接不被析构
         }
     }
 
@@ -226,8 +230,7 @@ void TcpServer::handleClientEvent(int fd, EventType events)
         return;
     }
 
-    auto conn_it = conn_map_.find(conn_id);
-    if (conn_it == conn_map_.end())
+    if (!conn)
     {
         ELOG << "Connection not found for fd: " << fd;
         epoller_.remove(fd);
@@ -237,8 +240,6 @@ void TcpServer::handleClientEvent(int fd, EventType events)
         fd_to_conn_.erase(fd);
         return;
     }
-
-    auto conn = conn_it->second;
 
     if ((events & EventType::RDHUP) != EventType::NONE)
     {

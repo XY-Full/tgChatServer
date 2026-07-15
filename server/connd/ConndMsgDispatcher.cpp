@@ -67,7 +67,12 @@ void ConndMsgDispatcher::onClientMessage(uint64_t conn_id, std::shared_ptr<AppMs
 void ConndMsgDispatcher::handleLogin(uint64_t conn_id, const AppMsg& msg)
 {
     cs::PlayerAuth login_msg;
-    login_msg.ParseFromArray(msg.data_, msg.data_len_);
+    if (!login_msg.ParseFromArray(msg.data_, msg.data_len_))
+    {
+        WLOG << "ConndMsgDispatcher: parse PlayerAuth failed, conn_id=" << conn_id
+             << " data_len=" << msg.data_len_;
+        return;
+    }
     const auto& req = login_msg.request();
 
     std::string token = req.token();
@@ -75,7 +80,13 @@ void ConndMsgDispatcher::handleLogin(uint64_t conn_id, const AppMsg& msg)
     ILOG << "ConndMsgDispatcher: login attempt conn_id=" << conn_id
          << " token_len=" << token.size();
 
-    AuthResult auth_res = auth_provider_.verify(token);
+    // 限制 token 长度，避免恶意客户端用超长 token 消耗 CPU/内存
+    constexpr size_t kMaxTokenLen = 4096;
+    AuthResult auth_res;
+    if (token.size() > kMaxTokenLen)
+        auth_res.err_msg = "token too long";
+    else
+        auth_res = auth_provider_.verify(token);
 
     // 构造响应
     cs::PlayerAuth reply;
@@ -196,17 +207,15 @@ IListener* ConndMsgDispatcher::findListener(uint64_t conn_id)
     //   WS  listener:  [1000000, 2,000,000)
     //   KCP listener:  [2000000, ∞)
     // listeners_ 顺序：[0]=TCP, [1]=WS, [2]=KCP
+    // 对应 listener 未配置时返回 nullptr，绝不能回退到其他协议的 listener，
+    // 否则会把 KCP/WS 的 conn_id 误投给 TCP server。
+    size_t idx;
     if (conn_id < 1000000ULL)
-    {
-        if (listeners_.size() > 0) return listeners_[0];
-    }
+        idx = 0;
     else if (conn_id < 2000000ULL)
-    {
-        if (listeners_.size() > 1) return listeners_[1];
-    }
+        idx = 1;
     else
-    {
-        if (listeners_.size() > 2) return listeners_[2];
-    }
-    return listeners_.empty() ? nullptr : listeners_[0];
+        idx = 2;
+
+    return idx < listeners_.size() ? listeners_[idx] : nullptr;
 }

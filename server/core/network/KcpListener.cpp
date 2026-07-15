@@ -167,12 +167,27 @@ void KcpListener::processUdpPacket(const uint8_t* data, size_t len, const sockad
 
 void KcpListener::dispatchKcpData(KcpSession& session)
 {
-    // 从 KCP 接收完整消息（可能多条）
-    char buf[65536];
+    // 从 KCP 接收完整消息（可能多条）。
+    // 用 peeksize 按需分配：固定栈缓冲会让超过其大小的消息永远收不出来，堵死整个会话。
+    std::vector<char> recv_buf;
     while (true)
     {
-        int n = ikcp_recv(session.kcp, buf, sizeof(buf));
+        int peek = ikcp_peeksize(session.kcp);
+        if (peek < 0) break; // 没有完整消息
+
+        recv_buf.resize(static_cast<size_t>(peek));
+        char* buf = recv_buf.data();
+
+        int n = ikcp_recv(session.kcp, buf, peek);
         if (n < 0) break;
+
+        if (static_cast<size_t>(n) > MAX_PACKET_SIZE)
+        {
+            // 超限消息已取出并丢弃，避免滞留队列阻塞后续消息
+            ELOG << "KcpListener: oversized msg " << n << " bytes dropped, conn_id="
+                 << session.conn_id;
+            continue;
+        }
 
         // 解析 AppMsg
         if (static_cast<size_t>(n) < sizeof(Header)) continue;
@@ -189,6 +204,15 @@ void KcpListener::dispatchKcpData(KcpSession& session)
             off += 4;
         }
 
+        // data_len 来自对端，必须与实际负载一致，否则下游会按错误长度读 body
+        if (static_cast<size_t>(n) < off + data_len)
+        {
+            ELOG << "KcpListener: malformed msg, data_len=" << data_len
+                 << " payload=" << (static_cast<size_t>(n) - off)
+                 << " conn_id=" << session.conn_id;
+            continue;
+        }
+
         size_t total_size = sizeof(AppMsg) + data_len;
         auto* raw = new uint8_t[total_size];
         auto* msg_base = reinterpret_cast<AppMsg*>(raw);
@@ -197,7 +221,7 @@ void KcpListener::dispatchKcpData(KcpSession& session)
         msg_base->header_.conn_id_ = session.conn_id;
         msg_base->msg_id_   = msg_id;
         msg_base->data_len_ = data_len;
-        if (data_len > 0 && static_cast<size_t>(n) >= off + data_len)
+        if (data_len > 0)
         {
             msg_base->data_ = reinterpret_cast<char*>(raw + sizeof(AppMsg));
             memcpy(msg_base->data_, buf + off, data_len);

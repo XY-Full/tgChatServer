@@ -35,7 +35,13 @@ void Connection::onReadable()
         ssize_t n = read(fd_, buffer, sizeof(buffer));
         if (n > 0)
         {
-            recv_buffer_->Push(buffer, n);
+            if (!recv_buffer_->Push(buffer, n))
+            {
+                // 缓冲区满，字节流已不完整，无法重新对齐，只能断开
+                ELOG << "Recv buffer overflow, closing conn_id: " << conn_id_;
+                close_handler_(conn_id_);
+                return;
+            }
             DLOG << "Read " << n << " bytes from conn_id: " << conn_id_ << ", current recv buffer size: " << recv_buffer_->Size();
             updateActiveTime();
         }
@@ -202,16 +208,18 @@ void Connection::processRecvBuffer()
 
         if (unlikely(header.version_ != MAGIC_VERSION))
         {
+            // 字节流已错位，丢弃部分数据无法重新对齐，直接断开
             ELOG << "Invalid packet version: " << (int)header.version_ << ", conn_id: " << conn_id_;
-            recv_buffer_->Drop(sizeof(Header));
-            break;
+            close_handler_(conn_id_);
+            return;
         }
 
-        if (unlikely(header.pack_len_ <= 0 || header.pack_len_ > MAX_PACKET_SIZE))
+        // pack_len 必须至少能容纳 AppMsg 固定体，否则后面按 [AppMsg][body] 解释会越界写
+        if (unlikely(header.pack_len_ < sizeof(AppMsg) || header.pack_len_ > MAX_PACKET_SIZE))
         {
-            ELOG << "Invalid packet length: " << header.pack_len_;
-            recv_buffer_->Drop(sizeof(Header));
-            break;
+            ELOG << "Invalid packet length: " << header.pack_len_ << ", conn_id: " << conn_id_;
+            close_handler_(conn_id_);
+            return;
         }
 
         // 等待完整包
@@ -221,9 +229,24 @@ void Connection::processRecvBuffer()
         // [AppMsg 结构体][body 数据]
         // 不能用 make_shared<AppMsg>()，那只分配 sizeof(AppMsg)，body 会越界
         uint8_t *raw = new uint8_t[header.pack_len_];
-        recv_buffer_->Pop(raw, header.pack_len_);
+        if (!recv_buffer_->Pop(raw, header.pack_len_))
+        {
+            ELOG << "Pop " << header.pack_len_ << " bytes failed, conn_id: " << conn_id_;
+            delete[] raw;
+            close_handler_(conn_id_);
+            return;
+        }
 
         auto *msg_base = reinterpret_cast<AppMsg *>(raw);
+        // data_len_ 来自对端，必须与 pack_len 一致，否则下游会按错误长度读 body
+        if (unlikely(static_cast<uint32_t>(msg_base->data_len_) + sizeof(AppMsg) != header.pack_len_))
+        {
+            ELOG << "Inconsistent data_len: " << msg_base->data_len_
+                 << " pack_len: " << header.pack_len_ << ", conn_id: " << conn_id_;
+            delete[] raw;
+            close_handler_(conn_id_);
+            return;
+        }
         // 修正 data_ 指针：指向紧跟在 AppMsg 结构体后面的 body 区域
         msg_base->data_ = reinterpret_cast<char *>(raw) + sizeof(AppMsg);
         msg_base->header_.conn_id_ = conn_id_;

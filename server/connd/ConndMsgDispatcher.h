@@ -50,9 +50,6 @@ private:
     // 找到能处理此 conn_id 的 listener（通过 conn_id 范围区分协议）
     IListener* findListener(uint64_t conn_id);
 
-    // 向指定 conn_id 发送错误回包
-    void sendErrorToClient(uint64_t conn_id, int32_t err_code, const std::string& msg_type);
-
     SessionManager&         session_mgr_;
     IAuthProvider&          auth_provider_;
     std::vector<IListener*> listeners_;

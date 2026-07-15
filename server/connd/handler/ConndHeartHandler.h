@@ -8,7 +8,7 @@
  * @brief connd 本地心跳处理器
  *
  * 直接在 connd 内回包，不透传给 logic，降低 logic 压力。
- * 复用现有 CS_HEART_BEAT / gate.pb.h 消息格式。
+ * 复用现有 CS_HEART_BEAT / login.pb.h 消息格式。
  */
 class ConndHeartHandler
 {

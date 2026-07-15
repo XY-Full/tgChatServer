@@ -65,6 +65,7 @@ private:
     std::string computeChecksum(const std::string& filepath);
     bool applyMigration(const MigrationFile& mf);
     bool execSQL(const std::string& sql, std::string& err);
+    std::string escapeSQL(const std::string& s); // mysql_real_escape_string 包装
     std::vector<std::string> getUserTables();
 
     MigrationConfig config_;

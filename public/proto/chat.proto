@@ -3,7 +3,7 @@ syntax = "proto3";
 package cs;
 import "base.proto";
 
-// CS_PLAYER_SEND_MESSAGE 	        = 250;	// 用户发送消息
+// CS_PLAYER_SEND_MESSAGE 	        = 103;	// 用户发送消息
 message PlayerSendMessage
 {
     message Request {
@@ -21,7 +21,7 @@ message PlayerSendMessage
     Response    response    = 2;
 }
 
-// CS_PLAYER_REQ_MESSAGE 	        = 251;	// 用户请求消息
+// CS_PLAYER_REQ_MESSAGE 	        = 104;	// 用户请求消息
 message PlayerReqMessage
 {
     message Request {
@@ -33,6 +33,21 @@ message PlayerReqMessage
     message Response {
         int32                   err = 1; // 错误码
         repeated    ChatMessage msg = 2; // 消息列表
+    }
+
+    Request     request     = 1;
+    Response    response    = 2;
+}
+
+// CS_PLAYER_REQ_CHAT_INFO 	        = 105;	// 用户查询当前聊天状态
+message PlayerReqChatInfo
+{
+    message Request {
+    }
+
+    message Response {
+        int32           err  = 1; // 错误码
+        PlayerChatInfo  info = 2; // 玩家聊天状态（禁言、CD、拉黑列表）
     }
 
     Request     request     = 1;

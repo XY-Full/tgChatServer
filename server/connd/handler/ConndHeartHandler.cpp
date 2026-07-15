@@ -3,14 +3,19 @@
 #include "Helper.h"
 #include "Log.h"
 #include "err_code.pb.h"
-#include "gate.pb.h"
+#include "login.pb.h"
 
 void ConndHeartHandler::onHeart(const AppMsg& msg)
 {
-    auto recvMsg = std::make_shared<Heart>();
-    recvMsg->ParseFromArray(msg.data_, msg.data_len_);
+    auto recvMsg = std::make_shared<cs::Heart>();
+    if (!recvMsg->ParseFromArray(msg.data_, msg.data_len_))
+    {
+        WLOG << "ConndHeartHandler: parse Heart failed, conn_id=" << msg.header_.conn_id_
+             << " data_len=" << msg.data_len_;
+        return;
+    }
 
-    auto replyMsg = std::make_shared<Heart>();
+    auto replyMsg = std::make_shared<cs::Heart>();
     auto response = replyMsg->mutable_response();
     response->set_err(ErrorCode::Error_success);
     response->set_timestamp(static_cast<int64_t>(time(nullptr)));

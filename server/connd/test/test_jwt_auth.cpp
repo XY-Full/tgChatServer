@@ -255,6 +255,16 @@ TEST(JwtAuthEmptySecret, AnyTokenFails)
     EXPECT_FALSE(result.ok);
 }
 
+// 攻击场景：secret 为空时，攻击者也能用空 key 算出"合法"HMAC，必须显式拒绝
+TEST(JwtAuthEmptySecret, ForgedTokenWithEmptyKeyFails)
+{
+    JwtAuthProvider provider("");
+    std::string token = MakeJwt("", "attacker", 3600); // 用空 key 自签
+    auto result = provider.verify(token);
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.err_msg, "jwt secret not configured");
+}
+
 // ──────────────────────────────────────────────
 // 8. 扩展测试
 // ──────────────────────────────────────────────
@@ -281,8 +291,8 @@ TEST_F(JwtAuthTest, SpecialCharsInUserId)
     EXPECT_EQ(result.user_id, special_id);
 }
 
-// header 中 alg="RS256"，当前实现不校验 alg，只要签名（HS256）正确就通过
-TEST_F(JwtAuthTest, AlgorithmFieldIgnored)
+// header 中 alg="RS256"，即使签名（HS256）正确也必须拒绝，防止算法混淆攻击
+TEST_F(JwtAuthTest, AlgorithmFieldValidated)
 {
     // 手动构造：修改 header alg 为 RS256，但仍用 HS256 签名
     std::string header_json = R"({"alg":"RS256","typ":"JWT"})";
@@ -299,9 +309,47 @@ TEST_F(JwtAuthTest, AlgorithmFieldIgnored)
     std::string token    = header_b64 + "." + payload_b64 + "." + sig_b64;
 
     auto result = provider_->verify(token);
-    // 实现只校验签名和 exp，不校验 alg 字段 → 应通过
-    EXPECT_TRUE(result.ok);
-    EXPECT_EQ(result.user_id, "alg_user");
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.err_msg, "unsupported alg");
+}
+
+// alg="none" 且签名为空，必须拒绝
+TEST_F(JwtAuthTest, AlgorithmNoneRejected)
+{
+    std::string header_json = R"({"alg":"none","typ":"JWT"})";
+    std::string header_b64  = Base64UrlEncode(header_json);
+
+    int64_t now_s = std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::system_clock::now().time_since_epoch()).count();
+    std::string payload_json = R"({"sub":"none_user","exp":)" + std::to_string(now_s + 3600) + "}";
+    std::string payload_b64  = Base64UrlEncode(payload_json);
+
+    std::string token = header_b64 + "." + payload_b64 + ".";
+    auto result = provider_->verify(token);
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.err_msg, "unsupported alg");
+}
+
+// nbf 在未来：即使签名有效也必须拒绝
+TEST_F(JwtAuthTest, NotBeforeInFuture)
+{
+    std::string header_json = R"({"alg":"HS256","typ":"JWT"})";
+    std::string header_b64  = Base64UrlEncode(header_json);
+
+    int64_t now_s = std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::system_clock::now().time_since_epoch()).count();
+    std::string payload_json =
+        R"({"sub":"future_user","nbf":)" + std::to_string(now_s + 3600) +
+        R"(,"exp":)" + std::to_string(now_s + 7200) + "}";
+    std::string payload_b64  = Base64UrlEncode(payload_json);
+
+    std::string signing_input = header_b64 + "." + payload_b64;
+    std::string sig_b64  = Base64UrlEncode(Helper::hmacSha256(kSecret, signing_input));
+    std::string token    = header_b64 + "." + payload_b64 + "." + sig_b64;
+
+    auto result = provider_->verify(token);
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.err_msg, "token not yet valid");
 }
 
 // payload 含多余字段（iat, nbf, aud），不影响解析
