@@ -36,6 +36,13 @@ cd "$path/ss_proto"
 proto_files=(*.proto)
 compile_proto_if_needed "$path/ss_proto" "$path/proto_files" "${proto_files[@]}"
 
+cd "$path/db_proto"
+proto_files=(*.proto)
+compile_proto_if_needed "$path/db_proto" "$path/proto_files" "${proto_files[@]}"
+
 cd $path
+# 从 db_proto 生成表列定义（proto_files/db_models.h）
+python3 ./db_model_gen.py
+
 ./msg_proto_mapper.py proto_files/msg_mapping_ss.h ss_proto false
 ./msg_proto_mapper.py proto_files/msg_mapping.h proto true

@@ -34,8 +34,9 @@ message DBQueryReq
 {
     message Request
     {
-        string           sql    = 1; // SELECT 语句（暂不支持预处理占位符）
+        string           sql    = 1; // SELECT 语句，参数用 ? 占位
         uint64           tx_id  = 2; // 非 0 表示在指定事务内执行
+        repeated DBValue params = 3; // 按 ? 出现顺序绑定的参数
     }
 
     message Response
@@ -55,8 +56,9 @@ message DBExecReq
 {
     message Request
     {
-        string sql   = 1; // INSERT / UPDATE / DELETE 语句
-        uint64 tx_id = 2; // 非 0 表示在指定事务内执行
+        string           sql    = 1; // INSERT / UPDATE / DELETE 语句，参数用 ? 占位
+        uint64           tx_id  = 2; // 非 0 表示在指定事务内执行
+        repeated DBValue params = 3; // 按 ? 出现顺序绑定的参数
     }
 
     message Response

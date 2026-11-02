@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package db;
+
+import "db_options.proto";
+
+// ── users 表 ──
+message User
+{
+    option (db.table) = "users";
+    option (db.comment) = "用户基础信息表";
+    // 登录建号是幂等操作：冲突时保持原行不动，避免覆盖已回填的 uid
+    option (db.on_conflict) = "username = VALUES(username)";
+    option (db.index) = "unique:uidx_username(username)";
+
+    int64  id       = 1 [(db.flags) = "primary_key,auto_increment"];      // 自增主键，同时作为玩家数字 uid
+    int64  uid      = 2 [(db.type) = "BIGINT UNSIGNED", (db.not_null) = true, (db.default_value) = "0"];
+    string username = 3 [(db.type) = "VARCHAR(64)", (db.not_null) = true, (db.default_value) = "''"];
+    int32  status   = 4 [(db.type) = "TINYINT", (db.not_null) = true, (db.default_value) = "0"];
+    string created_at = 5 [(db.type) = "DATETIME", (db.not_null) = true, (db.default_value) = "CURRENT_TIMESTAMP"];
+    string updated_at = 6 [(db.type) = "DATETIME", (db.not_null) = true,
+                           (db.default_value) = "CURRENT_TIMESTAMP", (db.on_update) = "CURRENT_TIMESTAMP"];
+}
+
+// ── chat_messages 表 ──
+message ChatMessage
+{
+    option (db.table)  = "chat_messages";
+    option (db.comment) = "聊天消息记录表";
+    option (db.mirror) = "cs.ChatMessage"; // 生成 db::ChatMessage -> cs::ChatMessage 转换
+    option (db.index) = "index:idx_from_uid_created(from_uid,created_at)";
+    option (db.index) = "index:idx_to_uid_created(to_uid,created_at)";
+    option (db.index) = "index:idx_channel_chat_id(channel,chat_id,id)";
+
+    int64  id       = 1 [(db.flags) = "primary_key,auto_increment", (db.cs_field) = "msg_id"]; // 自增主键，兼作消息 id 与分页游标
+    int64  msg_id   = 2 [(db.type) = "BIGINT UNSIGNED", (db.not_null) = true, (db.default_value) = "0"];
+    int64  from_uid = 3 [(db.type) = "BIGINT UNSIGNED", (db.not_null) = true, (db.default_value) = "0",
+                         (db.cs_field) = "player_id"];
+    int64  to_uid   = 4 [(db.type) = "BIGINT UNSIGNED", (db.not_null) = true, (db.default_value) = "0"];
+    string content  = 5 [(db.type) = "TEXT", (db.not_null) = true, (db.cs_field) = "msg"];
+    int32  msg_type = 6 [(db.type) = "TINYINT", (db.not_null) = true, (db.default_value) = "0"];
+    string created_at = 7 [(db.type) = "DATETIME", (db.not_null) = true, (db.default_value) = "CURRENT_TIMESTAMP"];
+    int32  channel  = 8 [(db.type) = "TINYINT", (db.not_null) = true, (db.default_value) = "0",
+                         (db.cs_field) = "channel_id"];
+    int64  chat_id  = 9 [(db.type) = "BIGINT", (db.not_null) = true, (db.default_value) = "0"];
+    int32  emoji_id = 10 [(db.type) = "INT", (db.not_null) = true, (db.default_value) = "0"];
+}

@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package db;
+
+import "google/protobuf/descriptor.proto";
+
+// ── 用 protobuf option 描述表结构，.proto 是 schema 的唯一数据源 ──
+// 生成器据此产出：C++ 侧列定义（db_models.h）+ DDL 描述（db_schema.h）
+extend google.protobuf.MessageOptions
+{
+    string table       = 50001; // 表名；留空则用 message 名的 snake_case
+    string mirror      = 50002; // 可选：对端协议消息全名（如 cs.ChatMessage），用于生成转换函数
+    string on_conflict = 50006; // 可选：upsert 冲突时的更新子句，留空则覆盖全部业务列
+
+    string engine      = 50007; // 存储引擎，默认 InnoDB
+    string charset     = 50008; // 字符集，默认 utf8mb4
+    string comment     = 50009; // 表注释
+
+    // 索引：unique(col1,col2) / index(col1,col2)
+    // 索引名由生成器按规则自动生成，保证 diff 时稳定
+    repeated string index = 50010;
+}
+
+extend google.protobuf.FieldOptions
+{
+    string flags  = 50003; // 逗号分隔：primary_key / auto_increment
+    string column = 50004; // 列名；留空则用字段名
+    string cs_field = 50005; // 可选：mirror 消息里对应的字段名（不同名时用它）
+
+    string type          = 50011; // SQL 类型，如 "VARCHAR(64)"；留空则按 proto 类型推导
+    bool   not_null      = 50012; // NOT NULL
+    string default_value = 50013; // 默认值，如 "0" / "''" / "CURRENT_TIMESTAMP"
+    string on_update     = 50014; // ON UPDATE 表达式，如 "CURRENT_TIMESTAMP"
+    string column_comment = 50015; // 列注释（不能也叫 comment：扩展字段名在 package 内需唯一）
+}

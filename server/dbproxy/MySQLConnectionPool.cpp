@@ -37,16 +37,54 @@ MySQLConnection* MySQLConnectionPool::createOne()
 void MySQLConnectionPool::release(MySQLConnection* conn)
 {
     if (!conn) return;
-    std::lock_guard<std::mutex> lk(mutex_);
-    if (shutdown_)
+
+    AcquireCallback waiter;
+    std::shared_ptr<MySQLConnection> handoff;
     {
-        conn->close();
-        delete conn;
-        return;
+        std::lock_guard<std::mutex> lk(mutex_);
+        if (shutdown_)
+        {
+            conn->close();
+            delete conn;
+            return;
+        }
+        --active_count_;
+
+        if (conn->isBroken())
+        {
+            // 作废的连接不再回池，摘除并销毁，下次取连接时按需新建
+            for (auto it = all_.begin(); it != all_.end(); ++it)
+                if (*it == conn) { all_.erase(it); break; }
+            conn->close();
+            delete conn;
+            cv_.notify_one();
+            return;
+        }
+
+        idle_.push(conn);
+        cv_.notify_one();
+
+        // 有异步等待者时直接把这条连接交给队首
+        if (!waiters_.empty())
+        {
+            waiter = std::move(waiters_.front());
+            waiters_.pop();
+            handoff = takeIdleLocked();
+        }
     }
-    --active_count_;
-    idle_.push(conn);
-    cv_.notify_one();
+
+    // 回调必须在锁外执行，waiter 内部会投递任务，且可能再次取连接
+    if (waiter) waiter(std::move(handoff));
+}
+
+std::shared_ptr<MySQLConnection> MySQLConnectionPool::takeIdleLocked()
+{
+    if (idle_.empty()) return nullptr;
+
+    MySQLConnection* raw = idle_.front();
+    idle_.pop();
+    ++active_count_;
+    return std::shared_ptr<MySQLConnection>(raw, [this](MySQLConnection* c) { this->release(c); });
 }
 
 std::shared_ptr<MySQLConnection> MySQLConnectionPool::acquire(int timeout_ms)
@@ -63,36 +101,28 @@ std::shared_ptr<MySQLConnection> MySQLConnectionPool::acquire(int timeout_ms)
             return nullptr;
         }
 
-        if (!idle_.empty())
-        {
-            MySQLConnection* raw = idle_.front();
-            idle_.pop();
-            ++active_count_;
-            // custom deleter 自动归还
-            return std::shared_ptr<MySQLConnection>(
-                raw, [this](MySQLConnection* c) { this->release(c); });
-        }
+        auto conn = takeIdleLocked();
+        if (conn) return conn;
 
-        // 池中无空闲连接，尝试扩容（不超过 max_pool_size）
-        // creating_ 把"解锁创建中"的连接也计入总数，避免并发扩容超出上限
-        int total = static_cast<int>(all_.size()) + creating_;
+        // 池中无空闲连接，尝试扩容
+        const int total = static_cast<int>(all_.size()) + creating_;
         if (total < max_pool_size_)
         {
             ++creating_;
             lk.unlock();
-            auto* conn = createOne();
+            auto* raw = createOne();
             lk.lock();
             --creating_;
-            if (conn)
+            if (raw)
             {
                 if (shutdown_)
                 {
-                    conn->close();
-                    delete conn;
+                    raw->close();
+                    delete raw;
                     return nullptr;
                 }
-                all_.push_back(conn);
-                idle_.push(conn);
+                all_.push_back(raw);
+                idle_.push(raw);
                 continue; // 重新尝试 acquire
             }
         }
@@ -104,6 +134,54 @@ std::shared_ptr<MySQLConnection> MySQLConnectionPool::acquire(int timeout_ms)
             return nullptr;
         }
     }
+}
+
+std::shared_ptr<MySQLConnection> MySQLConnectionPool::tryAcquire()
+{
+    std::unique_lock<std::mutex> lk(mutex_);
+
+    if (shutdown_) return nullptr;
+
+    auto conn = takeIdleLocked();
+    if (conn) return conn;
+
+    const int total = static_cast<int>(all_.size()) + creating_;
+    if (total < max_pool_size_)
+    {
+        ++creating_;
+        lk.unlock();
+        auto* raw = createOne();
+        lk.lock();
+        --creating_;
+        if (!raw) return nullptr;
+        if (shutdown_) { raw->close(); delete raw; return nullptr; }
+
+        all_.push_back(raw);
+        return takeIdleLocked();
+    }
+
+    return nullptr;
+}
+
+void MySQLConnectionPool::asyncAcquire(AcquireCallback cb)
+{
+    std::shared_ptr<MySQLConnection> conn;
+    bool rejected = false;
+    {
+        std::lock_guard<std::mutex> lk(mutex_);
+        if (shutdown_)
+        {
+            rejected = true;          // 正在关闭：直接回空
+        }
+        else
+        {
+            conn = takeIdleLocked();
+            if (!conn) waiters_.push(std::move(cb));  // 没有空闲：排队等归还
+        }
+    }
+
+    if (conn)          cb(std::move(conn));
+    else if (rejected) cb(nullptr);
 }
 
 void MySQLConnectionPool::healthCheck()

@@ -8,12 +8,14 @@ add_executable(dbmigrate ${DBMIGRATE_SRC})
 target_include_directories(dbmigrate
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/
-        /usr/include                  # for <mariadb/mysql.h>
+        ${CMAKE_SOURCE_DIR}/../public/proto_files
+        ${THIRD_PARTY_DIR}/libmariadb/include
 )
 
 target_link_libraries(dbmigrate
     PRIVATE
-        mariadb
+        ${THIRD_PARTY_DIR}/libmariadb/lib/mariadb/libmariadb.a
+        ssl crypto z dl pthread m
         OpenSSL::Crypto
         OpenSSL::SSL
 )
