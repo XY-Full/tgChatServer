@@ -76,9 +76,12 @@ void IBusNet::sendMsgToCenter(const google::protobuf::Message &msg)
         return;
     }
 
-    // pack 是 shared_ptr<AppMsgWrapper>，TcpClient::send 持有它直到发送完成
-    // 不能在 send 后立即 DeleteSSPack，否则 slab 内存提前释放导致发送数据损坏
+    // TcpClient::send 是同步发送，发送完成后 slab 内存即可归还
     TcpClient_->send(pack);
+
+    auto* appmsg = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
+    if (appmsg)
+        GlobalSpace()->shm_slab_.Free(pack->offset_, appmsg->header_.pack_len_);
 }
 
 // 接收到Center消息时，更新当前路由
@@ -153,18 +156,40 @@ void IBusNet::onCenterUpdateServiceStatusRsp(const AppMsg &msg)
         return;
     }
 
-    // 同时重建两张路由表
+    // 读现有路由表作为基线：全量更新时从零重建，差量更新时在其上应用变更
+    auto old_map       = getServiceMap();
+    auto old_instances = std::atomic_load(&NameInstances_);
+
     auto new_map       = std::make_shared<ServiceMap>();          // key = instance id
     auto new_instances = std::make_shared<ServiceNameInstances>(); // key = svr_name
 
+    if (!response.is_full_update_())
+    {
+        // 差量：复制现有表，再在下面应用增删
+        if (old_map)       *new_map       = *old_map;
+        if (old_instances) *new_instances = *old_instances;
+    }
+
     for (auto &s : response.service_info_map_())
     {
-        // 下线实例不加入路由表
+        // 下线：从两张路由表中移除
         if (s.is_offline_())
+        {
+            new_map->erase(s.id_());
+            auto it = new_instances->find(s.svr_name_());
+            if (it != new_instances->end())
+            {
+                it->second.erase(s.id_());
+                if (it->second.empty())
+                    new_instances->erase(it);
+            }
             continue;
+        }
 
-        // 精准路由表（每个 id 唯一）
-        (*new_map)[s.id_()].push_back(s);
+        // 精准路由表（每个 id 唯一，覆盖写入）
+        auto &vec = (*new_map)[s.id_()];
+        vec.clear();
+        vec.push_back(s);
 
         // 按名路由表：将 ServiceInfo 映射为 ServiceInstancePtr
         auto &inst_map = (*new_instances)[s.svr_name_()];

@@ -44,8 +44,8 @@ public:
 
 private:
     void handleLogin(uint64_t conn_id, const AppMsg& msg);
-    void forwardToLogic(uint64_t conn_id, const AppMsg& msg);
-    void forwardToAccount(uint64_t conn_id, const AppMsg& msg);
+    void forwardToLogic(uint64_t conn_id, AppMsg& msg);
+    void forwardToAccount(uint64_t conn_id, AppMsg& msg);
 
     // 找到能处理此 conn_id 的 listener（通过 conn_id 范围区分协议）
     IListener* findListener(uint64_t conn_id);

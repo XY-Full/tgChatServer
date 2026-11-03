@@ -40,6 +40,11 @@ public:
         message_handlers_map_[Type::S2C] = std::bind(&Impl::HandleCSMsg, this, std::placeholders::_1);
         message_handlers_map_[Type::S2SReq] = std::bind(&Impl::HandleRequest, this, std::placeholders::_1);
         message_handlers_map_[Type::S2SRsp] = std::bind(&Impl::HandleResponse, this, std::placeholders::_1);
+
+        // dispatcher必须在构造期创建，各服务可能在 bus_->Start() 之前就调用 RegistMessage
+        msg_dispatcher_ = std::make_unique<MsgDispatcher>();
+        ss_msg_dispatcher_ = std::make_unique<MsgDispatcher>();
+
         ILOG << "BusClient::Impl created with client_id: " << opts_->client_id;
     }
 
@@ -69,10 +74,9 @@ public:
         if(is_daemon_) bus_net_ = std::make_unique<BusdNet>();
         else bus_net_ = std::make_unique<BusClientNet>();
         
-        // CRITICAL FIX #4 & #5: Initialize message dispatchers and coroutine scheduler
-        msg_dispatcher_ = std::make_unique<MsgDispatcher>();
-        ss_msg_dispatcher_ = std::make_unique<MsgDispatcher>();
+        // 协程调度器
         co_scheduler_ = std::make_unique<CoroutineScheduler>(4);  // 4 worker threads
+        co_scheduler_->start();  // 启动 worker 线程
 
         // Start worker thread
         io_thread_ = std::thread(&Impl::IoLoop, this);
@@ -202,7 +206,10 @@ public:
             ELOG << "Failed to get shared memory pointer for offset: " << pack->offset_;
             return nullptr;
         }
-        reinterpret_cast<AppMsg *>(pack_ptr)->co_id_ = CUR_CO_ID;
+        auto* req_msg = reinterpret_cast<AppMsg *>(pack_ptr);
+        req_msg->co_id_ = CUR_CO_ID;
+        // 标记来源实例 id
+        strncpy(req_msg->src_name_, opts_->client_id.c_str(), sizeof(req_msg->src_name_) - 1);
 
         bool result = SendToNode(service_name, *pack);
         if (!result)
@@ -230,17 +237,39 @@ public:
             return false;
         }
 
-        auto co_id = req_msg.co_id_;
-        auto pack = Helper::CreateSSPack(rsp_msg, Type::S2SRsp, co_id);
-
-        bool result = SendToNode(req_msg.src_name_, *pack);
-        if (!result)
+        // SS请求走协程应答路径，co_id 唤醒等待中的 Request
+        if (req_msg.header_.type_ == Type::S2SReq)
         {
-            ELOG << "Failed to send message when reply to " << co_id;
-            return result;
+            auto co_id = req_msg.co_id_;
+            auto pack = Helper::CreateSSPack(rsp_msg, Type::S2SRsp, co_id);
+            return SendToNode(req_msg.src_name_, *pack);
         }
 
-        return result;
+        // CS请求回包以 S2C 类型送回 connd，
+        // 保留 conn_id，connd 的 msg_dispatcher 会按 msg_id 分发到对应下行 handler
+        auto pack = Helper::CreateCSPackage(rsp_msg, Type::S2C, req_msg.header_.conn_id_);
+        if (!pack)
+        {
+            ELOG << "Reply: CreateCSPackage failed";
+            return false;
+        }
+        return SendToNode(req_msg.src_name_, *pack);
+    }
+
+    bool PushToClient(uint64_t conn_id, const google::protobuf::Message& message)
+    {
+        if (!ready_)
+        {
+            ELOG << "PushToClient: client not ready";
+            return false;
+        }
+        auto pack = Helper::CreateCSPackage(message, Type::S2C, conn_id);
+        if (!pack)
+        {
+            ELOG << "PushToClient: CreateCSPackage failed";
+            return false;
+        }
+        return SendToNode("ConndService", *pack);
     }
 
     bool ForwardRawAppMsg(const std::string& service_name, const AppMsg& msg,
@@ -320,6 +349,10 @@ private:
                     continue;
                 }
                 auto pack = reinterpret_cast<AppMsg *>(pack_ptr);
+
+                // data_ 是发送方地址空间里的裸指针，跨进程共享内存后在本进程失效，
+                // 必须按“body 紧跟在 AppMsg 结构体之后”重新定位到本进程的 slab 映射地址
+                pack->data_ = reinterpret_cast<char *>(pack_ptr) + sizeof(AppMsg);
 
                 auto packPtr = std::shared_ptr<AppMsg>(
                     pack, [offset](AppMsg *p) { 
@@ -462,6 +495,11 @@ bool BusClient::UnregistMessage(uint32_t msg_id)
     return impl_->UnregistMessage(msg_id);
 }
 
+bool BusClient::SSRegistMessage(uint32_t msg_id, const MessageHandler &handler)
+{
+    return impl_->SSRegistMessage(msg_id, handler);
+}
+
 std::shared_ptr<AppMsg> BusClient::Request(const std::string &service_name, const google::protobuf::Message &message)
 {
     return impl_->Request(service_name, message);
@@ -470,6 +508,11 @@ std::shared_ptr<AppMsg> BusClient::Request(const std::string &service_name, cons
 bool BusClient::Reply(const AppMsg &req_msg, const google::protobuf::Message &msg)
 {
     return impl_->Reply(req_msg, msg);
+}
+
+bool BusClient::PushToClient(uint64_t conn_id, const google::protobuf::Message &message)
+{
+    return impl_->PushToClient(conn_id, message);
 }
 
 bool BusClient::ForwardRawAppMsg(const std::string& service_name, const AppMsg& msg,

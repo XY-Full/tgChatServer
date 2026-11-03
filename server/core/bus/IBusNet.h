@@ -23,6 +23,7 @@ struct Options
     int32_t local_port = 3089;
     std::string center_ip = "";
     int32_t center_port = 0;
+    std::string service_name = "";  // 服务名
     // =======配置参数=======
 
     std::string client_id = "";
@@ -41,6 +42,9 @@ struct Options
 
         center_ip = config_manager.getValue<std::string>("center_ip", "");
         center_port = config_manager.getValue<int32_t>("center_port", 0);
+
+        service_name = config_manager.getValue<std::string>("service_name",
+                                                            "service_" + std::to_string(service_id));
 
         client_id = std::to_string(region_id) + "." + std::to_string(zone_id) + "." + std::to_string(service_id) + "." +
                     std::to_string(instance_id);

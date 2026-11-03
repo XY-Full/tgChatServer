@@ -24,6 +24,7 @@ public:
     void stop();
     int32_t send(int32_t conn_id, std::shared_ptr<AppMsgWrapper> pack);
     int32_t send(int32_t conn_id, AppMsg& pack);
+    int32_t broadcast(std::shared_ptr<AppMsgWrapper> pack);  // 广播到所有连接
     void closeConn(int64_t conn_id);  // 主动踢掉某连接
 
 private:

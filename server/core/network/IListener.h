@@ -46,6 +46,17 @@ public:
     virtual int32_t send(uint64_t conn_id, std::shared_ptr<AppMsgWrapper> pack) = 0;
 
     /**
+     * @brief 向该监听器下的所有连接广播数据包
+     * @param pack 待发送的消息包
+     * @return 成功发送的连接数，失败返回负数
+     */
+    virtual int32_t broadcast(std::shared_ptr<AppMsgWrapper> pack)
+    {
+        (void)pack;
+        return -1;  // 默认不支持广播
+    }
+
+    /**
      * @brief 主动关闭指定连接
      * @param conn_id 目标连接 ID
      */

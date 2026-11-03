@@ -9,7 +9,7 @@ void BusClientNet::genServiceInfo()
     local_service_info_.set_port_(opts_->local_port);
     local_service_info_.set_is_daemon_(false);  // 关键：标记为非daemon
     local_service_info_.set_id_(opts_->client_id);
-    local_service_info_.set_svr_name_("service_" + std::to_string(opts_->service_id));
+    local_service_info_.set_svr_name_(opts_->service_name);
     
     // 设置共享内存接收缓冲区名称
     std::string shm_name = "/ibus_" + opts_->client_id;
@@ -30,7 +30,8 @@ bool BusClientNet::sendMsgByServiceInfo(const ss::ServiceInfo &info, const AppMs
         if (LocalServiceMap_.find(info.id_()) == LocalServiceMap_.end())
         {
             LocalServiceMap_[info.id_()] = std::make_unique<ShmRingBuffer<AppMsgWrapper>>(info.shm_recv_buffer_name_());
-            ILOG << "BusClientNet: Opened local SHM buffer for service: " << info.id_();
+            ILOG << "BusClientNet: Opened local SHM buffer for service: " << info.id_()
+                 << " shm='" << info.shm_recv_buffer_name_() << "'";
         }
 
         // If target is local, push directly to peer's ShmRingBuffer

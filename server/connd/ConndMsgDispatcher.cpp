@@ -138,10 +138,16 @@ void ConndMsgDispatcher::handleLogin(uint64_t conn_id, const AppMsg& msg)
 // 转发到 logic（已鉴权业务消息）
 // ─────────────────────────────────────────────
 
-void ConndMsgDispatcher::forwardToLogic(uint64_t conn_id, const AppMsg& msg)
+void ConndMsgDispatcher::forwardToLogic(uint64_t conn_id, AppMsg& msg)
 {
     DLOG << "ConndMsgDispatcher: forwardToLogic msg_id=" << msg.msg_id_
          << " conn_id=" << conn_id;
+
+    // 标记来源为本网关，logic 的 bus->Reply 据此把回包精准送回 connd
+    strncpy(msg.src_name_, "ConndService", sizeof(msg.src_name_) - 1);
+    // 透传鉴权后的账号标识，logic 据此建号/确定消息归属
+    const std::string user_id = session_mgr_.get_user_id(conn_id);
+    strncpy(msg.user_id_, user_id.c_str(), sizeof(msg.user_id_) - 1);
 
     if (!GlobalSpace()->bus_->ForwardRawAppMsg("LogicService", msg))
     {
@@ -154,9 +160,12 @@ void ConndMsgDispatcher::forwardToLogic(uint64_t conn_id, const AppMsg& msg)
 // 转发到 account（申请 token，无需鉴权）
 // ─────────────────────────────────────────────
 
-void ConndMsgDispatcher::forwardToAccount(uint64_t conn_id, const AppMsg& msg)
+void ConndMsgDispatcher::forwardToAccount(uint64_t conn_id, AppMsg& msg)
 {
     DLOG << "ConndMsgDispatcher: forwardToAccount conn_id=" << conn_id;
+
+    // 标记来源，account 的 bus->Reply 据此把回包送回 connd
+    strncpy(msg.src_name_, "ConndService", sizeof(msg.src_name_) - 1);
 
     if (!GlobalSpace()->bus_->ForwardRawAppMsg("AccountService", msg))
     {
@@ -174,20 +183,32 @@ void ConndMsgDispatcher::onDownstreamMessage(const AppMsg& msg)
     DLOG << "ConndMsgDispatcher: downstream msg_id=" << msg.msg_id_
          << " to conn_id=" << conn_id;
 
-    auto* listener = findListener(conn_id);
-    if (!listener)
-    {
-        WLOG << "ConndMsgDispatcher: no listener for conn_id=" << conn_id;
-        return;
-    }
-
-    // 将下行 AppMsg 直接复制到 slab 并封装为 AppMsgWrapper，
-    // 通过 IListener::send 发给客户端。
+    // 将下行 AppMsg 复制到 slab 并封装为 AppMsgWrapper，
+    // 通过 IListener::send/broadcast 发给客户端
     // data_ 已是序列化好的 proto bytes，不需要再次序列化。
     auto pack = Helper::ForwardRawAppMsg(msg, "");
     if (!pack)
     {
         ELOG << "ConndMsgDispatcher: ForwardRawAppMsg failed for conn_id=" << conn_id;
+        return;
+    }
+
+    // conn_id == 0 视为广播，推送给所有在线连接
+    if (conn_id == 0)
+    {
+        for (auto* listener : listeners_)
+        {
+            if (listener) listener->broadcast(pack);
+        }
+        ILOG << "ConndMsgDispatcher: broadcast msg_id=" << msg.msg_id_
+             << " to all listeners";
+        return;
+    }
+
+    auto* listener = findListener(conn_id);
+    if (!listener)
+    {
+        WLOG << "ConndMsgDispatcher: no listener for conn_id=" << conn_id;
         return;
     }
 

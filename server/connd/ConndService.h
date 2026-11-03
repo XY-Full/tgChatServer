@@ -10,6 +10,7 @@
 #include "network/KcpListener.h"
 #include "GlobalSpace.h"
 #include "msg_id.pb.h"
+#include <google/protobuf/descriptor.h>
 #include <memory>
 
 /**
@@ -129,19 +130,26 @@ public:
         }
 
         // ── 7. 注册下行消息回调（logic / account → connd → client）──
-        // account 服务签发 token 后通过 bus Reply 回来（msg_id = CS_PLAYER_APPLY_TOKEN）
-        GlobalSpace()->bus_->RegistMessage(
-            static_cast<uint32_t>(MsgID::CS_PLAYER_APPLY_TOKEN),
-            [this](const AppMsg& msg) {
-                if (dispatcher_) dispatcher_->onDownstreamMessage(msg);
-            });
-
-        // logic 下行推送给客户端（SC_NOTIFY 等）
-        GlobalSpace()->bus_->RegistMessage(
-            static_cast<uint32_t>(MsgID::SC_NOTIFY),
-            [this](const AppMsg& msg) {
-                if (dispatcher_) dispatcher_->onDownstreamMessage(msg);
-            });
+        // 所有 CS 消息的回包都以 S2C 类型经 bus 送回 connd，这里统一注册到
+        // onDownstreamMessage，按 header_.conn_id_ 路由到对应连接
+        auto register_downstream = [this](MsgID mid) {
+            GlobalSpace()->bus_->RegistMessage(
+                static_cast<uint32_t>(mid),
+                [this](const AppMsg& msg) {
+                    if (dispatcher_) dispatcher_->onDownstreamMessage(msg);
+                });
+        };
+        // 需要接收下行的CS和SC消息集合直接从 MsgID 枚举推导：
+        const auto* msgid_enum = MsgID_descriptor();
+        for (int i = 0; i < msgid_enum->value_count(); ++i)
+        {
+            const auto& name = msgid_enum->value(i)->name();
+            const bool  to_client = name.rfind("CS_", 0) == 0 || name.rfind("SC_", 0) == 0;
+            if (to_client)
+                register_downstream(static_cast<MsgID>(msgid_enum->value(i)->number()));
+        }
+        ILOG << "ConndApp: registered " << msgid_enum->value_count()
+             << " downstream msg ids (derived from MsgID enum)";
 
         // ── 8. 启动三种 Listener ──────────────────────────────────
         if (!tcp_listener_->start())

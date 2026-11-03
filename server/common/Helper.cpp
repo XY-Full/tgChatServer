@@ -379,13 +379,11 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateSSPack(const google::protobuf::Mess
         return nullptr;
     }
 
-    // custom deleter：shared_ptr 析构时自动归还 slab 内存
+    // 仅释放 wrapper 对象本身，slab 内存由接收方在读完后归还，
+    // 发送方不得提前释放，否则接收方会读到已被复用的内存
     auto pack = std::shared_ptr<AppMsgWrapper>(
         new AppMsgWrapper(),
-        [pack_shm_offset, pack_len](AppMsgWrapper* p) {
-            GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_len);
-            delete p;
-        });
+        [](AppMsgWrapper* p) { delete p; });
     pack->offset_ = pack_shm_offset;
 
     return pack;
@@ -398,13 +396,13 @@ void Helper::DeleteSSPack(const AppMsgWrapper& pack)
     GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_size);
 }
 
-std::shared_ptr<AppMsgWrapper> Helper::CreateCSPackage(const google::protobuf::Message &message)
+std::shared_ptr<AppMsgWrapper> Helper::CreateCSPackage(const google::protobuf::Message &message, Type type, uint64_t conn_id)
 {
     static std::atomic<uint32_t> now_seq_{0};
 
     // 获取message序列化后的长度，直接申请一块AppMsg+message_strlen大小的内存
     auto message_strlen = message.ByteSizeLong();
-    DLOG << "CreateSSPack: message type=" << GetShortTypeName(message) << ", strlen=" << message_strlen;
+    DLOG << "CreateCSPackage: message type=" << GetShortTypeName(message) << ", strlen=" << message_strlen;
     if (kcsMsgNameToId.find(GetShortTypeName(message)) == kcsMsgNameToId.end())
     {
         ELOG << "Message type not registered in kcsMsgNameToId: " << GetShortTypeName(message);
@@ -426,7 +424,8 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateCSPackage(const google::protobuf::M
     msg->header_.version_ = MAGIC_VERSION;
     msg->header_.pack_len_ = pack_len;
     msg->header_.seq_ = now_seq_.fetch_add(1);
-    msg->header_.type_ = Type::C2S;
+    msg->header_.type_ = type;
+    msg->header_.conn_id_ = conn_id;
 
     msg->data_ = reinterpret_cast<char *>(pack_shm_addr) + sizeof(AppMsg);  // body紧跟在AppMsg结构体后面
     msg->data_len_ = data_len;                                              // body数据长度
@@ -440,13 +439,10 @@ std::shared_ptr<AppMsgWrapper> Helper::CreateCSPackage(const google::protobuf::M
         return nullptr;
     }
 
-    // custom deleter：shared_ptr 析构时自动归还 slab 内存
+    // custom deleter：仅释放 wrapper 对象本身
     auto pack = std::shared_ptr<AppMsgWrapper>(
         new AppMsgWrapper(),
-        [pack_shm_offset, pack_len](AppMsgWrapper* p) {
-            GlobalSpace()->shm_slab_.Free(pack_shm_offset, pack_len);
-            delete p;
-        });
+        [](AppMsgWrapper* p) { delete p; });
     pack->offset_ = pack_shm_offset;
 
     return pack;
@@ -546,13 +542,10 @@ std::shared_ptr<AppMsgWrapper> Helper::ForwardRawAppMsg(
     // 修正 data_ 指针：指向新 slab 块内的数据区
     dst_msg->data_ = dst_data;
 
-    // 构造 AppMsgWrapper，析构时自动归还 slab
+    // 构造 AppMsgWrapper
     auto wrapper = std::shared_ptr<AppMsgWrapper>(
         new AppMsgWrapper(),
-        [offset, pack_len](AppMsgWrapper* p) {
-            GlobalSpace()->shm_slab_.Free(offset, pack_len);
-            delete p;
-        });
+        [](AppMsgWrapper* p) { delete p; });
     wrapper->offset_ = offset;
     strncpy(wrapper->dst_, dst_service.c_str(), sizeof(wrapper->dst_) - 1);
     wrapper->dst_[sizeof(wrapper->dst_) - 1] = '\0';

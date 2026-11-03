@@ -49,6 +49,17 @@ void TcpRegistrar::handleClient(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
         msg_handler_[msg_id](client_fd, msg);
 }
 
+void TcpRegistrar::sendResponse(uint64_t client_fd, const std::shared_ptr<AppMsgWrapper>& pack)
+{
+    if (!pack)
+        return;
+    server_.send(client_fd, pack);
+    // TCP 同步发送完成后，slab 内存即可归还
+    auto* appmsg = reinterpret_cast<AppMsg*>(GlobalSpace()->shm_slab_.off2ptr(pack->offset_));
+    if (appmsg)
+        GlobalSpace()->shm_slab_.Free(pack->offset_, appmsg->header_.pack_len_);
+}
+
 void TcpRegistrar::handleDisconnect(uint64_t client_fd)
 {
     std::lock_guard lg(conn_mu_);
@@ -107,7 +118,7 @@ void TcpRegistrar::onRegist(uint64_t client_fd, std::shared_ptr<AppMsg> msg)
     }
 
     auto response_pack = Helper::CreateSSPack(*replyMsg);
-    server_.send(client_fd, response_pack);
+    sendResponse(client_fd, response_pack);
     // 注意：全量服务列表通过第一次 onUpdateServiceStatus 下发，onRegist 只确认注册成功
 }
 
@@ -207,7 +218,7 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
         // 理论上不会到这里，保险起见
         response->set_err(Error_instance_not_found);
         auto response_pack = Helper::CreateSSPack(*replyMsg);
-        server_.send(client_fd, response_pack);
+        sendResponse(client_fd, response_pack);
         return;
     }
 
@@ -220,6 +231,7 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
         info->set_ip_(p->address);
         info->set_port_(p->port);
         info->set_id_(p->id);
+        info->set_shm_recv_buffer_name_(p->shm_recv_buffer_name);
         info->set_is_offline_(offline);
         info->set_connections_(p->connections);
         info->set_cpu_percent_(p->cpu_percent);
@@ -258,7 +270,7 @@ void TcpRegistrar::onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<App
     }
 
     auto response_pack = Helper::CreateSSPack(*replyMsg);
-    server_.send(client_fd, response_pack);
+    sendResponse(client_fd, response_pack);
 
     // 每次心跳顺带清理过期实例，避免依赖独立的 HealthChecker 线程
     reg_.cleanup_expired();

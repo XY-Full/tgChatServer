@@ -48,10 +48,18 @@ public:
     bool SendToNode(const std::string& service_name, const google::protobuf::Message &message);          // 发送消息给某个node
     bool RegistMessage(uint32_t msg_id, const MessageHandler &handler);   // 注册事件
     bool UnregistMessage(uint32_t msg_id);
+    bool SSRegistMessage(uint32_t msg_id, const MessageHandler &handler); // 注册 SS 请求
 
     // 请求/响应
     AppMsgPtr Request(const std::string& service_name, const google::protobuf::Message &message);
     bool Reply(const AppMsg& req_msg, const google::protobuf::Message &msg);
+
+    /**
+     * @brief 向指定客户端连接下发一条 SC 消息，经 connd 路由给客户端
+     * @param conn_id 目标连接 id；传 0 表示广播
+     * @param message SC协议消息
+     */
+    bool PushToClient(uint64_t conn_id, const google::protobuf::Message &message);
 
     /**
      * @brief 将已有 AppMsg 原样透传到目标服务，不做 proto 序列化。

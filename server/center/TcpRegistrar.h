@@ -28,6 +28,9 @@ private:
     void onHeartbeat(uint64_t client_fd, std::shared_ptr<AppMsg> msg);
     void onUpdateServiceStatus(uint64_t client_fd, std::shared_ptr<AppMsg> msg);
 
+    // 发送并释放 pack 占用的 slab 内存
+    void sendResponse(uint64_t client_fd, const std::shared_ptr<AppMsgWrapper>& pack);
+
     ServiceRegistry &reg_;
     uint16_t port_;
     std::atomic<bool> stop_{false};

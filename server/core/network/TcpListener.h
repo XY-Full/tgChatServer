@@ -55,6 +55,11 @@ public:
         return server_->send(static_cast<int32_t>(conn_id), pack);
     }
 
+    int32_t broadcast(std::shared_ptr<AppMsgWrapper> pack) override
+    {
+        return server_->broadcast(pack);
+    }
+
     void close_conn(uint64_t conn_id) override
     {
         server_->closeConn(static_cast<int64_t>(conn_id));

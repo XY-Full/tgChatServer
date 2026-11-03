@@ -24,7 +24,7 @@ void ConndHeartHandler::onHeart(const AppMsg& msg)
     DLOG << "ConndHeartHandler: heart from conn_id=" << conn_id;
 
     // 直接通过 listener 发回客户端，不走 bus->Reply（避免 SS 路由）
-    auto pack = Helper::CreateSSPack(*replyMsg);
+    auto pack = Helper::CreateCSPackage(*replyMsg, Type::S2C);
     if (pack)
     {
         auto* listener = find_listener_(conn_id);
