@@ -23,4 +23,5 @@ target_link_libraries(core PUBLIC libcopp::copp libcopp::cotask)
 
 if(BUILD_TESTS)
     add_subdirectory(shm/test)
+    add_subdirectory(coroutine/test)
 endif()

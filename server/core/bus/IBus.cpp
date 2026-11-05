@@ -4,6 +4,8 @@
 #include "Helper.h"
 #include "Log.h"
 #include "coroutine/CoroutineScheduler.h"
+
+#include <exception>
 #include "google/protobuf/message.h"
 #include "network/AppMsg.h"
 #include "network/MsgWrapper.h"
@@ -211,6 +213,10 @@ public:
         // 标记来源实例 id
         strncpy(req_msg->src_name_, opts_->client_id.c_str(), sizeof(req_msg->src_name_) - 1);
 
+        // 在发送之前先登记等待，否则回包可能先于 yield 到达，
+        // resume 找不到等待中的协程，唤醒会被丢弃
+        CoroutineScheduler::prepare_wait();
+
         bool result = SendToNode(service_name, *pack);
         if (!result)
         {
@@ -341,6 +347,8 @@ private:
             AppMsgWrapper msg;
             if (local_ring_->Pop(msg))
             {
+                try
+                {
                 auto offset = msg.offset_;
                 // CRITICAL FIX #3: Check for null pointer from off2ptr
                 auto pack_ptr = GlobalSpace()->shm_slab_.off2ptr(offset);
@@ -373,6 +381,15 @@ private:
                     });
                 } else {
                     ELOG << "Coroutine scheduler not initialized";
+                }
+                }
+                catch (const std::exception& e)
+                {
+                    ELOG << "BusClient: exception while handling message: " << e.what();
+                }
+                catch (...)
+                {
+                    ELOG << "BusClient: unknown exception while handling message";
                 }
             }
             else

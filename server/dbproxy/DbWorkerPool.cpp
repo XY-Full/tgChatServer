@@ -1,5 +1,9 @@
 #include "DbWorkerPool.h"
 
+#include "Log.h"
+
+#include <exception>
+
 DbWorkerPool::DbWorkerPool(int thread_count) : thread_count_(thread_count)
 {
     if (thread_count_ < 1) thread_count_ = 1;
@@ -49,6 +53,18 @@ void DbWorkerPool::workerRoutine()
             task = std::move(tasks_.front());
             tasks_.pop();
         }
-        task();
+
+        try
+        {
+            task();
+        }
+        catch (const std::exception& e)
+        {
+            ELOG << "DbWorkerPool: task threw std::exception: " << e.what();
+        }
+        catch (...)
+        {
+            ELOG << "DbWorkerPool: task threw unknown exception";
+        }
     }
 }

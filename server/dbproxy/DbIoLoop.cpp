@@ -2,6 +2,8 @@
 
 #include "Log.h"
 
+#include <exception>
+
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -123,7 +125,18 @@ void DbIoLoop::drainTasks()
     {
         auto t = std::move(local.front());
         local.pop();
-        t();
+        try
+        {
+            t();
+        }
+        catch (const std::exception& e)
+        {
+            ELOG << "DbIoLoop: posted task threw std::exception: " << e.what();
+        }
+        catch (...)
+        {
+            ELOG << "DbIoLoop: posted task threw unknown exception";
+        }
     }
 }
 
@@ -175,7 +188,19 @@ void DbIoLoop::run()
             waiters_.erase(it);
             armed_.erase(fd);
             ::epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
-            cb(status);
+
+            try
+            {
+                cb(status);
+            }
+            catch (const std::exception& e)
+            {
+                ELOG << "DbIoLoop: socket callback threw std::exception: " << e.what();
+            }
+            catch (...)
+            {
+                ELOG << "DbIoLoop: socket callback threw unknown exception";
+            }
         }
 
         const auto after = std::chrono::steady_clock::now();
@@ -191,7 +216,19 @@ void DbIoLoop::run()
             it = waiters_.erase(it);
             armed_.erase(fd);
             ::epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
-            cb(kWaitTimeout);
+
+            try
+            {
+                cb(kWaitTimeout);
+            }
+            catch (const std::exception& e)
+            {
+                ELOG << "DbIoLoop: timeout callback threw std::exception: " << e.what();
+            }
+            catch (...)
+            {
+                ELOG << "DbIoLoop: timeout callback threw unknown exception";
+            }
         }
     }
 

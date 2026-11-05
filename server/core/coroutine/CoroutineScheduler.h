@@ -18,6 +18,25 @@ using AppMsgPtr = std::shared_ptr<AppMsg>;
 
 #define CUR_CO_ID (CoroutineScheduler::current_id())
 
+// 协程等待状态机
+//
+// None      -> 不在等待
+// Prepared  -> 已调用prepare_wait，此时异步事件已发起，但还没真正挂起
+// Suspended -> 已真正挂起，控制权已回到worker线程，此时才能安全入队唤醒
+// Woken     -> 已被resume/超时唤醒，等协程自己取走结果
+//
+// 之所以要区分Prepared/Suspended，是因为resume可能在协程真正挂起之前就发生
+// 即异步事件先完成、协程后挂起，此时不能入队，否则另一个worker会对一个
+// 还在运行的协程做resume，造成栈错乱；这种情况交给owner worker在
+// task->resume() 返回后重新检查并排队
+enum class WaitState : int
+{
+    None      = 0,
+    Prepared  = 1,
+    Suspended = 2,
+    Woken     = 3
+};
+
 class CoroutineScheduler
 {
 public:
@@ -44,6 +63,10 @@ public:
     // 调度一个新任务，返回协程ID
     uint64_t schedule(TaskFn fn);
 
+    // 准备等待：必须在发起异步事件之前调用
+    // 否则事件可能在 yield 之前就完成，resume 找不到等待中的协程，唤醒会被丢弃
+    static bool prepare_wait();
+
     // yield: 当前协程挂起指定时间后自动恢复
     static AppMsgPtr yield(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000));
 
@@ -58,9 +81,11 @@ private:
     {
         uint64_t id;
         TaskPtr task;
-        std::atomic<bool> waiting{false}; // 标记协程是否挂起
-        std::mutex val_mtx;
+
+        // 下面所有字段都由 val_mtx 保护：状态迁移必须和唤醒判断在同一临界区内
+        std::mutex              val_mtx;
         std::condition_variable val_cv;
+        std::atomic<int>        wait_state{static_cast<int>(WaitState::None)};
         AppMsgPtr resume_value;                              // 用于存储传递的参数
         std::chrono::steady_clock::time_point timeout_point; // 超时时间点
         std::atomic<bool> timeout_enabled{false};            // 是否启用超时
