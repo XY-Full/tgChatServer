@@ -1,0 +1,13 @@
+{
+    "region_id": 0,
+    "zone_id": 1,
+    "service_id": 4,
+    "instance_id": 0,
+    "service_name": "LogicService",
+    "local_ip": "127.0.0.1",
+    "local_port": 3084,
+    "local_ring_size": 1048576,
+    "center_ip": "center",
+    "center_port": 9090,
+    "app": { "tick_interval_ms": 10 }
+}

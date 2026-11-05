@@ -2,7 +2,10 @@ nohup.out
 *.swp
 compile_commands.json
 build
+build-client
 .cache
+__pycache__
+public/__pycache__
 config.json
 third
 .vscode
@@ -24,3 +27,11 @@ Thumbs.db
 # 日志和崩溃文件
 *.log
 *.dmp
+
+# 部署运行时产物（由脚本生成，不入库）
+deploy/data/
+deploy/run/
+deploy/logs/
+
+# 第三方依赖源码包（由 tools/build_thirds.sh 下载并缓存）
+tools/packages/

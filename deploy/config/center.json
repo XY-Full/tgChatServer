@@ -1,0 +1,11 @@
+{
+    "region_id": 0,
+    "zone_id": 1,
+    "service_id": 1,
+    "instance_id": 0,
+    "service_name": "CenterService",
+    "local_ip": "127.0.0.1",
+    "local_port": 3081,
+    "local_ring_size": 1048576,
+    "app": { "tick_interval_ms": 10 }
+}

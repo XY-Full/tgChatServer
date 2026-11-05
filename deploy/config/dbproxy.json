@@ -1,0 +1,22 @@
+{
+    "region_id": 0,
+    "zone_id": 1,
+    "service_id": 6,
+    "instance_id": 0,
+    "service_name": "DBProxyService",
+    "local_ip": "127.0.0.1",
+    "local_port": 3086,
+    "local_ring_size": 1048576,
+    "center_ip": "center",
+    "center_port": 9090,
+    "db_host": "mysql",
+    "db_port": 3306,
+    "db_user": "root",
+    "db_password": "CHANGE_ME_production_db_password",
+    "db_name": "tgchat",
+    "db_pool_size": 8,
+    "db_max_pool_size": 32,
+    "db_connect_timeout_ms": 5000,
+    "db_tx_timeout_ms": 30000,
+    "app": { "tick_interval_ms": 10 }
+}

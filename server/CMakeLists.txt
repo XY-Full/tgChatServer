@@ -2,8 +2,15 @@ cmake_minimum_required(VERSION 3.15)
 project(Server LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# 启动 ccache
-set(CMAKE_USE_CCACHE ON)
+# 启动 ccache（CMAKE_USE_CCACHE 必须写在 project() 之前才生效，这里改用 compiler launcher）
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER   ${CCACHE_PROGRAM})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+else()
+    message(STATUS "ccache not found, build without compiler cache")
+endif()
 # 生成 compile_commands.json 文件来为 clangd 工具提供语法支持
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -94,6 +101,10 @@ endif()
 # CURL
 # -----------------------------
 set(CURL_USE_STATIC_LIBS TRUE)
+# 强制使用 third/curl 的精简静态库（无 nghttp2/gssapi 等传递依赖），
+# 避免误链系统 libcurl.a（其依赖大量第三方库导致链接失败）
+set(CURL_LIBRARY ${THIRD_PARTY_DIR}/curl/lib/libcurl.a CACHE FILEPATH "curl library" FORCE)
+set(CURL_INCLUDE_DIR ${THIRD_PARTY_DIR}/curl/include CACHE PATH "curl include dir" FORCE)
 find_package(CURL REQUIRED)
 if(CURL_FOUND)
     message(STATUS "Found CURL: ${CURL_LIBRARY}")

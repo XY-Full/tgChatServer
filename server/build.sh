@@ -17,7 +17,8 @@ build_project() {
     mkdir -p build
     cd build
     cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug ..
-    make -j8
+    jobs=$(nproc 2>/dev/null || echo 1)
+    make -j"${jobs}"
     cd ..
 }
 
